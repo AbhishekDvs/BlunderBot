@@ -1,0 +1,13 @@
+{
+  "name": "blunderbot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/AbhishekDvs/BlunderBot.git",
+  "author": "<abhishek280194@gmail.com>",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

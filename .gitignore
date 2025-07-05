@@ -1,0 +1,45 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+
+# Next.js
+.next/
+out/
+.vercel/
+dist/
+
+# Optional OS / editor stuff
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Logs
+logs
+*.log
+*.pid
+*.seed
+*.tgz
+
+# Env
+.env
+.env.*.local
+!.env.example
+
+# Testing
+coverage/
+*.lcov
+
+# Python (if Stockfish scripts/tools used)
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Misc
+.cache/
+temp/
+tmp/
