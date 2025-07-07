@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 
 const difficulties = [
-  { label: '🍼 BabyBot', value: 'easy', color: 'bg-green-500' },
-  { label: '🧠 MidBot', value: 'medium', color: 'bg-yellow-500' },
-  { label: '🤖 Evil Genius', value: 'hard', color: 'bg-red-500' }
+  { label: '🧢 Austin Powers', value: 'easy', color: 'bg-emerald-500' },  // Silly fun
+  { label: '🕶 Ethan Hunt', value: 'medium', color: 'bg-blue-500' },      // Tactical but beatable
+  { label: '🍸 James Bond', value: 'hard', color: 'bg-indigo-600' },      // Stylish assassin
+  { label: '👁 George Smiley', value: 'insane', color: 'bg-neutral-800' } // Pure intellect (Stockfish max)
 ]
+
 
 export default function Home() {
   const [selected, setSelected] = useState<string | null>(null)
@@ -21,6 +23,22 @@ export default function Home() {
       router.push(`/game?difficulty=${level}`)
     }, 500)
   }
+
+  function getSpyRoast(level: string): string {
+    switch (level) {
+      case 'easy':
+        return "Will hang a queen just to see what happens.";
+      case 'medium':
+        return "Tactical but still falls for forks and pins.";
+      case 'hard':
+        return "Punishes mistakes like it's MI6 protocol.";
+      case 'insane':
+        return "Cold, brutal logic. No soul. Just Stockfish.";
+      default:
+        return "Unknown agent.";
+    }
+  }
+
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#1F1D2B] to-[#0F0E17] text-white px-4">
@@ -38,17 +56,15 @@ export default function Home() {
         </p>
 
         <div className="flex flex-col md:flex-row gap-4 justify-center">
-          {difficulties.map((d) => (
-            <button
-              key={d.value}
-              onClick={() => handleSelect(d.value)}
-              className={`py-3 px-6 rounded-2xl cursor-pointer font-semibold text-white text-lg shadow-md hover:scale-105 active:scale-95 transition-transform duration-150 ${d.color} ${
-                selected === d.value ? 'ring-4 ring-white' : ''
-              }`}
-            >
-              {d.label}
-            </button>
-          ))}
+          <motion.div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {difficulties.map(d => (
+              <div key={d.value} className="bg-[#1e1e2e] rounded-xl p-4 shadow-md hover:scale-105 transition cursor-pointer" onClick={() => handleSelect(d.value)}>
+                <h3 className="text-xl font-bold text-white">{d.label}</h3>
+                <p className="text-sm text-gray-300 mt-1">Known for: {getSpyRoast(d.value)}</p>
+              </div>
+            ))}
+          </motion.div>
+
         </div>
 
         {selected && (
