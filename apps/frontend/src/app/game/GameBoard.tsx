@@ -1,10 +1,38 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState , useEffect } from 'react'
 import { Chess } from 'chess.js'
 import { Chessboard } from 'react-chessboard'
+import { BoardOrientation } from 'react-chessboard/dist/chessboard/types'
+import { useStockfish } from '@/hooks/useStockfish'
 
-export function GameBoard({ difficulty }: { difficulty: string }) {
+type PieceStyle = 'default' | 'pirouetti' | 'chestnut'
+
+export function GameBoard({
+  difficulty,
+  pieceStyle,
+  side
+}: {
+  difficulty: string
+  pieceStyle: PieceStyle,
+  side:BoardOrientation
+}) {
+  const { postMessage } = useStockfish((bestMove: string) => {
+    if (bestMove && bestMove.length === 4) {
+      const move = game.current.move({
+        from: bestMove.substring(0, 2),
+        to: bestMove.substring(2, 4),
+        promotion: 'q'
+      });
+
+      if (move) {
+        setFen(game.current.fen());
+        console.log(`[SF BOT (${difficulty})] plays: ${move.san}`);
+        if (game.current.isGameOver()) handleGameOver();
+      }
+    }
+  });
+
   const game = useRef(new Chess())
   const [fen, setFen] = useState(game.current.fen())
   const [gameOver, setGameOver] = useState(false)
@@ -13,24 +41,44 @@ export function GameBoard({ difficulty }: { difficulty: string }) {
   const pieceNames = ['P', 'N', 'B', 'R', 'Q', 'K']
   const colors = ['w', 'b']
 
-  const pirouettiPieces = Object.fromEntries(
-    colors.flatMap(color =>
-      pieceNames.map(name => {
-        const code = `${color}${name}`
-        return [
-          code,
-          () => (
-            <img
-              src={`/pieces/pirouetti/${code}.svg`}
-              alt={code}
-              className="w-full h-full select-none pointer-events-none neon-piece"
-              draggable={false}
-            />
-          )
-        ]
-      })
+  useEffect(() => {
+    if (side === 'black') {
+      // Human is black, bot plays first as white
+      makeBotMove()
+    }
+  }, [side])
+
+
+  function getCustomPieces(style: string) {
+    if (style === 'default') return undefined
+
+    const basePath = `/pieces/${style}`
+
+    return Object.fromEntries(
+      colors.flatMap(color =>
+        pieceNames.map(name => {
+          const code = `${color}${name}`
+          return [
+            code,
+            ({ squareWidth }: { squareWidth: number }) => (
+              <img
+                src={`${basePath}/${code}.svg`}
+                alt={code}
+                width={squareWidth}
+                height={squareWidth}
+                draggable={false}
+                style={{
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                  display: 'block'
+                }}
+              />
+            )
+          ]
+        })
+      )
     )
-  )
+  }
 
   function handleGameOver() {
     let message = ''
@@ -38,7 +86,7 @@ export function GameBoard({ difficulty }: { difficulty: string }) {
     if (game.current.isCheckmate()) {
       message = game.current.turn() === 'w' ? '💀 BlunderBot wins!' : '🎉 You win!'
     } else if (game.current.isDraw()) {
-      message = '🤝 It’s a draw!'
+      message = "🤝 It's a draw!"
     } else {
       message = 'Game over!'
     }
@@ -47,23 +95,42 @@ export function GameBoard({ difficulty }: { difficulty: string }) {
     setGameOver(true)
   }
 
-  function makeBotMove() {
-    if (game.current.isGameOver()) return
-
-    const possibleMoves = game.current.moves()
-    if (possibleMoves.length === 0) return
-
-    const randomMove =
-      possibleMoves[Math.floor(Math.random() * possibleMoves.length)]
-    game.current.move(randomMove)
-    setFen(game.current.fen())
-
-    console.log(`[BOT (${difficulty})] plays: ${randomMove}`)
-
-    if (game.current.isGameOver()) {
-      handleGameOver()
+  const getSearchCommand = (difficulty: string) => {
+    switch (difficulty) {
+      case 'easy': return 'go depth 5';
+      case 'medium': return 'go depth 10';
+      case 'hard': return 'go depth 14';
+      case 'insane': return 'go depth 20';
+      default: return 'go depth 8';
     }
+  };
+
+
+  function makeBotMove() {
+  if (game.current.isGameOver()) return;
+
+    postMessage('ucinewgame');
+    postMessage(`position fen ${game.current.fen()}`);
+    postMessage(getSearchCommand(difficulty));
   }
+
+
+  // function makeBotMove() {
+  //   if (game.current.isGameOver()) return
+
+  //   const possibleMoves = game.current.moves()
+  //   if (possibleMoves.length === 0) return
+
+  //   const randomMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)]
+  //   game.current.move(randomMove)
+  //   setFen(game.current.fen())
+
+  //   console.log(`[BOT (${difficulty})] plays: ${randomMove}`)
+
+  //   if (game.current.isGameOver()) {
+  //     handleGameOver()
+  //   }
+  // }
 
   const handlePieceDrop = (source: string, target: string): boolean => {
     const move = game.current.move({
@@ -80,11 +147,16 @@ export function GameBoard({ difficulty }: { difficulty: string }) {
     if (game.current.isGameOver()) {
       handleGameOver()
     } else {
-      setTimeout(makeBotMove, 500)
+      const turn = game.current.turn()
+      const botColor = side === 'white' ? 'b' : 'w'
+      if (turn === botColor) {
+        setTimeout(makeBotMove, 300)
+      }
     }
 
     return true
-  }
+    }
+
 
   const resetGame = () => {
     game.current.reset()
@@ -98,16 +170,10 @@ export function GameBoard({ difficulty }: { difficulty: string }) {
       <Chessboard
         position={fen}
         onPieceDrop={handlePieceDrop}
-        customPieces={pirouettiPieces}
-        boardOrientation="white"
+        customPieces={getCustomPieces(pieceStyle)}
+        boardOrientation={side}
+        animationDuration={side === 'black' ? 0 : 300}
         boardWidth={500}
-        customBoardStyle={{
-          borderRadius: '1rem',
-          backgroundColor: '#000814',
-          boxShadow: '0 0 40px #00ffe0, 0 0 20px #ff00f7 inset'
-        }}
-        customLightSquareStyle={{ backgroundColor: '#00ffe0' }}
-        customDarkSquareStyle={{ backgroundColor: '#8e05c2' }}
       />
 
       {gameOver && (
