@@ -20,11 +20,11 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
   },
-  metadataBase: new URL("https://yourdomain.com"), // Replace with your actual domain
+  metadataBase: new URL("https://blunderbot.pages.dev/"),
   openGraph: {
     title: "BlunderBot - The Robot That Plays Chess",
     description: "Outsmarted by a machine? Play with BlunderBot — your chess nemesis. Play. Analyze. Improve. Or just survive.",
-    url: "https://yourdomain.com",
+    url: "https://blunderbot.pages.dev/",
     siteName: "BlunderBot",
     images: [
       {
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "BlunderBot - Chess Bot",
-    description: "The only chess bot that mocks your every move. Choose a difficulty. Get humbled.",
+    description: "BlunderBot - Your Chess Nemesis. Choose a difficulty. Get humbled.",
     images: ["/og-image.png"],
     creator: "@AbhisheksDistro", // Optional
   },
