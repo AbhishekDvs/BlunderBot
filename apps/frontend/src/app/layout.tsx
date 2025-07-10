@@ -28,10 +28,10 @@ export const metadata: Metadata = {
     siteName: "BlunderBot",
     images: [
       {
-        url: "/og-image.png",
+        url: "https://blunderbot.pages.dev/og-image.png",
         width: 1200,
         height: 630,
-        alt: "BlunderBot Chess App Preview",
+        alt: "BlunderBot Chess",
       },
     ],
     type: "website",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "BlunderBot - Chess Bot",
     description: "BlunderBot - Your Chess Nemesis. Choose a difficulty. Get humbled.",
-    images: ["/og-image.png"],
+    images: ["https://blunderbot.pages.dev/og-image.png"],
     creator: "@AbhisheksDistro", // Optional
   },
 };
@@ -52,27 +52,23 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-        <body className={`${geistSans.variable} ${geistMono.variable} bg-[#1F1D2B] text-white antialiased`}>
-          <div className="min-h-screen flex flex-col">
-            <main className="flex-grow">
-              {children}
-            </main>
+      <body className={`${geistSans.variable} ${geistMono.variable} bg-[#1F1D2B] text-white antialiased`}>
+        <div className="min-h-screen flex flex-col">
+          <main className="flex-grow">{children}</main>
 
-            <footer className="w-full border-t border-gray-700 bg-[#2A2937] text-center text-sm text-gray-400 py-6">
-              Built with💡and coffee by&nbsp;
-              <a
-                href="https://abhisdistro.pages.dev/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-yellow-400 font-medium hover:underline"
-              >
-                Abhishek Dvs
-              </a>
-            </footer>
-          </div>
-        </body>
-      </html>
-
-    
+          <footer className="w-full border-t border-gray-700 bg-[#2A2937] text-center text-xs sm:text-sm text-gray-400 py-4 sm:py-6">
+            Built with 💡 and coffee by&nbsp;
+            <a
+              href="https://abhisdistro.pages.dev/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-yellow-400 font-medium hover:underline transition duration-150"
+            >
+              Abhishek Dvs
+            </a>
+          </footer>
+        </div>
+      </body>
+    </html>    
   );
 }

@@ -160,19 +160,26 @@ const handleCopyPGN = () => {
   }
 
   function handleGameOver() {
-    let message = ''
+  let message = '';
 
-    if (game.current.isCheckmate()) {
-      message = game.current.turn() === 'w' ? '💀 BlunderBot wins!' : '🎉 You win!'
-    } else if (game.current.isDraw()) {
-      message = "🤝 It's a draw!"
-    } else {
-      message = 'Game over!'
-    }
-
-    setResultMessage(message)
-    setGameOver(true)
+  if (game.current.isCheckmate()) {
+    message = game.current.turn() === 'w' ? '💀 BlunderBot wins!' : '🎉 You win!';
+  } else if (game.current.isStalemate()) {
+    message = "😶 Stalemate. It's a draw!";
+  } else if (game.current.isThreefoldRepetition()) {
+    message = "🔁 Threefold repetition. It's a draw!";
+  } else if (game.current.isInsufficientMaterial()) {
+    message = "🧮 Insufficient material. It's a draw!";
+  } else if (game.current.isDraw()) {
+    message = "🤝 It's a draw by rule!";
+  } else {
+    message = 'Game over!';
   }
+
+  setResultMessage(message);
+  setGameOver(true);
+}
+
 
   const getSearchCommand = (difficulty: string) => {
     switch (difficulty) {
@@ -249,6 +256,8 @@ const handleCopyPGN = () => {
   link.href = dataUrl;
   link.click();
 };
+
+
 
 
   const boardRef = useRef<HTMLDivElement>(null);
