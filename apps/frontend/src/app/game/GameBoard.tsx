@@ -2,28 +2,39 @@
 
 import { useRef, useState , useEffect } from 'react'
 import { Chess } from 'chess.js'
+import Image from 'next/image'
 import { Chessboard } from 'react-chessboard'
 import { BoardOrientation } from 'react-chessboard/dist/chessboard/types'
 import { useStockfish } from '@/hooks/useStockfish'
+import type { Move, Square } from 'chess.js'
+import { toPng } from 'html-to-image';
+import { boardThemes , BoardThemeKey } from '@/constants/themes'
 
 type PieceStyle = 'default' | 'pirouetti' | 'chestnut'
 
 export function GameBoard({
   difficulty,
   pieceStyle,
-  side
+  side,
+  boardTheme
 }: {
   difficulty: string
   pieceStyle: PieceStyle,
-  side:BoardOrientation
+  side:BoardOrientation,
+  boardTheme: BoardThemeKey
 }) {
   const { postMessage } = useStockfish((bestMove: string) => {
     if (bestMove && bestMove.length === 4) {
+      const from = bestMove.substring(0, 2);
+      const to = bestMove.substring(2, 4);
+      const promotion = bestMove.length >= 5 ? bestMove[4] : undefined;
+
       const move = game.current.move({
-        from: bestMove.substring(0, 2),
-        to: bestMove.substring(2, 4),
-        promotion: 'q'
+        from,
+        to,
+        promotion
       });
+
 
       if (move) {
         setFen(game.current.fen());
@@ -37,16 +48,84 @@ export function GameBoard({
   const [fen, setFen] = useState(game.current.fen())
   const [gameOver, setGameOver] = useState(false)
   const [resultMessage, setResultMessage] = useState('')
+  const moveHistory = game.current.history();
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  const [highlightedSquares, setHighlightedSquares] = useState<{ [square: string]: React.CSSProperties }>({});
+  const [boardWidth, setBoardWidth] = useState(400)
+  const [showModal, setShowModal] = useState(true);
+  const [copiedPGN, setCopiedPGN] = useState(false);
+  const boardOnlyRef = useRef<HTMLDivElement>(null);
+  const [pendingPromotion, setPendingPromotion] = useState<{
+    from: string;
+    to: string;
+  } | null>(null);
+  const theme = boardThemes[boardTheme];
 
   const pieceNames = ['P', 'N', 'B', 'R', 'Q', 'K']
   const colors = ['w', 'b']
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (side === 'black') {
-      // Human is black, bot plays first as white
       makeBotMove()
     }
   }, [side])
+
+  useEffect(() => {
+  const handleResize = () => {
+    setBoardWidth(Math.min(500, window.innerWidth - 32)) 
+  }
+
+  handleResize() 
+  window.addEventListener('resize', handleResize)
+  return () => window.removeEventListener('resize', handleResize)
+}, [])
+
+  function onSquareClick(square: string) {
+  const moves = game.current.moves({ square: square as Square, verbose: true }) as Move[];
+
+  if (selectedSquare && highlightedSquares[square]) {
+    const move = game.current.move({
+      from: selectedSquare,
+      to: square,
+      promotion: 'q',
+    });
+
+    setSelectedSquare(null);
+    setHighlightedSquares({});
+    if (move) {
+      setFen(game.current.fen());
+      console.log(`[YOU] played: ${move.san}`);
+      setTimeout(makeBotMove, 500);
+    }
+    return;
+  }
+
+  if (moves.length === 0) {
+    setSelectedSquare(null);
+    setHighlightedSquares({});
+    return;
+  }
+
+  const newHighlights: { [square: string]: React.CSSProperties } = {};
+  moves.forEach(m => {
+    newHighlights[m.to] = {
+      background: 'radial-gradient(circle, rgba(255,255,0,0.3) 40%, transparent 50%)',
+      borderRadius: '50%',
+    };
+  });
+
+  setSelectedSquare(square);
+  setHighlightedSquares(newHighlights);
+}
+
+const handleCopyPGN = () => {
+  const pgn = game.current.pgn();
+  navigator.clipboard.writeText(pgn).then(() => {
+    setCopiedPGN(true);
+    setTimeout(() => setCopiedPGN(false), 2000);
+  });
+};
 
 
   function getCustomPieces(style: string) {
@@ -61,7 +140,7 @@ export function GameBoard({
           return [
             code,
             ({ squareWidth }: { squareWidth: number }) => (
-              <img
+              <Image
                 src={`${basePath}/${code}.svg`}
                 alt={code}
                 width={squareWidth}
@@ -97,9 +176,9 @@ export function GameBoard({
 
   const getSearchCommand = (difficulty: string) => {
     switch (difficulty) {
-      case 'easy': return 'go depth 5';
-      case 'medium': return 'go depth 10';
-      case 'hard': return 'go depth 14';
+      case 'easy': return 'go depth 3';
+      case 'medium': return 'go depth 6';
+      case 'hard': return 'go depth 10';
       case 'insane': return 'go depth 20';
       default: return 'go depth 8';
     }
@@ -114,48 +193,44 @@ export function GameBoard({
     postMessage(getSearchCommand(difficulty));
   }
 
-
-  // function makeBotMove() {
-  //   if (game.current.isGameOver()) return
-
-  //   const possibleMoves = game.current.moves()
-  //   if (possibleMoves.length === 0) return
-
-  //   const randomMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)]
-  //   game.current.move(randomMove)
-  //   setFen(game.current.fen())
-
-  //   console.log(`[BOT (${difficulty})] plays: ${randomMove}`)
-
-  //   if (game.current.isGameOver()) {
-  //     handleGameOver()
-  //   }
-  // }
-
   const handlePieceDrop = (source: string, target: string): boolean => {
-    const move = game.current.move({
-      from: source,
-      to: target,
-      promotion: 'q'
-    })
+  const piece = game.current.get(source as Square)
 
-    if (!move) return false
+  if (
+    piece?.type === 'p' &&
+    ((piece.color === 'w' && target[1] === '8') ||
+     (piece.color === 'b' && target[1] === '1'))
+  ) {
+    setPendingPromotion({ from: source, to: target });
+    return false; 
+  }
 
-    setFen(game.current.fen())
-    console.log(`[YOU] played: ${move.san}`)
+  const move = game.current.move({
+    from: source,
+    to: target,
+  });
 
-    if (game.current.isGameOver()) {
-      handleGameOver()
-    } else {
-      const turn = game.current.turn()
-      const botColor = side === 'white' ? 'b' : 'w'
-      if (turn === botColor) {
-        setTimeout(makeBotMove, 300)
-      }
-    }
+    if (!move) return false;
 
-    return true
-    }
+    setFen(game.current.fen());
+    if (game.current.isGameOver()) handleGameOver();
+    else setTimeout(makeBotMove, 500);
+
+    return true;
+  };
+
+  const handleDownloadPGN = () => {
+    const pgn = game.current.pgn();
+    const blob = new Blob([pgn], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'blunderbot_game.pgn';
+    a.click();
+
+    URL.revokeObjectURL(url);
+  };
 
 
   const resetGame = () => {
@@ -165,31 +240,133 @@ export function GameBoard({
     setResultMessage('')
   }
 
+  const exportBoardAsPNG = async () => {
+  if (!boardOnlyRef.current) return;
+
+  const dataUrl = await toPng(boardOnlyRef.current);
+  const link = document.createElement('a');
+  link.download = 'blunderbot_board.png';
+  link.href = dataUrl;
+  link.click();
+};
+
+
+  const boardRef = useRef<HTMLDivElement>(null);
+
   return (
-    <div className="relative w-full max-w-[500px] aspect-square mx-auto">
+  <div
+    ref={boardRef}
+    className="relative w-full max-w-full sm:max-w-[500px] aspect-square mx-auto px-2"
+  >
+    {pendingPromotion && (
+      <div className="absolute inset-0 bg-black bg-opacity-80 flex items-center justify-center z-20 p-4">
+        <div className="bg-[#2A2937] text-white p-4 rounded-xl space-y-4 shadow-lg text-center w-full max-w-xs">
+          <h3 className="text-lg font-bold">Promote to:</h3>
+          <div className="flex justify-center flex-wrap gap-3">
+            {['q', 'r', 'b', 'n'].map((p) => (
+              <button
+                key={p}
+                className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold px-3 py-2 rounded"
+                onClick={() => {
+                  const move = game.current.move({
+                    from: pendingPromotion.from,
+                    to: pendingPromotion.to,
+                    promotion: p as 'q' | 'r' | 'b' | 'n',
+                  });
+
+                  if (move) {
+                    setFen(game.current.fen());
+                    if (game.current.isGameOver()) handleGameOver();
+                    else setTimeout(makeBotMove, 500);
+                  }
+
+                  setPendingPromotion(null);
+                }}
+              >
+                {p.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    )}
+
+    <div ref={boardOnlyRef} className="w-full">
       <Chessboard
         position={fen}
         onPieceDrop={handlePieceDrop}
         customPieces={getCustomPieces(pieceStyle)}
+        customSquareStyles={highlightedSquares}
+        onSquareClick={onSquareClick}
+        arePiecesDraggable={true}
         boardOrientation={side}
         animationDuration={side === 'black' ? 0 : 300}
-        boardWidth={500}
+        boardWidth={boardWidth}
+        customDarkSquareStyle={{ backgroundColor: theme.dark }}
+        customLightSquareStyle={{ backgroundColor: theme.light }}
       />
+    </div>
 
-      {gameOver && (
-        <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center z-10">
-          <div className="bg-gradient-to-br from-purple-900 to-black border-2 border-pink-500 text-white p-6 rounded-xl shadow-xl w-[90%] max-w-xs text-center neon-modal">
-            <h2 className="text-2xl font-bold mb-2">🧠 Game Over</h2>
-            <p className="text-lg mb-4">{resultMessage}</p>
+    
+    {gameOver && showModal && (
+      <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center z-10 p-4">
+        <div className="bg-[#2A2937] border border-yellow-400 text-white p-6 rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto space-y-4">
+          <h2 className="text-2xl font-bold text-center">🧠 Game Over</h2>
+          <p className="text-lg text-center">{resultMessage}</p>
+          <div className="max-h-32 overflow-y-auto bg-[#1F1D2B] p-2 rounded text-sm text-left border border-gray-600">
+            <h3 className="text-yellow-400 font-semibold mb-1">📝 Moves:</h3>
+            <ol className="list-decimal list-inside space-y-1">
+              {Array.from({ length: Math.ceil(moveHistory.length / 2) }, (_, i) => {
+                const white = moveHistory[2 * i];
+                const black = moveHistory[2 * i + 1];
+                return (
+                  <li key={i}>
+                    {i + 1}. {white} {black ?? ''}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
-              className="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 transition-all duration-200 shadow-lg"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
               onClick={resetGame}
             >
               🔁 Play Again
             </button>
+
+            <button
+              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"
+              onClick={handleCopyPGN}
+            >
+              📋 {copiedPGN ? 'Copied PGN!' : 'Copy PGN'}
+            </button>
+
+            <button
+              className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 transition"
+              onClick={handleDownloadPGN}
+            >
+              ⬇️ Download PGN
+            </button>
+
+            <button
+              onClick={exportBoardAsPNG}
+              className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 transition"
+            >
+              🖼️ Export Board as PNG
+            </button>
+
+            <button
+              className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600 transition col-span-full"
+              onClick={() => setShowModal(false)}
+            >
+              👀 View Final Board
+            </button>
           </div>
         </div>
-      )}
-    </div>
-  )
+      </div>
+    )}
+  </div>
+);
+
 }

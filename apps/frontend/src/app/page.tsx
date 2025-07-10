@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 
 const difficulties = [
-  { label: '🧢 Austin Powers', value: 'easy', color: 'bg-emerald-500' },
-  { label: '🕶 Ethan Hunt', value: 'medium', color: 'bg-blue-500' },
-  { label: '🍸 James Bond', value: 'hard', color: 'bg-indigo-600' },
-  { label: '👁 George Smiley', value: 'insane', color: 'bg-neutral-800' }
+  { label: '♻️ WALL·E - Easy', value: 'easy', color: 'bg-emerald-500' },
+  { label: '🤖 R2-D2 - Medium', value: 'medium', color: 'bg-blue-500' },
+  { label: '🧬 Ultron - Hard', value: 'hard', color: 'bg-indigo-600' },
+  { label: '🔥 T-800 - Insane', value: 'insane', color: 'bg-neutral-800' }
 ]
+
+
 
 export default function Home() {
   const [selected, setSelected] = useState<string | null>(null)
@@ -50,10 +52,9 @@ export default function Home() {
           Welcome to BlunderBot
         </h1>
         <p className="text-lg md:text-xl text-gray-300">
-          Get roasted while you lose in style. Select your doom level:
+          Select your mission difficulty. No second chances.
         </p>
 
-        {/* Side Selector */}
         <div className="mt-6">
           <p className="text-gray-300 mb-2 text-sm">Choose your side:</p>
           <div className="flex justify-center gap-4">
@@ -75,16 +76,17 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
           {difficulties.map(d => (
-            <div
-              key={d.value}
-              className="bg-[#1e1e2e] rounded-xl p-4 shadow-md hover:scale-105 transition cursor-pointer"
-              onClick={() => handleSelect(d.value)}
-            >
-              <h3 className="text-xl font-bold text-white">{d.label}</h3>
-              <p className="text-sm text-gray-300 mt-1">
-                Known for: {getSpyRoast(d.value)}
-              </p>
-            </div>
+           <div
+            key={d.value}
+            className="rounded-xl p-4 shadow-lg hover:scale-105 transition cursor-pointer bg-white/10 backdrop-blur-md border border-white/20"
+            onClick={() => handleSelect(d.value)}
+          >
+            <h3 className="text-xl font-bold text-white">{d.label}</h3>
+            <p className="text-sm text-gray-300 mt-1">
+              {getSpyRoast(d.value)}
+            </p>
+          </div>
+
           ))}
         </div>
 

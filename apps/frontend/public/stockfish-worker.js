@@ -1,11 +1,19 @@
-// public/stockfish-worker.js
-importScripts('stockfish.js');
-const engine = STOCKFISH();
+let engine;
 
-onmessage = e => {
-  engine.postMessage(e.data);
+try {
+  engine = new Worker('stockfish.js');
+} catch (err) {
+  postMessage('Failed to load stockfish.js: ' + err.message);
+}
+
+onmessage = (e) => {
+  if (engine) {
+    engine.postMessage(e.data);
+  }
 };
 
-engine.onmessage = event => {
-  postMessage(event.data);
-};
+if (engine) {
+  engine.onmessage = (event) => {
+    postMessage(event.data);
+  };
+}

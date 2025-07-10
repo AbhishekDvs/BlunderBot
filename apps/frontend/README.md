@@ -1,36 +1,27 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+### 🙏 Credits
 
-## Getting Started
+**BlunderBot** was created with ❤️ and caffeine by **[Abhishek Dvs](https://github.com/yourusername)**.
 
-First, run the development server:
+This project is open source and welcomes contributions. Special thanks to:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+* [Stockfish](https://stockfishchess.org) – for the powerful open-source chess engine.
+* [react-chessboard](https://github.com/Clariity/react-chessboard) – for the elegant chess UI.
+* [chess.js](https://github.com/jhlywa/chess.js) – for chess logic and PGN/position handling.
+* [html-to-image](https://github.com/bubkoo/html-to-image) – for board export as PNG.
+* All the open-source tools and libraries that made this possible.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 🕶️ Agent Files
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This operation wouldn't be possible without:
 
-## Learn More
+* **Abhishek Dvs** – Handler of code, orchestrator of blunders.
+* **Stockfish** – The silent assassin of misplayed endgames.
+* **Chess.js & React Chessboard** – Tactical ops for UI & board logic.
+* **html-to-image** – The undercover snapshot tool.
+* All open-source agents who helped bring BlunderBot to life.
 
-To learn more about Next.js, take a look at the following resources:
+💾 Mission logs and source: [GitHub](https://github.com/abhishekdvs/BlunderBot)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
