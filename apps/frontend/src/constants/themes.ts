@@ -1,4 +1,3 @@
-// boardThemes.ts
 export const boardThemes = {
    default: {
     light: '#f0d9b5',
@@ -13,7 +12,7 @@ export const boardThemes = {
     dark: '#001f1f'
   },
   cyberpunk: {
-    light: '#00b0ff', // Light neon-ish blue 00b0ff 9C27B0
+    light: '#00b0ff', // 9C27B0
     dark: '#212121'
   },
   aiCore: {
@@ -26,4 +25,4 @@ export const boardThemes = {
   }
 } as const;
 
-export type BoardThemeKey = keyof typeof boardThemes; // <- "ultron" | "neonGrid" | ...
+export type BoardThemeKey = keyof typeof boardThemes;

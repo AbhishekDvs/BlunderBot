@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     title: "BlunderBot - Chess Bot",
     description: "BlunderBot - Your Chess Nemesis. Choose a difficulty. Get humbled.",
     images: ["https://blunderbot.pages.dev/og-image.png"],
-    creator: "@AbhisheksDistro", // Optional
+    creator: "@AbhisheksDistro", 
   },
 };
 

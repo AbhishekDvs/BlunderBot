@@ -17,7 +17,6 @@ export default function GameClient() {
 
   return (
     <main className="min-h-screen bg-[#1F1D2B] text-white flex flex-col-reverse md:flex-row">
-      {/* Sidebar */}
       <div className="w-full md:w-1/4 bg-[#2A2937] p-4 space-y-4 border-t md:border-t-0 md:border-l border-gray-700">
         <h2 className="text-xl font-bold text-yellow-400">BlunderBot Says:</h2>
 
@@ -65,7 +64,6 @@ export default function GameClient() {
         <NewGameButton />
       </div>
 
-      {/* Game Board */}
       <div className="w-full md:w-3/4 flex items-center justify-center p-4">
         <GameBoard
           difficulty={difficulty}
