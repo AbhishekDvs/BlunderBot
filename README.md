@@ -1,6 +1,6 @@
 ### 🙏 Credits
 
-**BlunderBot** was created with 💡 and caffeine by **[Abhishek Dvs](https://github.com/yourusername)**.
+**BlunderBot** was created with 💡 and caffeine by **[Abhishek Dvs](https://github.com/abhishekdvs)**.
 
 This project is open source and welcomes contributions. Special thanks to:
 
