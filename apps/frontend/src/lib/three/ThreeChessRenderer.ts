@@ -97,11 +97,11 @@ export class ThreeChessRenderer {
    */
   private setupLighting() {
     // Ambient / Hemisphere fill (lifted floor bounce for dark basalt pieces)
-    const hemiLight = new THREE.HemisphereLight(0xfffaed, 0x2c2620, 1.15)
+    const hemiLight = new THREE.HemisphereLight(0xfffaed, 0x302a24, 1.25)
     this.scene.add(hemiLight)
 
     // Directional Key Sun (Upper-left screen space as per Astra spec)
-    const dirLight = new THREE.DirectionalLight(0xfffaed, 2.2)
+    const dirLight = new THREE.DirectionalLight(0xfffaed, 2.3)
     dirLight.position.set(-6, 12, 6)
     dirLight.castShadow = true
     dirLight.shadow.mapSize.width = 2048
@@ -112,19 +112,19 @@ export class ThreeChessRenderer {
     dirLight.shadow.camera.right = 6
     dirLight.shadow.camera.top = 6
     dirLight.shadow.camera.bottom = -6
-    dirLight.shadow.bias = -0.0005
-    dirLight.shadow.radius = 2.5
+    dirLight.shadow.bias = -0.0004
+    dirLight.shadow.radius = 2.0
     dirLight.shadow.blurSamples = 16
     this.scene.add(dirLight)
 
     // Neutral frontal fill to lift dark basalt shadows and reveal armor plate engravings
-    const frontalFill = new THREE.DirectionalLight(0xffffff, 0.85)
-    frontalFill.position.set(0, 8, 10)
+    const frontalFill = new THREE.DirectionalLight(0xffffff, 1.10)
+    frontalFill.position.set(0, 9, 10)
     this.scene.add(frontalFill)
 
-    // Warm Rim light for piece silhouette definition
-    const rimLight = new THREE.DirectionalLight(0xb68a3e, 0.8)
-    rimLight.position.set(6, 4, -8)
+    // Warm Rim light for piece silhouette definition & specular sheen
+    const rimLight = new THREE.DirectionalLight(0xd4af37, 1.05)
+    rimLight.position.set(6, 5, -8)
     this.scene.add(rimLight)
   }
 

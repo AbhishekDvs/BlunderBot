@@ -18,79 +18,79 @@ if (typeof window !== 'undefined') {
 }
 const loader = new GLTFLoader()
 
-// Faction PBR material palettes
+// Faction PBR material palettes with enhanced readability and edge contrast
 const WHITE_PALETTE = {
   stone: new THREE.MeshStandardMaterial({
-    color: 0xe8ddc5, // Warm ivory
-    roughness: 0.65,
-    metalness: 0.1,
+    color: 0xebe3d3, // Warm antique alabaster/ivory
+    roughness: 0.34,
+    metalness: 0.05,
   }),
   gold: new THREE.MeshStandardMaterial({
-    color: 0xb68a3e, // Brushed gold
-    roughness: 0.35,
-    metalness: 0.9,
+    color: 0xd9a637, // Polished warm gold
+    roughness: 0.24,
+    metalness: 0.92,
   }),
   bronze: new THREE.MeshStandardMaterial({
-    color: 0x82613d, // Aged bronze
-    roughness: 0.45,
-    metalness: 0.8,
+    color: 0x9e7542, // Polished bronze
+    roughness: 0.32,
+    metalness: 0.88,
   }),
   crimson: new THREE.MeshStandardMaterial({
-    color: 0x8d302b, // Royal crimson
-    roughness: 0.65,
-    metalness: 0.1,
+    color: 0xad2927, // Royal crimson
+    roughness: 0.70,
+    metalness: 0.05,
   }),
   saffron: new THREE.MeshStandardMaterial({
-    color: 0xc67e2e, // Infantry saffron
-    roughness: 0.7,
+    color: 0xd6842e, // Infantry saffron
+    roughness: 0.70,
     metalness: 0.05,
   }),
   forestGreen: new THREE.MeshStandardMaterial({
-    color: 0x3e5943, // Sage green
-    roughness: 0.7,
+    color: 0x476b4d, // Sage green
+    roughness: 0.70,
     metalness: 0.05,
   }),
   steel: new THREE.MeshStandardMaterial({
-    color: 0x89908b, // Polished steel blade
-    roughness: 0.25,
-    metalness: 0.95,
+    color: 0xbfc7d1, // Polished steel blade
+    roughness: 0.18,
+    metalness: 0.96,
   }),
 }
 
 const BLACK_PALETTE = {
   stone: new THREE.MeshStandardMaterial({
-    color: 0x261c14, // Dark basalt stone
-    roughness: 0.7,
-    metalness: 0.15,
+    color: 0x302a28, // Lustrous volcanic obsidian/basalt
+    roughness: 0.28,
+    metalness: 0.22,
   }),
   gold: new THREE.MeshStandardMaterial({
-    color: 0x82613d, // Aged bronze/brass
-    roughness: 0.4,
-    metalness: 0.85,
+    color: 0xd19940, // High-contrast antique brass/bronze edge trim
+    roughness: 0.25,
+    metalness: 0.88,
   }),
   bronze: new THREE.MeshStandardMaterial({
-    color: 0x3a3d40, // Blackened steel
-    roughness: 0.3,
+    color: 0x6b5138, // Warm dark bronze
+    roughness: 0.35,
     metalness: 0.85,
   }),
   crimson: new THREE.MeshStandardMaterial({
-    color: 0x5c1d18, // Deep maroon
-    roughness: 0.65,
-    metalness: 0.1,
+    color: 0x7a241f, // Deep maroon
+    roughness: 0.70,
+    metalness: 0.05,
   }),
   saffron: new THREE.MeshStandardMaterial({
-    color: 0x996515, // Dark ochre
-    roughness: 0.7,
-    metalness: 0.1,
+    color: 0xad701f, // Warm dark ochre
+    roughness: 0.70,
+    metalness: 0.05,
   }),
   forestGreen: new THREE.MeshStandardMaterial({
-    color: 0x2f4335, // Muted green
-    roughness: 0.7,
+    color: 0x38523f, // Deep spruce green
+    roughness: 0.70,
     metalness: 0.05,
   }),
   steel: new THREE.MeshStandardMaterial({
-    color: 0x4f5255, // Dark tempered steel
-    roughness: 0.3,
+    color: 0x7a8087, // Tempered steel
+    roughness: 0.22,
     metalness: 0.95,
   }),
 }

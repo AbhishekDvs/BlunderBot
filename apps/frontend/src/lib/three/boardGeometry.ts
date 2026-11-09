@@ -46,26 +46,26 @@ export class PhysicalBoard3D {
     const frameSize = 9.4
     const frameHeight = 0.35
 
-    // Outer slab
+    // Outer slab: Deep dark obsidian / roasted walnut
     const frameGeo = new THREE.BoxGeometry(frameSize, frameHeight, frameSize)
     const frameMat = new THREE.MeshStandardMaterial({
-      color: 0x1b140e, // Deep dark walnut / basalt
-      roughness: 0.65,
-      metalness: 0.15,
+      color: 0x18130e,
+      roughness: 0.55,
+      metalness: 0.2,
     })
     const frameMesh = new THREE.Mesh(frameGeo, frameMat)
     frameMesh.position.y = -frameHeight / 2
     frameMesh.receiveShadow = true
     this.group.add(frameMesh)
 
-    // Inner bevel lip (brushed bronze / brass inlay)
-    const innerLipSize = 8.3
+    // Inner bevel lip (brushed bronze / gold inlay)
+    const innerLipSize = 8.32
     const lipHeight = 0.04
     const lipGeo = new THREE.BoxGeometry(innerLipSize, lipHeight, innerLipSize)
     const lipMat = new THREE.MeshStandardMaterial({
-      color: 0x82613d, // Aged bronze / gold trim
-      roughness: 0.35,
-      metalness: 0.85,
+      color: 0x9b7846,
+      roughness: 0.28,
+      metalness: 0.88,
     })
     const lipMesh = new THREE.Mesh(lipGeo, lipMat)
     lipMesh.position.y = 0.01
@@ -79,21 +79,21 @@ export class PhysicalBoard3D {
   private buildSquareTiles() {
     const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
     const tileHeight = 0.05
-    const tileWidth = 0.98 // slight bevel gap
+    const tileWidth = 0.96 // crisp bevel gap revealing dark recessed frame
 
     const lightColor = new THREE.Color(this.preset.lightSquare)
     const darkColor = new THREE.Color(this.preset.darkSquare)
 
     const lightMat = new THREE.MeshStandardMaterial({
       color: lightColor,
-      roughness: 0.55,
-      metalness: 0.1,
+      roughness: 0.38,
+      metalness: 0.06,
     })
 
     const darkMat = new THREE.MeshStandardMaterial({
       color: darkColor,
-      roughness: 0.65,
-      metalness: 0.15,
+      roughness: 0.44,
+      metalness: 0.10,
     })
 
     const tileGeo = new THREE.BoxGeometry(tileWidth, tileHeight, tileWidth)

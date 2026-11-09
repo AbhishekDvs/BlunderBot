@@ -22,10 +22,10 @@ export class CameraController3D {
   private targetLookAt = new THREE.Vector3(0, 0, 0)
   private currentLookAt = new THREE.Vector3(0, 0, 0)
 
-  // Scene bounding box (board slab [-4.7, 4.7] + piece heights [0, 1.2])
+  // Scene bounding box (board slab [-4.7, 4.7] + piece heights [0, 2.0])
   private sceneBox = new THREE.Box3(
     new THREE.Vector3(-4.8, 0, -4.8),
-    new THREE.Vector3(4.8, 1.3, 4.8)
+    new THREE.Vector3(4.8, 2.0, 4.8)
   )
 
   // Orbit angle for ending cinematics
@@ -53,28 +53,30 @@ export class CameraController3D {
     const vFovRad = THREE.MathUtils.degToRad(this.camera.fov)
     const hFovRad = 2 * Math.atan(Math.tan(vFovRad / 2) * this.camera.aspect)
 
-    // Distance required to fit vertical extent (height + projected depth)
-    const fitHeightDist = (size.y * 0.5 + size.z * 0.5) / Math.tan(vFovRad / 2)
-    // Distance required to fit horizontal extent (width)
-    const fitWidthDist = (size.x * 0.5) / Math.tan(hFovRad / 2)
-
-    const distance = Math.max(fitHeightDist, fitWidthDist) * (1.0 + margin)
     const flipFactor = this.isFlipped ? -1 : 1
 
     let elevationRad: number
     let lookAtOffsetZ: number
+    let baseDistance: number
 
     switch (this.currentMode) {
       case 'cinematic':
         elevationRad = THREE.MathUtils.degToRad(32)
         lookAtOffsetZ = 0.3 * flipFactor
+        baseDistance = ((size.y * 0.5 + size.z * 0.5) / Math.tan(vFovRad / 2)) * (1.0 + margin)
         break
       case 'tactical':
       default:
-        elevationRad = THREE.MathUtils.degToRad(55)
+        // Precise tactical camera angle (y = 10.5, z = 7.8) -> elevation ~53.4 deg, distance ~13.08
+        elevationRad = Math.atan2(10.5, 7.8)
         lookAtOffsetZ = 0.0
+        baseDistance = 13.08 * (1.0 + margin * 0.1)
         break
     }
+
+    // Ensure horizontal extent fits on narrow/portrait screens (mobile responsiveness)
+    const fitWidthDist = (size.x * 0.5) / Math.tan(hFovRad / 2) * (1.0 + margin)
+    const distance = Math.max(baseDistance, fitWidthDist)
 
     this.targetPosition.set(
       center.x,
