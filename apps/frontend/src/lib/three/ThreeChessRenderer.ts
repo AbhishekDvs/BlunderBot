@@ -267,7 +267,13 @@ export class ThreeChessRenderer {
       return
     }
 
-    const duration = this.pacing === 'cinematic' ? 380 : 220
+    const classChar = pieceCode.slice(1).toUpperCase()
+    const isKnight = classChar === 'N'
+
+    // Play character movement animation
+    piece.animator?.playClip('move', true)
+
+    const duration = this.pacing === 'cinematic' ? (isKnight ? 620 : 500) : (isKnight ? 400 : 300)
     const startTime = performance.now()
 
     const step = () => {
@@ -275,15 +281,23 @@ export class ThreeChessRenderer {
       const t = Math.min(1.0, (now - startTime) / duration)
       const ease = 0.5 - Math.cos(t * Math.PI) / 2
 
-      piece!.group.position.lerpVectors(startPos, targetPos, ease)
+      piece!.group.position.x = THREE.MathUtils.lerp(startPos.x, targetPos.x, ease)
+      piece!.group.position.z = THREE.MathUtils.lerp(startPos.z, targetPos.z, ease)
 
-      // Slight hop arch
-      piece!.group.position.y = 0.06 + Math.sin(t * Math.PI) * 0.18
+      if (isKnight) {
+        // High cavalry leap over intervening pieces
+        piece!.group.position.y = Math.sin(t * Math.PI) * 0.42
+      } else {
+        // Natural footstep bounce synchronized with movement
+        piece!.group.position.y = Math.abs(Math.sin(t * Math.PI * 4)) * 0.025
+      }
 
       if (t < 1.0) {
         requestAnimationFrame(step)
       } else {
         piece!.group.position.copy(targetPos)
+        // Transition cleanly back to idle
+        piece!.animator?.playClip('idle', true)
         onComplete?.()
       }
     }
@@ -399,6 +413,11 @@ export class ThreeChessRenderer {
 
       // Update Camera transitions
       this.cameraCtrl.update(delta)
+
+      // Update 2.5D character piece animators (walking, breathing, combat)
+      for (const piece of this.pieceNodes.values()) {
+        piece.animator?.update(delta)
+      }
 
       // Update Two-Piece Encounter
       this.encounterDirector.update(now)

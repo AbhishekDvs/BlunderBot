@@ -366,10 +366,13 @@ def build_durg_armature(scene):
 def author_durg_animations(arm_obj):
     """Creates the standard suite of mechanical action clips."""
     arm_obj.animation_data_create()
+    for pb in arm_obj.pose.bones:
+        pb.rotation_mode = 'XYZ'
     pb = arm_obj.pose.bones
 
     # 1. Idle (1-96 frames = 4.0s @ 24fps)
     action_idle = bpy.data.actions.new('idle')
+    action_idle.use_fake_user = True
     arm_obj.animation_data.action = action_idle
     for f in [1, 48, 96]:
         chassis_bone = pb['chassis']
@@ -382,6 +385,7 @@ def author_durg_animations(arm_obj):
 
     # 2. Move (1-48 frames = 2.0s @ 24fps): wheels roll, chassis sways
     action_move = bpy.data.actions.new('move')
+    action_move.use_fake_user = True
     arm_obj.animation_data.action = action_move
     for f in [1, 12, 24, 36, 48]:
         rot_angle = -2 * math.pi * (f - 1) / 48

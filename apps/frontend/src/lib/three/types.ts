@@ -17,6 +17,19 @@ export interface SquareCoordinates {
   worldZ: number
 }
 
+export interface PieceAnimator {
+  currentClip: string
+  currentFrame: number
+  frameTime: number
+  loop: boolean
+  isFinished: boolean
+  onComplete?: (() => void) | undefined
+  updateUV: () => void
+  playClip: (clipName: string, loop?: boolean, onComplete?: () => void) => void
+  setFrame: (frameIndex: number) => void
+  update: (deltaSeconds: number) => void
+}
+
 export interface Piece3DNode {
   pieceCode: string // 'wP', 'bK', etc.
   square: string // 'e4'
@@ -25,10 +38,12 @@ export interface Piece3DNode {
   weaponNode?: THREE.Object3D
   shieldNode?: THREE.Object3D
   plinthNode?: THREE.Object3D
+  cardMesh?: THREE.Mesh
   initialScale: THREE.Vector3
   currentPosition: THREE.Vector3
   targetPosition: THREE.Vector3
   isAnimating: boolean
+  animator?: PieceAnimator
 }
 
 export interface CombatEncounterParams {

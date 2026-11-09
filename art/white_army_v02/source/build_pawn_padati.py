@@ -375,10 +375,13 @@ def bind_pawn_mesh_and_gear(arm_obj, body, gear_objs, spear_shaft, shield, turba
 def author_pawn_animations(arm_obj):
     """Authors the complete 10-clip standard animation set for Pawn."""
     arm_obj.animation_data_create()
+    for pb in arm_obj.pose.bones:
+        pb.rotation_mode = 'XYZ'
     pb = arm_obj.pose.bones
 
     # 1. Idle (1-96 frames = 4.0s @ 24fps): Combat ready breathing
     action_idle = bpy.data.actions.new('idle')
+    action_idle.use_fake_user = True
     arm_obj.animation_data.action = action_idle
     for f in [1, 48, 96]:
         pb['chest'].location = (0, 0, 0.004 * math.sin(f * math.pi / 24))
@@ -388,117 +391,152 @@ def author_pawn_animations(arm_obj):
         pb['hand.R'].rotation_euler = (0, 0.05 * math.cos(f * 0.1), 0)
         pb['hand.R'].keyframe_insert('rotation_euler', frame=f)
 
-    # 2. Move (1-48 frames = 2.0s @ 24fps): Infantry march
+    # 2. Move (1-48 frames = 2.0s @ 24fps): Expressive infantry march
+    # Complete stride cycle with alternating leg swings and arm counterbalances
     action_move = bpy.data.actions.new('move')
+    action_move.use_fake_user = True
     arm_obj.animation_data.action = action_move
-    for f in [1, 12, 24, 36, 48]:
+    for f in [1, 7, 13, 19, 25, 31, 37, 43, 49]:
         phase = (f - 1) * 2 * math.pi / 48
-        # Legs swing
-        pb['thigh.L'].rotation_euler = (0.35 * math.sin(phase), 0, 0)
-        pb['thigh.R'].rotation_euler = (-0.35 * math.sin(phase), 0, 0)
-        pb['shin.L'].rotation_euler = (max(0, -0.40 * math.sin(phase)), 0, 0)
-        pb['shin.R'].rotation_euler = (max(0, 0.40 * math.sin(phase)), 0, 0)
+        # Thighs: pronounced forward/backward swing
+        pb['thigh.L'].rotation_euler = (0.55 * math.sin(phase), 0, 0.04 * math.cos(phase))
+        pb['thigh.R'].rotation_euler = (-0.55 * math.sin(phase), 0, -0.04 * math.cos(phase))
+        # Shins: knee flexes backward on backstroke/lift, extends on plant
+        pb['shin.L'].rotation_euler = (max(0, -0.65 * math.sin(phase)), 0, 0)
+        pb['shin.R'].rotation_euler = (max(0, 0.65 * math.sin(phase)), 0, 0)
+        # Feet: articulate with ground contact
+        pb['foot.L'].rotation_euler = (-0.25 * math.sin(phase), 0, 0)
+        pb['foot.R'].rotation_euler = (0.25 * math.sin(phase), 0, 0)
+
         pb['thigh.L'].keyframe_insert('rotation_euler', frame=f)
         pb['thigh.R'].keyframe_insert('rotation_euler', frame=f)
         pb['shin.L'].keyframe_insert('rotation_euler', frame=f)
         pb['shin.R'].keyframe_insert('rotation_euler', frame=f)
-        # Arms swing with weapon
-        pb['upper_arm.R'].rotation_euler = (-0.25 * math.sin(phase), 0, 0)
-        pb['upper_arm.L'].rotation_euler = (0.25 * math.sin(phase), 0, 0)
+        pb['foot.L'].keyframe_insert('rotation_euler', frame=f)
+        pb['foot.R'].keyframe_insert('rotation_euler', frame=f)
+
+        # Arms: right arm swings spear forward and back in rhythm
+        pb['upper_arm.R'].rotation_euler = (-0.45 * math.sin(phase), 0.08, -0.10)
+        pb['forearm.R'].rotation_euler = (0.25 + 0.15 * math.cos(phase), 0, 0)
+        # Left arm: shield sways naturally with body motion
+        pb['upper_arm.L'].rotation_euler = (0.35 * math.sin(phase), -0.08, 0.20)
+        pb['forearm.L'].rotation_euler = (0.45 + 0.10 * math.sin(phase), 0, 0.30)
+
         pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=f)
+        pb['forearm.R'].keyframe_insert('rotation_euler', frame=f)
         pb['upper_arm.L'].keyframe_insert('rotation_euler', frame=f)
-        # Vertical stride bob
-        pb['pelvis'].location = (0, 0, 0.012 * math.sin(phase * 2))
+        pb['forearm.L'].keyframe_insert('rotation_euler', frame=f)
+
+        # Torso & Pelvis: vertical stride bounce and weight shift
+        pb['pelvis'].location = (0.012 * math.sin(phase), 0, 0.018 * abs(math.sin(phase * 2)))
+        pb['pelvis'].rotation_euler = (0.04 * math.cos(phase * 2), 0, 0.05 * math.sin(phase))
         pb['pelvis'].keyframe_insert('location', frame=f)
+        pb['pelvis'].keyframe_insert('rotation_euler', frame=f)
+
+        pb['chest'].rotation_euler = (0, 0, -0.05 * math.sin(phase))
+        pb['chest'].keyframe_insert('rotation_euler', frame=f)
 
     # 3. Attack Anticipation (1-24 frames): Draw back spear, angle shield
     action_anticipate = bpy.data.actions.new('attack_anticipation')
+    action_anticipate.use_fake_user = True
     arm_obj.animation_data.action = action_anticipate
     pb['upper_arm.R'].rotation_euler = (0, 0, 0)
     pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=1)
-    pb['upper_arm.R'].rotation_euler = (-0.45, 0.15, -0.20)
+    pb['upper_arm.R'].rotation_euler = (-0.65, 0.20, -0.25) # Spear drawn back
     pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=24)
 
     pb['forearm.L'].rotation_euler = (0, 0, 0)
     pb['forearm.L'].keyframe_insert('rotation_euler', frame=1)
-    pb['forearm.L'].rotation_euler = (0.35, -0.20, 0.40) # Shield ready
+    pb['forearm.L'].rotation_euler = (0.45, -0.25, 0.50) # Shield ready
     pb['forearm.L'].keyframe_insert('rotation_euler', frame=24)
-
-    # 4. Attack (1-36 frames): Forward spear lunge
-    action_attack = bpy.data.actions.new('attack')
-    arm_obj.animation_data.action = action_attack
-    pb['upper_arm.R'].rotation_euler = (-0.45, 0.15, -0.20)
-    pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=1)
-    pb['upper_arm.R'].rotation_euler = (0.65, -0.10, 0.10) # Thrust strike
-    pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=12)
-    pb['upper_arm.R'].rotation_euler = (0.30, 0, 0) # Hold follow-through
-    pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=36)
 
     pb['pelvis'].location = (0, 0, 0)
     pb['pelvis'].keyframe_insert('location', frame=1)
-    pb['pelvis'].location = (0, 0.08, -0.02) # Lunging forward
-    pb['pelvis'].keyframe_insert('location', frame=12)
+    pb['pelvis'].location = (0, -0.04, -0.02) # Sinks weight back
+    pb['pelvis'].keyframe_insert('location', frame=24)
+
+    # 4. Attack (1-36 frames): Forward spear lunge
+    action_attack = bpy.data.actions.new('attack')
+    action_attack.use_fake_user = True
+    arm_obj.animation_data.action = action_attack
+    pb['upper_arm.R'].rotation_euler = (-0.65, 0.20, -0.25)
+    pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=1)
+    pb['upper_arm.R'].rotation_euler = (0.85, -0.15, 0.15) # Decisive spear thrust
+    pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=14)
+    pb['upper_arm.R'].rotation_euler = (0.35, 0, 0) # Follow-through
+    pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=36)
+
+    pb['pelvis'].location = (0, -0.04, -0.02)
+    pb['pelvis'].keyframe_insert('location', frame=1)
+    pb['pelvis'].location = (0, 0.12, -0.03) # Forward lunge
+    pb['pelvis'].keyframe_insert('location', frame=14)
     pb['pelvis'].location = (0, 0, 0)
     pb['pelvis'].keyframe_insert('location', frame=36)
 
     # 5. Defend (1-36 frames): Raise dhal shield to ward off attack
     action_defend = bpy.data.actions.new('defend')
+    action_defend.use_fake_user = True
     arm_obj.animation_data.action = action_defend
     pb['upper_arm.L'].rotation_euler = (0, 0, 0)
     pb['upper_arm.L'].keyframe_insert('rotation_euler', frame=1)
-    pb['upper_arm.L'].rotation_euler = (0.55, 0.25, 0.45) # Shield up
+    pb['upper_arm.L'].rotation_euler = (0.65, 0.30, 0.55) # Shield up
     pb['upper_arm.L'].keyframe_insert('rotation_euler', frame=10)
-    pb['forearm.L'].rotation_euler = (0.75, 0, 0.50) # Brace shield
+    pb['forearm.L'].rotation_euler = (0.85, 0, 0.60) # Brace shield
     pb['forearm.L'].keyframe_insert('rotation_euler', frame=10)
 
     # 6. Hit (1-24 frames): Recoil from weapon impact
     action_hit = bpy.data.actions.new('hit')
+    action_hit.use_fake_user = True
     arm_obj.animation_data.action = action_hit
     pb['chest'].rotation_euler = (0, 0, 0)
     pb['chest'].keyframe_insert('rotation_euler', frame=1)
-    pb['chest'].rotation_euler = (-0.30, 0.15, -0.10) # Impact shudder
+    pb['chest'].rotation_euler = (-0.40, 0.20, -0.15) # Violent impact shudder
     pb['chest'].keyframe_insert('rotation_euler', frame=6)
     pb['chest'].rotation_euler = (0, 0, 0)
     pb['chest'].keyframe_insert('rotation_euler', frame=24)
 
     # 7. Stagger (1-36 frames): Stumble back
     action_stagger = bpy.data.actions.new('stagger')
+    action_stagger.use_fake_user = True
     arm_obj.animation_data.action = action_stagger
     pb['pelvis'].location = (0, 0, 0)
     pb['pelvis'].keyframe_insert('location', frame=1)
-    pb['pelvis'].location = (0, -0.10, -0.04) # Steps back
+    pb['pelvis'].location = (0, -0.14, -0.05) # Steps back
     pb['pelvis'].keyframe_insert('location', frame=14)
     pb['pelvis'].location = (0, 0, 0)
     pb['pelvis'].keyframe_insert('location', frame=36)
 
     # 8. Defeat (1-48 frames): Falls to knee, spear drops, base stays grounded
     action_defeat = bpy.data.actions.new('defeat')
+    action_defeat.use_fake_user = True
     arm_obj.animation_data.action = action_defeat
     pb['thigh.R'].rotation_euler = (0, 0, 0)
     pb['thigh.R'].keyframe_insert('rotation_euler', frame=1)
-    pb['thigh.R'].rotation_euler = (0.85, 0, 0) # Kneels down
+    pb['thigh.R'].rotation_euler = (0.95, 0, 0) # Kneels down
     pb['thigh.R'].keyframe_insert('rotation_euler', frame=24)
 
     pb['pelvis'].location = (0, 0, 0)
     pb['pelvis'].keyframe_insert('location', frame=1)
-    pb['pelvis'].location = (0, 0, -0.14)
+    pb['pelvis'].location = (0, 0, -0.16)
     pb['pelvis'].keyframe_insert('location', frame=24)
 
     pb['upper_arm.R'].rotation_euler = (0, 0, 0)
     pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=1)
-    pb['upper_arm.R'].rotation_euler = (0.75, 0, -0.30) # Spear tips to ground
+    pb['upper_arm.R'].rotation_euler = (0.85, 0, -0.35) # Spear tips to ground
     pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=28)
 
     # 9. Victory (1-48 frames): Spear thrust to heavens in victory salute
     action_victory = bpy.data.actions.new('victory')
+    action_victory.use_fake_user = True
     arm_obj.animation_data.action = action_victory
     pb['upper_arm.R'].rotation_euler = (0, 0, 0)
     pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=1)
-    pb['upper_arm.R'].rotation_euler = (-1.20, 0, 0.25) # Spear raised high
+    pb['upper_arm.R'].rotation_euler = (-1.35, 0, 0.30) # Spear raised high
     pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=20)
 
     # 10. Draw (1-36 frames): Attention salute
     action_draw = bpy.data.actions.new('draw')
+    action_draw.use_fake_user = True
     arm_obj.animation_data.action = action_draw
     pb['chest'].location = (0, 0, 0)
     pb['chest'].keyframe_insert('location', frame=1)

@@ -9,7 +9,19 @@
 
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import type { Piece3DNode } from './types.ts'
+import type { Piece3DNode, PieceAnimator } from './types.ts'
+
+export const CLIPS_DEF: Record<string, { start: number; count: number; fps: number; loop: boolean; contactFrame?: number }> = {
+  idle: { start: 0, count: 8, fps: 10, loop: true },
+  move: { start: 8, count: 12, fps: 14, loop: true },
+  attack_anticipation: { start: 20, count: 4, fps: 12, loop: false },
+  attack: { start: 24, count: 8, fps: 16, loop: false, contactFrame: 4 },
+  defend: { start: 32, count: 6, fps: 12, loop: false },
+  hit: { start: 38, count: 4, fps: 16, loop: false },
+  stagger: { start: 42, count: 6, fps: 12, loop: false },
+  defeat: { start: 48, count: 8, fps: 12, loop: false },
+  victory: { start: 56, count: 8, fps: 12, loop: false },
+}
 
 // Cache for loaded GLB templates
 const glbCache = new Map<string, THREE.Group>()
@@ -110,8 +122,8 @@ export const ASSET_MANIFESTS: Record<string, AssetManifest> = {
     name: 'Stylized 2.5D Indian War Chess',
     label: '✨ 2.5D Stylized (Recommended)',
     isExperimental: false,
-    description: 'Polished 2.5D Indian royal & Asura armies with rich silhouettes, Warcraft III-inspired combat, and sub-second readability.',
-    getModelPath: (code) => `/pieces/2p5d-indian/${code}.png`,
+    description: 'Living 2.5D ancient Indian war chess units with frame-by-frame animation, Warcraft RTS combat, and sub-second readability.',
+    getModelPath: (code) => `/pieces/2p5d-animated/${code}_atlas.webp`,
   },
   'astra-dev-v02': {
     id: 'astra-dev-v02',
@@ -198,6 +210,7 @@ export class PieceBuilder3D {
                 tex.minFilter = THREE.LinearMipmapLinearFilter
                 tex.magFilter = THREE.LinearFilter
                 tex.generateMipmaps = true
+                this.textureCache.set(`atlas_${code}`, tex)
                 this.textureCache.set(code, tex)
                 resolve()
               },
@@ -231,23 +244,30 @@ export class PieceBuilder3D {
     )
   }
 
-  private static get2p5dTexture(pieceCode: string): THREE.Texture {
-    let tex = this.textureCache.get(pieceCode)
-    if (!tex) {
-      tex = this.textureLoader.load(`/pieces/2p5d-indian/${pieceCode}.png`)
-      tex.colorSpace = THREE.SRGBColorSpace
-      tex.minFilter = THREE.LinearMipmapLinearFilter
-      tex.magFilter = THREE.LinearFilter
-      tex.generateMipmaps = true
-      this.textureCache.set(pieceCode, tex)
+  private static get2p5dAnimatedTexture(pieceCode: string): THREE.Texture {
+    if (typeof document === 'undefined') {
+      return new THREE.Texture()
     }
+    let masterTex = this.textureCache.get(`atlas_${pieceCode}`)
+    if (!masterTex) {
+      masterTex = this.textureLoader.load(`/pieces/2p5d-animated/${pieceCode}_atlas.webp`)
+      masterTex.colorSpace = THREE.SRGBColorSpace
+      masterTex.minFilter = THREE.LinearMipmapLinearFilter
+      masterTex.magFilter = THREE.LinearFilter
+      masterTex.generateMipmaps = true
+      this.textureCache.set(`atlas_${pieceCode}`, masterTex)
+    }
+    const tex = masterTex.clone()
+    tex.repeat.set(1 / 8, 1 / 8)
+    tex.offset.set(0, 7 / 8) // Start at idle frame 0
+    tex.needsUpdate = true
     return tex
   }
 
   /**
    * Constructs an authoritative 2.5D stylized Indian war chess miniature:
-   * Upright card with high-res painterly illustration, soft contact plinth,
-   * gold fillet ring, and weapon/contact socket anchors for Warcraft III combat.
+   * Upright card with animated 8x8 sprite atlas texture (Warcraft RTS inspired),
+   * soft contact plinth, gold fillet ring, and weapon/contact socket anchors.
    */
   private static build2p5dPiece(
     pieceCode: string,
@@ -259,6 +279,8 @@ export class PieceBuilder3D {
     weaponNode: THREE.Object3D
     shieldNode: THREE.Object3D
     plinthNode: THREE.Object3D
+    cardMesh: THREE.Mesh
+    animator: PieceAnimator
   } {
     const group = new THREE.Group()
     group.name = `Miniature_2p5D_${pieceCode}_${square}`
@@ -293,8 +315,8 @@ export class PieceBuilder3D {
     rimMesh.position.y = 0.04
     group.add(rimMesh)
 
-    // 4. Upright 2.5D Stylized Character Card Mesh
-    const texture = this.get2p5dTexture(pieceCode)
+    // 4. Upright 2.5D Animated Character Card Mesh with UV transform animator
+    const texture = this.get2p5dAnimatedTexture(pieceCode)
     const cardGeo = new THREE.PlaneGeometry(dim.width, dim.height)
     const cardMat = new THREE.MeshStandardMaterial({
       map: texture,
@@ -310,9 +332,66 @@ export class PieceBuilder3D {
     cardMesh.castShadow = true
     cardMesh.receiveShadow = false
     cardMesh.position.set(0, dim.yOffset, 0)
-    // Tilted slightly back (-0.32 rad) to perpendicularly face 67 deg tactical camera
-    cardMesh.rotation.x = -0.32
+    // Tilted backwards (-0.58 rad = ~33 deg) to perpendicularly face 48 deg oblique tactical camera
+    cardMesh.rotation.x = -0.58
     group.add(cardMesh)
+
+    // Frame-by-Frame Animator Engine
+    const animator: PieceAnimator = {
+      currentClip: 'idle',
+      currentFrame: 0,
+      frameTime: 0,
+      loop: true,
+      isFinished: false,
+      playClip(clipName: string, loop = true, onComplete?: () => void) {
+        this.currentClip = clipName
+        this.currentFrame = 0
+        this.frameTime = 0
+        this.loop = loop
+        this.isFinished = false
+        this.updateUV()
+        if (onComplete) {
+          this.onComplete = onComplete
+        }
+      },
+      setFrame(frameIndex: number) {
+        this.currentFrame = frameIndex
+        this.updateUV()
+      },
+      updateUV() {
+        const clipDef = CLIPS_DEF[this.currentClip] || CLIPS_DEF.idle
+        const localFrame = this.currentFrame % clipDef.count
+        const atlasIndex = clipDef.start + localFrame
+        const col = atlasIndex % 8
+        const row = Math.floor(atlasIndex / 8)
+        texture.offset.x = col / 8
+        texture.offset.y = (7 - row) / 8
+      },
+      update(deltaSeconds: number) {
+        if (this.isFinished) return
+        const clipDef = CLIPS_DEF[this.currentClip] || CLIPS_DEF.idle
+        this.frameTime += deltaSeconds
+        const fps = clipDef.fps || 12
+        const frameDuration = 1 / fps
+        if (this.frameTime >= frameDuration) {
+          this.frameTime -= frameDuration
+          this.currentFrame++
+          if (this.currentFrame >= clipDef.count) {
+            if (this.loop) {
+              this.currentFrame = 0
+            } else {
+              this.currentFrame = clipDef.count - 1
+              this.isFinished = true
+              if (this.onComplete) {
+                this.onComplete()
+                this.onComplete = undefined
+              }
+            }
+          }
+          this.updateUV()
+        }
+      },
+    }
 
     // 5. Authored Socket Anchors for RTS Combat Director
     const weaponSocket = new THREE.Object3D()
@@ -356,6 +435,8 @@ export class PieceBuilder3D {
       weaponNode: weaponSocket,
       shieldNode: shieldSocket,
       plinthNode: plinthMesh,
+      cardMesh,
+      animator,
     }
   }
 
@@ -375,6 +456,8 @@ export class PieceBuilder3D {
     let weaponNode: THREE.Object3D | undefined
     let shieldNode: THREE.Object3D | undefined
     let plinthNode: THREE.Object3D | undefined
+    let cardMesh: THREE.Mesh | undefined
+    let animator: PieceAnimator | undefined
 
     if (activeManifest.id === '2p5d-stylized') {
       const model = this.build2p5dPiece(pieceCode, square, pal)
@@ -383,6 +466,8 @@ export class PieceBuilder3D {
       weaponNode = model.weaponNode
       shieldNode = model.shieldNode
       plinthNode = model.plinthNode
+      cardMesh = model.cardMesh
+      animator = model.animator
     } else {
       // Check if GLB is cached by manifest key or legacy key
       const cacheKey = `${activeManifest.id}:${pieceCode}`
@@ -460,6 +545,8 @@ export class PieceBuilder3D {
       weaponNode,
       shieldNode,
       plinthNode,
+      cardMesh,
+      animator,
       initialScale: new THREE.Vector3(1, 1, 1),
       currentPosition: new THREE.Vector3(),
       targetPosition: new THREE.Vector3(),

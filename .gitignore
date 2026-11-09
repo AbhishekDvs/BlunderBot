@@ -35,6 +35,17 @@ logs
 coverage/
 *.lcov
 
+# Blender backups and autosaves
+*.blend1
+*.blend2
+*.blend@
+
+# Test & Playwright artifacts
+test-results/
+playwright-report/
+*.webm
+*.mp4
+
 # Python (if Stockfish scripts/tools used)
 __pycache__/
 *.py[cod]

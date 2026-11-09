@@ -387,10 +387,13 @@ def bind_acharya_mesh_and_vestments(arm_obj, body, gear_objs, staff_root, shawl,
 def author_acharya_animations(arm_obj):
     """Authors the complete 10-clip standard animation set for Bishop."""
     arm_obj.animation_data_create()
+    for pb in arm_obj.pose.bones:
+        pb.rotation_mode = 'XYZ'
     pb = arm_obj.pose.bones
 
     # 1. Idle (1-96 frames = 4.0s @ 24fps): Contemplative monk posture, breathing, staff grounded
     action_idle = bpy.data.actions.new('idle')
+    action_idle.use_fake_user = True
     arm_obj.animation_data.action = action_idle
     for f in [1, 48, 96]:
         pb['chest'].location = (0, 0, 0.004 * math.sin(f * math.pi / 24))
@@ -400,27 +403,29 @@ def author_acharya_animations(arm_obj):
 
     # 2. Move (1-48 frames = 2.0s @ 24fps): Stately diagonal stride with staff pacing
     action_move = bpy.data.actions.new('move')
+    action_move.use_fake_user = True
     arm_obj.animation_data.action = action_move
-    for f in [1, 12, 24, 36, 48]:
+    for f in [1, 7, 13, 19, 25, 31, 37, 43, 49]:
         phase = (f - 1) * 2 * math.pi / 48
-        pb['thigh.L'].rotation_euler = (0.28 * math.sin(phase), 0, 0)
-        pb['thigh.R'].rotation_euler = (-0.28 * math.sin(phase), 0, 0)
-        pb['shin.L'].rotation_euler = (max(0, -0.32 * math.sin(phase)), 0, 0)
-        pb['shin.R'].rotation_euler = (max(0, 0.32 * math.sin(phase)), 0, 0)
+        pb['thigh.L'].rotation_euler = (0.42 * math.sin(phase), 0, 0)
+        pb['thigh.R'].rotation_euler = (-0.42 * math.sin(phase), 0, 0)
+        pb['shin.L'].rotation_euler = (max(0, -0.48 * math.sin(phase)), 0, 0)
+        pb['shin.R'].rotation_euler = (max(0, 0.48 * math.sin(phase)), 0, 0)
         pb['thigh.L'].keyframe_insert('rotation_euler', frame=f)
         pb['thigh.R'].keyframe_insert('rotation_euler', frame=f)
         pb['shin.L'].keyframe_insert('rotation_euler', frame=f)
         pb['shin.R'].keyframe_insert('rotation_euler', frame=f)
 
         # Staff steps with right hand
-        pb['upper_arm.R'].rotation_euler = (0.15 * math.cos(phase), 0, 0)
+        pb['upper_arm.R'].rotation_euler = (0.28 * math.cos(phase), 0, 0)
         pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=f)
 
-        pb['pelvis'].location = (0, 0, 0.008 * math.sin(phase * 2))
+        pb['pelvis'].location = (0, 0, 0.012 * math.sin(phase * 2))
         pb['pelvis'].keyframe_insert('location', frame=f)
 
     # 3. Attack Anticipation (1-24 frames): Raises lotus staff overhead
     action_anticipate = bpy.data.actions.new('attack_anticipation')
+    action_anticipate.use_fake_user = True
     arm_obj.animation_data.action = action_anticipate
     pb['upper_arm.R'].rotation_euler = (0, 0, 0)
     pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=1)
@@ -429,10 +434,11 @@ def author_acharya_animations(arm_obj):
 
     # 4. Attack (1-36 frames): Sweeping staff strike forward
     action_attack = bpy.data.actions.new('attack')
+    action_attack.use_fake_user = True
     arm_obj.animation_data.action = action_attack
     pb['upper_arm.R'].rotation_euler = (-0.85, 0.20, -0.30)
     pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=1)
-    pb['upper_arm.R'].rotation_euler = (0.65, -0.15, 0.15) # Thrusting forward
+    pb['upper_arm.R'].rotation_euler = (0.75, -0.15, 0.15) # Thrusting forward
     pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=12)
     pb['upper_arm.R'].rotation_euler = (0.35, 0, 0)
     pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=36)
@@ -446,56 +452,60 @@ def author_acharya_animations(arm_obj):
 
     # 5. Defend (1-36 frames): REPAIRED DEFENSE - Firm two-handed staff ward, braced center of gravity
     action_defend = bpy.data.actions.new('defend')
+    action_defend.use_fake_user = True
     arm_obj.animation_data.action = action_defend
     # Angles staff across chest at 45 degrees
     pb['upper_arm.R'].rotation_euler = (0, 0, 0)
     pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=1)
-    pb['upper_arm.R'].rotation_euler = (0.50, 0.35, 0.40) # Raises right hand
+    pb['upper_arm.R'].rotation_euler = (0.60, 0.40, 0.45) # Raises right hand
     pb['upper_arm.R'].keyframe_insert('rotation_euler', frame=12)
 
     pb['upper_arm.L'].rotation_euler = (0, 0, 0)
     pb['upper_arm.L'].keyframe_insert('rotation_euler', frame=1)
-    pb['upper_arm.L'].rotation_euler = (0.65, -0.25, -0.35) # Left hand braces staff
+    pb['upper_arm.L'].rotation_euler = (0.75, -0.30, -0.40) # Left hand braces staff
     pb['upper_arm.L'].keyframe_insert('rotation_euler', frame=12)
 
     pb['pelvis'].location = (0, 0, 0)
     pb['pelvis'].keyframe_insert('location', frame=1)
-    pb['pelvis'].location = (0, -0.04, -0.03) # Sinks into stance
+    pb['pelvis'].location = (0, -0.06, -0.04) # Sinks into stance
     pb['pelvis'].keyframe_insert('location', frame=12)
     pb['pelvis'].location = (0, 0, 0)
     pb['pelvis'].keyframe_insert('location', frame=36)
 
     # 6. Hit (1-24 frames): Absorbs impact through staff
     action_hit = bpy.data.actions.new('hit')
+    action_hit.use_fake_user = True
     arm_obj.animation_data.action = action_hit
     pb['chest'].rotation_euler = (0, 0, 0)
     pb['chest'].keyframe_insert('rotation_euler', frame=1)
-    pb['chest'].rotation_euler = (-0.24, 0.10, -0.06)
+    pb['chest'].rotation_euler = (-0.35, 0.15, -0.10)
     pb['chest'].keyframe_insert('rotation_euler', frame=6)
     pb['chest'].rotation_euler = (0, 0, 0)
     pb['chest'].keyframe_insert('rotation_euler', frame=24)
 
     # 7. Stagger (1-36 frames): Recoil step back
     action_stagger = bpy.data.actions.new('stagger')
+    action_stagger.use_fake_user = True
     arm_obj.animation_data.action = action_stagger
     pb['pelvis'].location = (0, 0, 0)
     pb['pelvis'].keyframe_insert('location', frame=1)
-    pb['pelvis'].location = (0, -0.09, -0.03)
+    pb['pelvis'].location = (0, -0.12, -0.04)
     pb['pelvis'].keyframe_insert('location', frame=12)
     pb['pelvis'].location = (0, 0, 0)
     pb['pelvis'].keyframe_insert('location', frame=36)
 
     # 8. Defeat (1-48 frames): Concession: falls to knee, staff tips down, base grounded
     action_defeat = bpy.data.actions.new('defeat')
+    action_defeat.use_fake_user = True
     arm_obj.animation_data.action = action_defeat
     pb['thigh.R'].rotation_euler = (0, 0, 0)
     pb['thigh.R'].keyframe_insert('rotation_euler', frame=1)
-    pb['thigh.R'].rotation_euler = (0.75, 0, 0) # Kneels
+    pb['thigh.R'].rotation_euler = (0.85, 0, 0) # Kneels
     pb['thigh.R'].keyframe_insert('rotation_euler', frame=24)
 
     pb['pelvis'].location = (0, 0, 0)
     pb['pelvis'].keyframe_insert('location', frame=1)
-    pb['pelvis'].location = (0, 0, -0.12)
+    pb['pelvis'].location = (0, 0, -0.14)
     pb['pelvis'].keyframe_insert('location', frame=24)
 
     pb['upper_arm.R'].rotation_euler = (0, 0, 0)

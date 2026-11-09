@@ -392,10 +392,13 @@ def bind_raja_mesh_and_regalia(arm_obj, body, gear_objs, blade, cape, c_t1, cuir
 def author_raja_animations(arm_obj):
     """Authors the complete 10-clip standard animation set for King."""
     arm_obj.animation_data_create()
+    for pb in arm_obj.pose.bones:
+        pb.rotation_mode = 'XYZ'
     pb = arm_obj.pose.bones
 
     # 1. Idle (1-96 frames = 4.0s @ 24fps): Regal breathing, hands resting on pommel
     action_idle = bpy.data.actions.new('idle')
+    action_idle.use_fake_user = True
     arm_obj.animation_data.action = action_idle
     for f in [1, 48, 96]:
         pb['chest'].location = (0, 0, 0.005 * math.sin(f * math.pi / 24))
@@ -405,19 +408,20 @@ def author_raja_animations(arm_obj):
 
     # 2. Move (1-48 frames = 2.0s @ 24fps): Stately measured royal advance
     action_move = bpy.data.actions.new('move')
+    action_move.use_fake_user = True
     arm_obj.animation_data.action = action_move
-    for f in [1, 12, 24, 36, 48]:
+    for f in [1, 7, 13, 19, 25, 31, 37, 43, 49]:
         phase = (f - 1) * 2 * math.pi / 48
-        pb['thigh.L'].rotation_euler = (0.28 * math.sin(phase), 0, 0)
-        pb['thigh.R'].rotation_euler = (-0.28 * math.sin(phase), 0, 0)
-        pb['shin.L'].rotation_euler = (max(0, -0.32 * math.sin(phase)), 0, 0)
-        pb['shin.R'].rotation_euler = (max(0, 0.32 * math.sin(phase)), 0, 0)
+        pb['thigh.L'].rotation_euler = (0.38 * math.sin(phase), 0, 0)
+        pb['thigh.R'].rotation_euler = (-0.38 * math.sin(phase), 0, 0)
+        pb['shin.L'].rotation_euler = (max(0, -0.42 * math.sin(phase)), 0, 0)
+        pb['shin.R'].rotation_euler = (max(0, 0.42 * math.sin(phase)), 0, 0)
         pb['thigh.L'].keyframe_insert('rotation_euler', frame=f)
         pb['thigh.R'].keyframe_insert('rotation_euler', frame=f)
         pb['shin.L'].keyframe_insert('rotation_euler', frame=f)
         pb['shin.R'].keyframe_insert('rotation_euler', frame=f)
 
-        pb['pelvis'].location = (0, 0, 0.008 * math.sin(phase * 2))
+        pb['pelvis'].location = (0, 0, 0.010 * math.sin(phase * 2))
         pb['pelvis'].keyframe_insert('location', frame=f)
 
     # 3. Attack Anticipation (1-24 frames): Raises Khandā sword overhead with two hands

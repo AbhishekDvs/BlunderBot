@@ -188,6 +188,10 @@ export class EncounterDirector3D {
     this.hasTriggeredImpact = false
     this.isActive = true
     this.currentPhase = 'anticipation'
+
+    // Trigger authentic character anticipation animations
+    attacker.animator?.playClip('attack_anticipation', false)
+    defender.animator?.playClip('defend', false)
   }
 
   /**
@@ -257,7 +261,10 @@ export class EncounterDirector3D {
     }
     // 2. Phase: Approach & Defensive Reaction (0.22 -> 0.54)
     else if (progress < 0.54) {
-      this.currentPhase = 'approach'
+      if (this.currentPhase !== 'approach') {
+        this.currentPhase = 'approach'
+        this.attackerNode.animator?.playClip('move', true)
+      }
       const t = (progress - 0.22) / 0.32
 
       // Attacker translates forward towards exact contact position
@@ -358,6 +365,10 @@ export class EncounterDirector3D {
       this.hasTriggeredImpact = true
       this.currentPhase = 'impact'
 
+      // Trigger character attack and hit reaction clips
+      this.attackerNode.animator?.playClip('attack', false)
+      this.defenderNode.animator?.playClip('hit', false)
+
       // White hit flash on defender card (Warcraft III RTS Impact)
       const defCard = this.defenderNode.group.getObjectByName(`Card_${this.defenderNode.pieceCode}`) as THREE.Mesh
       if (defCard && (defCard.material as THREE.MeshStandardMaterial).isMeshStandardMaterial) {
@@ -385,7 +396,12 @@ export class EncounterDirector3D {
     }
     // 4. Phase: Physical Recoil & Structural Shell Fracture (0.54 -> 0.80)
     else if (progress < 0.80) {
-      this.currentPhase = 'stagger_fracture'
+      if (this.currentPhase !== 'stagger_fracture') {
+        this.currentPhase = 'stagger_fracture'
+        this.defenderNode.animator?.playClip('stagger', false, () => {
+          this.defenderNode?.animator?.playClip('defeat', false)
+        })
+      }
       const t = (progress - 0.54) / 0.26
 
       if (this.attackerNode.group.name.includes('2p5D')) {
@@ -452,7 +468,10 @@ export class EncounterDirector3D {
     }
     // 5. Phase: Settling & Occupation (0.80 -> 1.0)
     else {
-      this.currentPhase = 'settling'
+      if (this.currentPhase !== 'settling') {
+        this.currentPhase = 'settling'
+        this.attackerNode.animator?.playClip('idle', true)
+      }
       const t = (progress - 0.80) / 0.20
 
       // Defeated upper body is dismantled, plinth remains grounded on square
@@ -512,6 +531,7 @@ export class EncounterDirector3D {
       if (blLower) blLower.rotation.x = 0
       if (brUpper) brUpper.rotation.x = 0
       if (brLower) brLower.rotation.x = 0
+      this.attackerNode.animator?.playClip('idle', true)
       this.attackerNode.isAnimating = false
     }
 

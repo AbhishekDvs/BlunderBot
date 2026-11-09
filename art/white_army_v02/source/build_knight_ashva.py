@@ -581,10 +581,13 @@ def bind_ashva_components(arm_obj, body_obj, head_obj, leg_objs, rider_objs, lan
 def author_ashva_animations(arm_obj):
     """Authors the complete 10-clip standard animation set for Knight."""
     arm_obj.animation_data_create()
+    for pb in arm_obj.pose.bones:
+        pb.rotation_mode = 'XYZ'
     pb = arm_obj.pose.bones
 
     # 1. Idle (1-96 frames = 4.0s @ 24fps): Horse breathing, head arch, tail swish
     action_idle = bpy.data.actions.new('idle')
+    action_idle.use_fake_user = True
     arm_obj.animation_data.action = action_idle
     for f in [1, 48, 96]:
         pb['horse_spine'].location = (0, 0, 0.005 * math.sin(f * math.pi / 24))
@@ -594,50 +597,55 @@ def author_ashva_animations(arm_obj):
 
     # 2. Move (1-48 frames = 2.0s @ 24fps): Articulated 4-leg canter/trot gait
     action_move = bpy.data.actions.new('move')
+    action_move.use_fake_user = True
     arm_obj.animation_data.action = action_move
-    for f in [1, 12, 24, 36, 48]:
+    for f in [1, 7, 13, 19, 25, 31, 37, 43, 49]:
         phase = (f - 1) * 2 * math.pi / 24 # 2 full trot cycles
         # Diagonal pairs trot (FL + BR vs FR + BL)
-        pb['leg_FL_upper'].rotation_euler = (0.40 * math.sin(phase), 0, 0)
-        pb['leg_FL_lower'].rotation_euler = (max(0, 0.45 * math.sin(phase)), 0, 0) # Knee flexes back
-        pb['leg_BR_upper'].rotation_euler = (0.35 * math.sin(phase), 0, 0)
-        pb['leg_BR_lower'].rotation_euler = (max(0, -0.40 * math.sin(phase)), 0, 0)
+        pb['leg_FL_upper'].rotation_euler = (0.45 * math.sin(phase), 0, 0)
+        pb['leg_FL_lower'].rotation_euler = (max(0, 0.55 * math.sin(phase)), 0, 0) # Knee flexes back
+        pb['leg_BR_upper'].rotation_euler = (0.40 * math.sin(phase), 0, 0)
+        pb['leg_BR_lower'].rotation_euler = (max(0, -0.45 * math.sin(phase)), 0, 0)
 
-        pb['leg_FR_upper'].rotation_euler = (-0.40 * math.sin(phase), 0, 0)
-        pb['leg_FR_lower'].rotation_euler = (max(0, -0.45 * math.sin(phase)), 0, 0)
-        pb['leg_BL_upper'].rotation_euler = (-0.35 * math.sin(phase), 0, 0)
-        pb['leg_BL_lower'].rotation_euler = (max(0, 0.40 * math.sin(phase)), 0, 0)
+        pb['leg_FR_upper'].rotation_euler = (-0.45 * math.sin(phase), 0, 0)
+        pb['leg_FR_lower'].rotation_euler = (max(0, -0.55 * math.sin(phase)), 0, 0)
+        pb['leg_BL_upper'].rotation_euler = (-0.40 * math.sin(phase), 0, 0)
+        pb['leg_BL_lower'].rotation_euler = (max(0, 0.45 * math.sin(phase)), 0, 0)
 
         for leg in ['leg_FL_upper', 'leg_FL_lower', 'leg_BR_upper', 'leg_BR_lower',
                     'leg_FR_upper', 'leg_FR_lower', 'leg_BL_upper', 'leg_BL_lower']:
             pb[leg].keyframe_insert('rotation_euler', frame=f)
 
-        # Gallop bob
-        pb['horse_spine'].location = (0, 0, 0.018 * abs(math.sin(phase)))
+        # Gallop bob & rider swaying in saddle
+        pb['horse_spine'].location = (0, 0, 0.024 * abs(math.sin(phase)))
         pb['horse_spine'].keyframe_insert('location', frame=f)
+        pb['rider_torso'].rotation_euler = (0.08 * math.sin(phase), 0, 0)
+        pb['rider_torso'].keyframe_insert('rotation_euler', frame=f)
 
     # 3. Attack Anticipation (1-24 frames): Horse rears back onto hind legs
     action_anticipate = bpy.data.actions.new('attack_anticipation')
+    action_anticipate.use_fake_user = True
     arm_obj.animation_data.action = action_anticipate
     pb['horse_spine'].rotation_euler = (0, 0, 0)
     pb['horse_spine'].keyframe_insert('rotation_euler', frame=1)
-    pb['horse_spine'].rotation_euler = (-0.45, 0, 0) # Rearing up
-    pb['horse_spine'].location = (0, -0.06, 0.08)
+    pb['horse_spine'].rotation_euler = (-0.55, 0, 0) # High rear
+    pb['horse_spine'].location = (0, -0.08, 0.10)
     pb['horse_spine'].keyframe_insert('rotation_euler', frame=24)
     pb['horse_spine'].keyframe_insert('location', frame=24)
 
-    pb['leg_FL_upper'].rotation_euler = (0.65, 0, 0.20) # Front legs strike air
-    pb['leg_FR_upper'].rotation_euler = (0.55, 0, -0.20)
+    pb['leg_FL_upper'].rotation_euler = (0.75, 0, 0.25) # Front legs paw air
+    pb['leg_FR_upper'].rotation_euler = (0.65, 0, -0.25)
     pb['leg_FL_upper'].keyframe_insert('rotation_euler', frame=24)
     pb['leg_FR_upper'].keyframe_insert('rotation_euler', frame=24)
 
     # 4. Attack (1-36 frames): Crashes forward into couched lance strike
     action_attack = bpy.data.actions.new('attack')
+    action_attack.use_fake_user = True
     arm_obj.animation_data.action = action_attack
-    pb['horse_spine'].rotation_euler = (-0.45, 0, 0)
+    pb['horse_spine'].rotation_euler = (-0.55, 0, 0)
     pb['horse_spine'].keyframe_insert('rotation_euler', frame=1)
-    pb['horse_spine'].rotation_euler = (0.25, 0, 0) # Lunge down
-    pb['horse_spine'].location = (0, 0.12, -0.03)
+    pb['horse_spine'].rotation_euler = (0.30, 0, 0) # Lunge down
+    pb['horse_spine'].location = (0, 0.14, -0.03)
     pb['horse_spine'].keyframe_insert('rotation_euler', frame=14)
     pb['horse_spine'].keyframe_insert('location', frame=14)
     pb['horse_spine'].rotation_euler = (0, 0, 0)
@@ -647,11 +655,12 @@ def author_ashva_animations(arm_obj):
 
     pb['rider_arm_R'].rotation_euler = (0, 0, 0)
     pb['rider_arm_R'].keyframe_insert('rotation_euler', frame=1)
-    pb['rider_arm_R'].rotation_euler = (0.45, 0, 0) # Lance couched forward
+    pb['rider_arm_R'].rotation_euler = (0.55, 0, 0) # Couched lance
     pb['rider_arm_R'].keyframe_insert('rotation_euler', frame=14)
 
     # 5. Defend (1-36 frames): Horse turns armored shoulder, rider shields
     action_defend = bpy.data.actions.new('defend')
+    action_defend.use_fake_user = True
     arm_obj.animation_data.action = action_defend
     pb['horse_spine'].rotation_euler = (0, 0, 0)
     pb['horse_spine'].keyframe_insert('rotation_euler', frame=1)
@@ -660,53 +669,58 @@ def author_ashva_animations(arm_obj):
 
     # 6. Hit (1-24 frames): Recoil shudder
     action_hit = bpy.data.actions.new('hit')
+    action_hit.use_fake_user = True
     arm_obj.animation_data.action = action_hit
     pb['horse_head'].rotation_euler = (0, 0, 0)
     pb['horse_head'].keyframe_insert('rotation_euler', frame=1)
-    pb['horse_head'].rotation_euler = (-0.35, 0.15, 0) # Jerks head back
+    pb['horse_head'].rotation_euler = (-0.45, 0.20, 0) # Jerks head back
     pb['horse_head'].keyframe_insert('rotation_euler', frame=6)
     pb['horse_head'].rotation_euler = (0, 0, 0)
     pb['horse_head'].keyframe_insert('rotation_euler', frame=24)
 
     # 7. Stagger (1-36 frames): Sideways stumble
     action_stagger = bpy.data.actions.new('stagger')
+    action_stagger.use_fake_user = True
     arm_obj.animation_data.action = action_stagger
     pb['horse_spine'].location = (0, 0, 0)
     pb['horse_spine'].keyframe_insert('location', frame=1)
-    pb['horse_spine'].location = (-0.08, -0.06, -0.03)
+    pb['horse_spine'].location = (-0.10, -0.08, -0.04)
     pb['horse_spine'].keyframe_insert('location', frame=12)
     pb['horse_spine'].location = (0, 0, 0)
     pb['horse_spine'].keyframe_insert('location', frame=36)
 
     # 8. Defeat (1-48 frames): Horse drops to knees, rider concessions, base grounded
     action_defeat = bpy.data.actions.new('defeat')
+    action_defeat.use_fake_user = True
     arm_obj.animation_data.action = action_defeat
     pb['horse_spine'].location = (0, 0, 0)
     pb['horse_spine'].keyframe_insert('location', frame=1)
-    pb['horse_spine'].location = (0, 0, -0.14) # Sinks down
+    pb['horse_spine'].location = (0, 0, -0.16) # Sinks down
     pb['horse_spine'].keyframe_insert('location', frame=24)
 
-    pb['leg_FL_lower'].rotation_euler = (0.85, 0, 0) # Forelegs fold
-    pb['leg_FR_lower'].rotation_euler = (0.85, 0, 0)
+    pb['leg_FL_lower'].rotation_euler = (0.95, 0, 0) # Forelegs fold
+    pb['leg_FR_lower'].rotation_euler = (0.95, 0, 0)
     pb['leg_FL_lower'].keyframe_insert('rotation_euler', frame=24)
     pb['leg_FR_lower'].keyframe_insert('rotation_euler', frame=24)
 
-    pb['rider_arm_R'].rotation_euler = (0.65, 0, -0.20) # Lance lowered
+    pb['rider_arm_R'].rotation_euler = (0.75, 0, -0.25) # Lance lowered
     pb['rider_arm_R'].keyframe_insert('rotation_euler', frame=28)
 
     # 9. Victory (1-48 frames): High rear and cheer
     action_victory = bpy.data.actions.new('victory')
+    action_victory.use_fake_user = True
     arm_obj.animation_data.action = action_victory
     pb['horse_spine'].rotation_euler = (0, 0, 0)
     pb['horse_spine'].keyframe_insert('rotation_euler', frame=1)
-    pb['horse_spine'].rotation_euler = (-0.60, 0, 0) # Majestic high rear
+    pb['horse_spine'].rotation_euler = (-0.70, 0, 0) # Majestic high rear
     pb['horse_spine'].keyframe_insert('rotation_euler', frame=20)
 
-    pb['rider_arm_R'].rotation_euler = (-0.85, 0, 0.25) # Lance thrust high
+    pb['rider_arm_R'].rotation_euler = (-0.95, 0, 0.30) # Lance thrust high
     pb['rider_arm_R'].keyframe_insert('rotation_euler', frame=20)
 
     # 10. Draw (1-36 frames): Neutral stand
     action_draw = bpy.data.actions.new('draw')
+    action_draw.use_fake_user = True
     arm_obj.animation_data.action = action_draw
     pb['horse_head'].rotation_euler = (0.05, 0, 0)
     pb['horse_head'].keyframe_insert('rotation_euler', frame=1)

@@ -44,23 +44,6 @@ export function ThreeBoardCanvas({
   const [inspectorMode, setInspectorMode] = useState<InspectorViewMode>('match')
   const [selectedClass, setSelectedClass] = useState<'P' | 'N' | 'B' | 'R' | 'Q' | 'K'>('N')
 
-  const handleTestKnightVsBishop = useCallback(() => {
-    if (!rendererRef.current) return
-    // Trigger Warcraft III-inspired Knight (wN e4) captures Bishop (bB d5) encounter
-    rendererRef.current.triggerCapture(
-      'e4',
-      'd5',
-      'wN',
-      'bB',
-      () => {
-        soundService.playCombatImpact('N', settings.soundEnabled)
-      },
-      () => {
-        rendererRef.current?.setFen(fenRef.current)
-      }
-    )
-  }, [settings.soundEnabled])
-
   // Astra event subscriptions (Capture, Move, GameEnd, Reset)
   useEffect(() => {
     const unsubCapture = astraHub.onCapture((event) => {
@@ -376,23 +359,12 @@ export function ThreeBoardCanvas({
           <span className="font-semibold">Dev Preview</span>
         </button>
 
-        {/* Knight vs Bishop Capture Duel Test Button */}
-        <button
-          type="button"
-          onClick={handleTestKnightVsBishop}
-          className="px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 transition font-semibold flex items-center gap-1.5 shadow-sm text-xs"
-          title="Play Warcraft III-inspired Knight vs Bishop capture encounter"
-        >
-          <span>⚔️</span>
-          <span>Duel: Knight vs Bishop</span>
-        </button>
-
         {/* Skip Active Combat Sequence */}
         <button
           type="button"
           onClick={handleSkipCombat}
           className="px-2 py-1 rounded-lg hover:bg-red-500/20 text-[#84919D] hover:text-red-300 transition text-[11px] font-mono"
-          title="Skip active combat sequence (Esc)"
+          title="Skip active combat or movement sequence (Esc)"
         >
           Skip
         </button>

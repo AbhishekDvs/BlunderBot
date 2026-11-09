@@ -84,13 +84,13 @@ export class CameraController3D {
 
       case 'tactical':
       default: {
-        // High tactical elevation (65–70 deg, exactly 67 deg)
-        elevationRad = THREE.MathUtils.degToRad(67) + this.userPitchOffset
-        // Clamp elevation to safe readable limits (52 deg to 82 deg)
+        // Oblique tactical elevation calibrated to 2.5D rendered character sprites (45-55 deg, exactly 48 deg)
+        elevationRad = THREE.MathUtils.degToRad(48) + this.userPitchOffset
+        // Clamp elevation to safe readable limits (36 deg to 68 deg)
         elevationRad = THREE.MathUtils.clamp(
           elevationRad,
-          THREE.MathUtils.degToRad(52),
-          THREE.MathUtils.degToRad(82)
+          THREE.MathUtils.degToRad(36),
+          THREE.MathUtils.degToRad(68)
         )
         lookAtOffsetZ = 0.0
 

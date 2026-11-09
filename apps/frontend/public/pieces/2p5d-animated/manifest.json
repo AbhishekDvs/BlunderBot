@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "cell": 256,
+  "cols": 8,
+  "rows": 8,
+  "cameraAngleDeg": 48,
+  "pieces": [
+    "wP",
+    "wN",
+    "wB",
+    "wR",
+    "wQ",
+    "wK",
+    "bP",
+    "bN",
+    "bB",
+    "bR",
+    "bQ",
+    "bK"
+  ]
+}
