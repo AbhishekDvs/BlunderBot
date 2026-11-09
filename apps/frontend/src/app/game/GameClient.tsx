@@ -1,77 +1,51 @@
 'use client'
 
-import { useState } from 'react'
-import { GameBoard } from './GameBoard'
-import { NewGameButton } from './NewGameButton'
+import { useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { boardThemes, BoardThemeKey } from '@/constants/themes'
+import { GameBoard } from './GameBoard'
+import { Navbar } from '@/components/ui/Navbar'
+import { ThemeCustomizerModal } from '@/components/ui/ThemeCustomizerModal'
 
-type PieceStyle = 'default' | 'pirouetti' | 'chestnut'
+export type Difficulty = 'easy' | 'medium' | 'hard' | 'insane'
+export type PieceStyle = 'default' | 'pirouetti' | 'chestnut'
+export type BoardSide = 'white' | 'black'
+export type TimeControl = 'casual' | '10m' | '5m' | '1m'
+
+const VALID_DIFFICULTIES: readonly Difficulty[] = ['easy', 'medium', 'hard', 'insane'] as const
+const VALID_TIME_CONTROLS: readonly TimeControl[] = ['casual', '10m', '5m', '1m'] as const
+
+function sanitizeDifficulty(val: string | null): Difficulty {
+  if (val && (VALID_DIFFICULTIES as readonly string[]).includes(val)) {
+    return val as Difficulty
+  }
+  return 'easy'
+}
+
+function sanitizeSide(val: string | null): BoardSide {
+  return val === 'black' ? 'black' : 'white'
+}
+
+function sanitizeTimeControl(val: string | null): TimeControl {
+  if (val && (VALID_TIME_CONTROLS as readonly string[]).includes(val)) {
+    return val as TimeControl
+  }
+  return 'casual'
+}
 
 export default function GameClient() {
   const searchParams = useSearchParams()
-  const difficulty = searchParams.get('difficulty') || 'easy'
-  const side = searchParams.get('side') === 'black' ? 'black' : 'white'
-  const [pieceStyle, setPieceStyle] = useState<PieceStyle>('default')
-  const [boardTheme, setBoardTheme] = useState<BoardThemeKey>('default')
+  const difficulty = useMemo(() => sanitizeDifficulty(searchParams.get('difficulty')), [searchParams])
+  const side = useMemo(() => sanitizeSide(searchParams.get('side')), [searchParams])
+  const timeControl = useMemo(() => sanitizeTimeControl(searchParams.get('timeControl')), [searchParams])
 
   return (
-    <main className="min-h-screen bg-[#1F1D2B] text-white flex flex-col-reverse md:flex-row">
-      <div className="w-full md:w-1/4 bg-[#2A2937] p-4 space-y-4 border-t md:border-t-0 md:border-l border-gray-700">
-        <h2 className="text-xl font-bold text-yellow-400">BlunderBot Says:</h2>
+    <div className="min-h-screen bg-[#0C0E12] text-white flex flex-col font-sans selection:bg-yellow-500/30 selection:text-yellow-200">
+      <Navbar />
+      <ThemeCustomizerModal />
 
-        <div className="bg-[#3A3949] p-3 rounded-xl shadow-inner text-sm">
-          “Nice move. If your goal is to lose.”
-        </div>
-
-        <div className="text-sm text-gray-300">
-          Difficulty: <span className="capitalize">{difficulty}</span>
-        </div>
-
-        <div>
-          <label htmlFor="pieceStyle" className="block text-sm font-medium text-gray-300 mb-1">
-            Piece Style
-          </label>
-          <select
-            id="pieceStyle"
-            className="w-full p-2 rounded bg-[#3A3949] text-white text-sm shadow-inner"
-            value={pieceStyle}
-            onChange={(e) => setPieceStyle(e.target.value as PieceStyle)}
-          >
-            <option value="default">♟️ Default</option>
-            <option value="pirouetti">🎭 Pirouetti</option>
-            <option value="chestnut">🌰 Chessnut</option>
-          </select>
-        </div>
-
-        <div className="text-sm text-gray-300">
-          Board Theme
-          <div className="flex flex-wrap gap-2 mt-1">
-            {(Object.keys(boardThemes) as BoardThemeKey[]).map((theme) => (
-              <button
-                key={theme}
-                onClick={() => setBoardTheme(theme)}
-                className={`cursor-pointer px-3 py-1 rounded ${
-                  boardTheme === theme ? 'bg-yellow-200 text-black' : 'bg-gray-700'
-                }`}
-              >
-                {theme.charAt(0).toUpperCase() + theme.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <NewGameButton />
-      </div>
-
-      <div className="w-full md:w-3/4 flex items-center justify-center p-4">
-        <GameBoard
-          difficulty={difficulty}
-          pieceStyle={pieceStyle}
-          side={side}
-          boardTheme={boardTheme}
-        />
-      </div>
-    </main>
+      <main className="flex-1 flex flex-col items-center justify-start">
+        <GameBoard difficulty={difficulty} side={side} timeControl={timeControl} />
+      </main>
+    </div>
   )
 }

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ASTRA — benchmark review, gate closed</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#ede4d6;color:#33291e;font:16px/1.6 system-ui,sans-serif}main{max-width:1180px;margin:auto;padding:42px 30px}h1,h2{font-family:Georgia,serif;font-weight:400;line-height:1.15}h1{font-size:46px;margin:12px 0}h2{font-size:26px}p{max-width:850px}small,.caption{color:#665847}.status{letter-spacing:.14em;text-transform:uppercase;font-size:12px;color:#883b28;font-weight:bold}.hero{width:100%;height:auto;display:block;background:#c9ad87;border:1px solid #a78a65}.samples{display:flex;gap:50px;align-items:flex-end;flex-wrap:wrap;padding:24px;background:#d8c6ab;border:1px solid #b29b7b}.strip{display:block;background:conic-gradient(#c8a87d 25%,#483526 0 50%,#c8a87d 0 75%,#483526 0);background-size:calc(var(--cell)*2) calc(var(--cell)*2);width:calc(var(--cell)*3);height:var(--cell)}.strip img{display:block;width:100%;height:100%}figure{margin:0}figcaption{font-size:12px;margin-top:10px}a{color:#704021}hr{border:0;border-top:1px solid #bca98e;margin:32px 0}
+</style><main>
+<div class="status">Art review / 09 November 2026 / Production gate closed</div>
+<h1>Three miniatures. One uncompromised standard.</h1>
+<p>This generated proposal explores the approved Pawn, Knight and Queen direction. It is <strong>not a render from delivered 3D models</strong>, not approved game art, and not an animation asset. The live game uses standard chess pieces while the army is unavailable.</p>
+<a href="benchmark-proposal.png"><img class="hero" src="benchmark-proposal.png" alt="Generated proposal showing ivory and bronze pawn, armored cavalry and imperial queen"></a>
+<p class="caption"><a href="benchmark-proposal.png">Inspect the original 2172 × 724 PNG</a> · Built-in imagegen · No geometry, rig or animation provenance.</p>
+<h2>Actual cell sizes, without enlargement</h2>
+<p>Same sheet scaled to three adjacent cells at each target size. This is a readability diagnostic, <strong>not board integration evidence</strong>. Browser zoom should be 100%. Observe the unequal base sizes, overly thin spear and lost ornament.</p>
+<div class="samples">
+<figure><div class="strip" style="--cell:36px"><img src="benchmark-proposal.png" alt="Three proposed pieces at 36 pixel cells"></div><figcaption>36 px / phone</figcaption></figure>
+<figure><div class="strip" style="--cell:40px"><img src="benchmark-proposal.png" alt="Three proposed pieces at 40 pixel cells"></div><figcaption>40 px / compact</figcaption></figure>
+<figure><div class="strip" style="--cell:62.5px"><img src="benchmark-proposal.png" alt="Three proposed pieces at 62.5 pixel cells"></div><figcaption>62.5 px / 500 px board</figcaption></figure>
+</div>
+<h2>Review result: do not integrate</h2>
+<p>Volume and material detail are much closer to the reference than the retired vectors. However, the base diameters and projected heights are inconsistent; ornate infantry, thin weapons and the tall cavalry spear weaken the hierarchy. Colored edge contamination is visible around the cutout. A single generated view cannot validate horse anatomy, rear geometry, grips or rig deformation.</p>
+<p>Next production milestone: three sculpted masters with equal bases, locked camera and lighting, clean alpha, reviewed turnarounds and genuinely rendered size tests. Only after that passes should attack, reaction and fracture clips be produced. No other piece classes are authorized by this benchmark.</p>
+<hr><p><a href="before.png">Actual application before the gate fix</a> · <a href="after.png">Actual application after the gate fix</a> · <a href="AUDIT.md">Full audit and outstanding production steps</a></p>
+</main></html>

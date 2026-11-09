@@ -1,4 +1,8 @@
 export const boardThemes = {
+  sandstone: {
+    light: '#ead9b7',
+    dark: '#94704b',
+  },
    default: {
     light: '#f0d9b5',
     dark: '#b58863',

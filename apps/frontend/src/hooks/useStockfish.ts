@@ -1,7 +1,12 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 
 export function useStockfish(onBestMove: (move: string) => void) {
   const workerRef = useRef<Worker | null>(null)
+  const onBestMoveRef = useRef(onBestMove)
+
+  useEffect(() => {
+    onBestMoveRef.current = onBestMove
+  }, [onBestMove])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -12,15 +17,19 @@ export function useStockfish(onBestMove: (move: string) => void) {
       worker = new Worker('/stockfish-worker.js')
       workerRef.current = worker
 
-      worker.onmessage = (e) => {
-        const line = e.data as string
-        console.log('[STOCKFISH]', e.data); 
-        if (typeof line === 'string' && line.startsWith('bestmove')) {
+      worker.onmessage = (e: MessageEvent) => {
+        if (typeof e.data !== 'string') return
+        const line = e.data
+        if (line.startsWith('bestmove')) {
           const move = line.split(' ')[1]
           if (move) {
-            onBestMove(move)
+            onBestMoveRef.current(move)
           }
         }
+      }
+
+      worker.onerror = (err) => {
+        console.error('Stockfish worker error:', err)
       }
     } catch (err) {
       console.error('Failed to create Stockfish worker:', err)
@@ -28,14 +37,15 @@ export function useStockfish(onBestMove: (move: string) => void) {
 
     return () => {
       worker?.terminate()
+      workerRef.current = null
     }
-  }, [onBestMove])
+  }, [])
 
-  const postMessage = (msg: string) => {
-    if (workerRef.current) {
+  const postMessage = useCallback((msg: string) => {
+    if (workerRef.current && typeof msg === 'string') {
       workerRef.current.postMessage(msg)
     }
-  }
+  }, [])
 
   return { postMessage }
 }
