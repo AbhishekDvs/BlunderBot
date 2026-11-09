@@ -253,20 +253,20 @@ export class PhysicalBoard3D {
   private createIndicatorPool() {
     const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
 
-    // 3D Beveled Gemstone Pip for quiet legal moves
-    const pipGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.035, 16)
+    // 3D Slender Polished Gold Pip for quiet legal moves (uncluttered, elegant)
+    const pipGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.015, 16)
     const pipMat = new THREE.MeshStandardMaterial({
-      color: 0xdeb887,
-      roughness: 0.25,
-      metalness: 0.85,
+      color: 0xd4a559,
+      roughness: 0.28,
+      metalness: 0.88,
     })
 
-    // Crimson Notched Ring Bracket for captures
-    const ringGeo = new THREE.RingGeometry(0.35, 0.44, 32)
+    // Slender Crimson/Amber Ring Bracket for captures (low-noise, non-distracting)
+    const ringGeo = new THREE.RingGeometry(0.32, 0.38, 32)
     const ringMat = new THREE.MeshBasicMaterial({
-      color: 0xef4444,
+      color: 0xdc3545,
       transparent: true,
-      opacity: 0.75,
+      opacity: 0.48,
       depthWrite: false,
     })
 

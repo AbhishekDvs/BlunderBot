@@ -132,8 +132,16 @@ export class EncounterDirector3D {
     this.attackerTargetYaw = Math.atan2(this.attackDir.x, this.attackDir.z)
     this.defenderTargetYaw = Math.atan2(-this.attackDir.x, -this.attackDir.z)
 
-    attacker.group.rotation.y = this.attackerTargetYaw
-    defender.group.rotation.y = this.defenderTargetYaw
+    // For 2.5D cards, clamp yaw so the front illustrative artwork always faces the player's camera
+    const is2p5d = attacker.group.name.includes('2p5D') || defender.group.name.includes('2p5D')
+    if (is2p5d) {
+      const clampYaw = (y: number) => THREE.MathUtils.clamp(y, -0.35, 0.35)
+      attacker.group.rotation.y = clampYaw(this.attackerTargetYaw)
+      defender.group.rotation.y = clampYaw(this.defenderTargetYaw)
+    } else {
+      attacker.group.rotation.y = this.attackerTargetYaw
+      defender.group.rotation.y = this.defenderTargetYaw
+    }
 
     // 2. World-Space Socket Contact Alignment
     attacker.group.position.copy(this.attackerStartPos)
@@ -199,21 +207,52 @@ export class EncounterDirector3D {
       this.currentPhase = 'anticipation'
       const t = progress / 0.22
 
-      // Attacker coils back weight & raises weapon
-      if (this.attackerNode.weaponNode) {
-        this.attackerNode.weaponNode.rotation.x = -Math.sin(t * Math.PI) * 0.35
-      }
-      if (this.attackerNode.torsoNode) {
-        this.attackerNode.torsoNode.position.y = Math.sin(t * Math.PI) * 0.04
+      // 2.5D Stylized Miniature Anticipation
+      if (this.attackerNode.group.name.includes('2p5D')) {
+        const card = this.attackerNode.group.getObjectByName(`Card_${this.attackerNode.pieceCode}`)
+        if (card) {
+          if (attackerClass === 'N') {
+            // Knight warhorse rears up in dramatic combat anticipation!
+            this.attackerNode.group.position.y = Math.sin(t * Math.PI) * 0.14
+            card.rotation.x = -0.32 - Math.sin(t * Math.PI) * 0.32
+          } else {
+            card.rotation.x = -0.32 - Math.sin(t * Math.PI) * 0.20
+            this.attackerNode.group.position.y = Math.sin(t * Math.PI) * 0.05
+          }
+        }
+      } else {
+        // 3D Model Anticipation
+        if (this.attackerNode.weaponNode) {
+          this.attackerNode.weaponNode.rotation.x = -Math.sin(t * Math.PI) * 0.35
+        }
+        if (this.attackerNode.torsoNode) {
+          this.attackerNode.torsoNode.position.y = Math.sin(t * Math.PI) * 0.04
+        }
       }
 
       // Defender spots threat and assumes defensive posture
-      if (defenderClass === 'B' && this.defenderNode.weaponNode) {
-        this.defenderNode.weaponNode.rotation.z = Math.sin(t * Math.PI) * 0.40
-      } else if (defenderClass === 'P' && this.defenderNode.shieldNode) {
-        this.defenderNode.shieldNode.rotation.z = Math.PI / 2 + Math.sin(t * Math.PI) * 0.35
-      } else if (this.defenderNode.weaponNode) {
-        this.defenderNode.weaponNode.rotation.x = Math.sin(t * Math.PI) * 0.30
+      if (this.defenderNode.group.name.includes('2p5D')) {
+        const defCard = this.defenderNode.group.getObjectByName(`Card_${this.defenderNode.pieceCode}`)
+        if (defCard) {
+          if (defenderClass === 'B') {
+            // Bishop raises warding staff diagonally
+            defCard.rotation.z = Math.sin(t * Math.PI) * 0.32
+            defCard.rotation.x = -0.32 - Math.sin(t * Math.PI) * 0.18
+          } else if (defenderClass === 'P') {
+            defCard.rotation.z = -Math.sin(t * Math.PI) * 0.22
+            defCard.rotation.x = -0.32 - Math.sin(t * Math.PI) * 0.15
+          } else {
+            defCard.rotation.x = -0.32 - Math.sin(t * Math.PI) * 0.18
+          }
+        }
+      } else {
+        if (defenderClass === 'B' && this.defenderNode.weaponNode) {
+          this.defenderNode.weaponNode.rotation.z = Math.sin(t * Math.PI) * 0.40
+        } else if (defenderClass === 'P' && this.defenderNode.shieldNode) {
+          this.defenderNode.shieldNode.rotation.z = Math.PI / 2 + Math.sin(t * Math.PI) * 0.35
+        } else if (this.defenderNode.weaponNode) {
+          this.defenderNode.weaponNode.rotation.x = Math.sin(t * Math.PI) * 0.30
+        }
       }
     }
     // 2. Phase: Approach & Defensive Reaction (0.22 -> 0.54)
@@ -224,79 +263,115 @@ export class EncounterDirector3D {
       // Attacker translates forward towards exact contact position
       this.attackerNode.group.position.lerpVectors(this.attackerStartPos, this.contactPos, t)
 
-      // Attacker Class Locomotion
-      if (attackerClass === 'N') {
-        // Articulated 4-leg canter/trot gait with knee/hock flex
-        const trotCycle = t * Math.PI * 6
-        const legUpperAngle = Math.sin(trotCycle) * 0.42
-        const legLowerAngle = Math.max(0, Math.sin(trotCycle)) * 0.48 // knee flexes backward on backswing
-
-        const flUpper = this.attackerNode.group.getObjectByName('Horse_FL_Upper')
-        const flLower = this.attackerNode.group.getObjectByName('Horse_FL_Lower')
-        const frUpper = this.attackerNode.group.getObjectByName('Horse_FR_Upper')
-        const frLower = this.attackerNode.group.getObjectByName('Horse_FR_Lower')
-        const blUpper = this.attackerNode.group.getObjectByName('Horse_BL_Upper')
-        const blLower = this.attackerNode.group.getObjectByName('Horse_BL_Lower')
-        const brUpper = this.attackerNode.group.getObjectByName('Horse_BR_Upper')
-        const brLower = this.attackerNode.group.getObjectByName('Horse_BR_Lower')
-
-        if (flUpper) flUpper.rotation.x = legUpperAngle
-        if (flLower) flLower.rotation.x = legLowerAngle
-        if (frUpper) frUpper.rotation.x = -legUpperAngle
-        if (frLower) frLower.rotation.x = Math.max(0, -legUpperAngle) * 0.48
-        if (blUpper) blUpper.rotation.x = -legUpperAngle
-        if (blLower) blLower.rotation.x = Math.max(0, -legUpperAngle) * 0.48
-        if (brUpper) brUpper.rotation.x = legUpperAngle
-        if (brLower) brLower.rotation.x = legLowerAngle
-
-        // Gallop vertical bob & pitch
-        this.attackerNode.group.position.y = Math.abs(Math.sin(trotCycle)) * 0.04
-        this.attackerNode.group.rotation.x = Math.sin(trotCycle * 0.5) * 0.08
-
-        // Couched lance posture: lowers smoothly into strike
-        if (this.attackerNode.weaponNode) {
-          this.attackerNode.weaponNode.rotation.x = t * 0.50
-        }
-      } else if (attackerClass === 'P') {
-        if (this.attackerNode.weaponNode) {
-          this.attackerNode.weaponNode.rotation.x = t * 0.85
-        }
-        this.attackerNode.group.position.y = Math.sin(t * Math.PI * 4) * 0.02
-      } else if (attackerClass === 'R') {
-        if (this.attackerNode.weaponNode) {
-          this.attackerNode.weaponNode.position.z = Math.sin(t * Math.PI) * 0.16
+      // 2.5D Stylized Locomotion
+      if (this.attackerNode.group.name.includes('2p5D')) {
+        const card = this.attackerNode.group.getObjectByName(`Card_${this.attackerNode.pieceCode}`)
+        if (attackerClass === 'N') {
+          // Dynamic cavalry gallop hop!
+          this.attackerNode.group.position.y = Math.abs(Math.sin(t * Math.PI * 6)) * 0.09
+          if (card) card.rotation.x = -0.32 + Math.sin(t * Math.PI) * 0.16
+        } else {
+          this.attackerNode.group.position.y = Math.abs(Math.sin(t * Math.PI * 8)) * 0.035
+          if (card) card.rotation.x = -0.32 + Math.sin(t * Math.PI) * 0.10
         }
       } else {
-        if (this.attackerNode.weaponNode) {
-          this.attackerNode.weaponNode.rotation.x = t * 0.70
+        // 3D Model Locomotion
+        if (attackerClass === 'N') {
+          const trotCycle = t * Math.PI * 6
+          const legUpperAngle = Math.sin(trotCycle) * 0.42
+          const legLowerAngle = Math.max(0, Math.sin(trotCycle)) * 0.48
+
+          const flUpper = this.attackerNode.group.getObjectByName('Horse_FL_Upper')
+          const flLower = this.attackerNode.group.getObjectByName('Horse_FL_Lower')
+          const frUpper = this.attackerNode.group.getObjectByName('Horse_FR_Upper')
+          const frLower = this.attackerNode.group.getObjectByName('Horse_FR_Lower')
+          const blUpper = this.attackerNode.group.getObjectByName('Horse_BL_Upper')
+          const blLower = this.attackerNode.group.getObjectByName('Horse_BL_Lower')
+          const brUpper = this.attackerNode.group.getObjectByName('Horse_BR_Upper')
+          const brLower = this.attackerNode.group.getObjectByName('Horse_BR_Lower')
+
+          if (flUpper) flUpper.rotation.x = legUpperAngle
+          if (flLower) flLower.rotation.x = legLowerAngle
+          if (frUpper) frUpper.rotation.x = -legUpperAngle
+          if (frLower) frLower.rotation.x = Math.max(0, -legUpperAngle) * 0.48
+          if (blUpper) blUpper.rotation.x = -legUpperAngle
+          if (blLower) blLower.rotation.x = Math.max(0, -legUpperAngle) * 0.48
+          if (brUpper) brUpper.rotation.x = legUpperAngle
+          if (brLower) brLower.rotation.x = legLowerAngle
+
+          this.attackerNode.group.position.y = Math.abs(Math.sin(trotCycle)) * 0.04
+          this.attackerNode.group.rotation.x = Math.sin(trotCycle * 0.5) * 0.08
+
+          if (this.attackerNode.weaponNode) {
+            this.attackerNode.weaponNode.rotation.x = t * 0.50
+          }
+        } else if (attackerClass === 'P') {
+          if (this.attackerNode.weaponNode) {
+            this.attackerNode.weaponNode.rotation.x = t * 0.85
+          }
+          this.attackerNode.group.position.y = Math.sin(t * Math.PI * 4) * 0.02
+        } else if (attackerClass === 'R') {
+          if (this.attackerNode.weaponNode) {
+            this.attackerNode.weaponNode.position.z = Math.sin(t * Math.PI) * 0.16
+          }
+        } else {
+          if (this.attackerNode.weaponNode) {
+            this.attackerNode.weaponNode.rotation.x = t * 0.70
+          }
         }
       }
 
       // Defender Anticipatory Reaction & Block
-      if (defenderClass === 'B') {
-        // Bishop raises and angles warding lotus staff to absorb incoming strike
-        if (this.defenderNode.weaponNode) {
-          this.defenderNode.weaponNode.rotation.z = Math.sin(t * Math.PI * 0.5) * 0.65
-          this.defenderNode.weaponNode.rotation.x = Math.sin(t * Math.PI * 0.5) * 0.42
+      if (this.defenderNode.group.name.includes('2p5D')) {
+        const defCard = this.defenderNode.group.getObjectByName(`Card_${this.defenderNode.pieceCode}`)
+        if (defCard) {
+          if (defenderClass === 'B') {
+            defCard.rotation.z = Math.sin(t * Math.PI * 0.5) * 0.38
+            defCard.rotation.x = -0.32 - Math.sin(t * Math.PI * 0.5) * 0.15
+          } else if (defenderClass === 'P') {
+            defCard.rotation.z = -Math.sin(t * Math.PI * 0.5) * 0.25
+          }
         }
-        if (this.defenderNode.torsoNode) {
-          this.defenderNode.torsoNode.rotation.y = Math.sin(t * Math.PI * 0.5) * 0.25
+      } else {
+        if (defenderClass === 'B') {
+          if (this.defenderNode.weaponNode) {
+            this.defenderNode.weaponNode.rotation.z = Math.sin(t * Math.PI * 0.5) * 0.65
+            this.defenderNode.weaponNode.rotation.x = Math.sin(t * Math.PI * 0.5) * 0.42
+          }
+          if (this.defenderNode.torsoNode) {
+            this.defenderNode.torsoNode.rotation.y = Math.sin(t * Math.PI * 0.5) * 0.25
+          }
+        } else if (defenderClass === 'P') {
+          if (this.defenderNode.shieldNode) {
+            this.defenderNode.shieldNode.position.z = Math.sin(t * Math.PI * 0.5) * 0.14
+            this.defenderNode.shieldNode.rotation.y = -Math.sin(t * Math.PI * 0.5) * 0.28
+          }
+        } else if (defenderClass === 'N') {
+          this.defenderNode.group.rotation.y = this.defenderTargetYaw + Math.sin(t * Math.PI * 0.5) * 0.35
+        } else if (this.defenderNode.weaponNode) {
+          this.defenderNode.weaponNode.rotation.z = Math.sin(t * Math.PI * 0.5) * 0.45
         }
-      } else if (defenderClass === 'P') {
-        if (this.defenderNode.shieldNode) {
-          this.defenderNode.shieldNode.position.z = Math.sin(t * Math.PI * 0.5) * 0.14
-          this.defenderNode.shieldNode.rotation.y = -Math.sin(t * Math.PI * 0.5) * 0.28
-        }
-      } else if (defenderClass === 'N') {
-        this.defenderNode.group.rotation.y = this.defenderTargetYaw + Math.sin(t * Math.PI * 0.5) * 0.35
-      } else if (this.defenderNode.weaponNode) {
-        this.defenderNode.weaponNode.rotation.z = Math.sin(t * Math.PI * 0.5) * 0.45
       }
     }
     // 3. Phase: Synchronized Weapon Impact & Spark (0.54)
     else if (progress >= 0.54 && !this.hasTriggeredImpact) {
       this.hasTriggeredImpact = true
       this.currentPhase = 'impact'
+
+      // White hit flash on defender card (Warcraft III RTS Impact)
+      const defCard = this.defenderNode.group.getObjectByName(`Card_${this.defenderNode.pieceCode}`) as THREE.Mesh
+      if (defCard && (defCard.material as THREE.MeshStandardMaterial).isMeshStandardMaterial) {
+        const mat = defCard.material as THREE.MeshStandardMaterial
+        mat.emissive.setHex(0xffffff)
+        mat.emissiveIntensity = 0.95
+        setTimeout(() => {
+          mat.emissive.setHex(0x000000)
+          mat.emissiveIntensity = 0
+        }, 90)
+      }
+
+      // Camera trauma micro-shake
+      this.cameraCtrl.triggerTrauma(0.065)
 
       // Trigger Web Audio impact sound & callback
       this.onContactCallback?.()
@@ -313,56 +388,67 @@ export class EncounterDirector3D {
       this.currentPhase = 'stagger_fracture'
       const t = (progress - 0.54) / 0.26
 
-      // Attacker follows through with strike
-      if (this.attackerNode.weaponNode) {
-        this.attackerNode.weaponNode.rotation.x = (1.0 - t) * 0.50
-      }
-      this.attackerNode.group.position.y = 0
-      this.attackerNode.group.rotation.x = 0
+      if (this.attackerNode.group.name.includes('2p5D')) {
+        const card = this.attackerNode.group.getObjectByName(`Card_${this.attackerNode.pieceCode}`)
+        if (card) card.rotation.x = -0.32
+        this.attackerNode.group.position.y = 0
+      } else {
+        if (this.attackerNode.weaponNode) {
+          this.attackerNode.weaponNode.rotation.x = (1.0 - t) * 0.50
+        }
+        this.attackerNode.group.position.y = 0
+        this.attackerNode.group.rotation.x = 0
 
-      // Reset horse legs after impact
-      if (attackerClass === 'N') {
-        const flUpper = this.attackerNode.group.getObjectByName('Horse_FL_Upper')
-        const flLower = this.attackerNode.group.getObjectByName('Horse_FL_Lower')
-        const frUpper = this.attackerNode.group.getObjectByName('Horse_FR_Upper')
-        const frLower = this.attackerNode.group.getObjectByName('Horse_FR_Lower')
-        const blUpper = this.attackerNode.group.getObjectByName('Horse_BL_Upper')
-        const blLower = this.attackerNode.group.getObjectByName('Horse_BL_Lower')
-        const brUpper = this.attackerNode.group.getObjectByName('Horse_BR_Upper')
-        const brLower = this.attackerNode.group.getObjectByName('Horse_BR_Lower')
-        if (flUpper) flUpper.rotation.x = 0
-        if (flLower) flLower.rotation.x = 0
-        if (frUpper) frUpper.rotation.x = 0
-        if (frLower) frLower.rotation.x = 0
-        if (blUpper) blUpper.rotation.x = 0
-        if (blLower) blLower.rotation.x = 0
-        if (brUpper) brUpper.rotation.x = 0
-        if (brLower) brLower.rotation.x = 0
+        if (attackerClass === 'N') {
+          const flUpper = this.attackerNode.group.getObjectByName('Horse_FL_Upper')
+          const flLower = this.attackerNode.group.getObjectByName('Horse_FL_Lower')
+          const frUpper = this.attackerNode.group.getObjectByName('Horse_FR_Upper')
+          const frLower = this.attackerNode.group.getObjectByName('Horse_FR_Lower')
+          const blUpper = this.attackerNode.group.getObjectByName('Horse_BL_Upper')
+          const blLower = this.attackerNode.group.getObjectByName('Horse_BL_Lower')
+          const brUpper = this.attackerNode.group.getObjectByName('Horse_BR_Upper')
+          const brLower = this.attackerNode.group.getObjectByName('Horse_BR_Lower')
+          if (flUpper) flUpper.rotation.x = 0
+          if (flLower) flLower.rotation.x = 0
+          if (frUpper) frUpper.rotation.x = 0
+          if (frLower) frLower.rotation.x = 0
+          if (blUpper) blUpper.rotation.x = 0
+          if (blLower) blLower.rotation.x = 0
+          if (brUpper) brUpper.rotation.x = 0
+          if (brLower) brLower.rotation.x = 0
+        }
       }
 
-      // NO WHOLE-MODEL SHRINKING: Group scale remains 1.0!
+      // Group scale remains 1.0
       this.defenderNode.group.scale.set(1, 1, 1)
 
       // Physical Stagger Recoil backwards along strike vector with grounded contact
-      const staggerDist = Math.sin(t * Math.PI * 0.5) * 0.26
+      const staggerDist = Math.sin(t * Math.PI * 0.5) * 0.32
       this.defenderNode.group.position.addVectors(
         this.defenderPos,
         this.attackDir.clone().multiplyScalar(staggerDist)
       )
 
-      // Torso staggers backward while base remains grounded
-      if (this.defenderNode.torsoNode) {
-        this.defenderNode.torsoNode.rotation.x = -t * 0.75
-      }
-
-      // Authored Shell Fracture separation
-      this.defenderNode.group.traverse((obj) => {
-        if (obj.name.startsWith('Fracture_')) {
-          obj.position.y += Math.sin(t * Math.PI) * 0.05
-          obj.position.z += t * 0.12
-          obj.rotation.x += t * 0.70
+      if (this.defenderNode.group.name.includes('2p5D')) {
+        const defCard = this.defenderNode.group.getObjectByName(`Card_${this.defenderNode.pieceCode}`) as THREE.Mesh
+        if (defCard) {
+          defCard.rotation.x = -0.32 - t * 0.85
+          if (defCard.material && 'opacity' in defCard.material) {
+            (defCard.material as THREE.Material).opacity = Math.max(0, 1.0 - t * 1.5)
+          }
         }
-      })
+      } else {
+        if (this.defenderNode.torsoNode) {
+          this.defenderNode.torsoNode.rotation.x = -t * 0.75
+        }
+        this.defenderNode.group.traverse((obj) => {
+          if (obj.name.startsWith('Fracture_')) {
+            obj.position.y += Math.sin(t * Math.PI) * 0.05
+            obj.position.z += t * 0.12
+            obj.rotation.x += t * 0.70
+          }
+        })
+      }
     }
     // 5. Phase: Settling & Occupation (0.80 -> 1.0)
     else {
@@ -378,7 +464,14 @@ export class EncounterDirector3D {
       // Restore upright posture & resting weapon
       this.attackerNode.group.position.y = 0
       this.attackerNode.group.rotation.x = 0
-      if (this.attackerNode.weaponNode) {
+
+      if (this.attackerNode.group.name.includes('2p5D')) {
+        const card = this.attackerNode.group.getObjectByName(`Card_${this.attackerNode.pieceCode}`)
+        if (card) {
+          card.rotation.x = -0.32
+          card.rotation.z = 0
+        }
+      } else if (this.attackerNode.weaponNode) {
         this.attackerNode.weaponNode.rotation.set(0, 0, 0)
         this.attackerNode.weaponNode.position.set(0, 0, 0)
       }

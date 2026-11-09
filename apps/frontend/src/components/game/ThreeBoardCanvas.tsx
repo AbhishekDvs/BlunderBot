@@ -37,12 +37,29 @@ export function ThreeBoardCanvas({
 
   const [cameraMode, setCameraMode] = useState<CameraViewMode>('tactical')
   const [pacing, setPacing] = useState<AnimationPacing>('cinematic')
-  const [manifestId, setManifestId] = useState<string>('production')
+  const [manifestId, setManifestId] = useState<string>('2p5d-stylized')
   const [isInspectorOpen, setIsInspectorOpen] = useState(false)
   const isInspectorOpenRef = useRef(isInspectorOpen)
   isInspectorOpenRef.current = isInspectorOpen
   const [inspectorMode, setInspectorMode] = useState<InspectorViewMode>('match')
   const [selectedClass, setSelectedClass] = useState<'P' | 'N' | 'B' | 'R' | 'Q' | 'K'>('N')
+
+  const handleTestKnightVsBishop = useCallback(() => {
+    if (!rendererRef.current) return
+    // Trigger Warcraft III-inspired Knight (wN e4) captures Bishop (bB d5) encounter
+    rendererRef.current.triggerCapture(
+      'e4',
+      'd5',
+      'wN',
+      'bB',
+      () => {
+        soundService.playCombatImpact('N', settings.soundEnabled)
+      },
+      () => {
+        rendererRef.current?.setFen(fenRef.current)
+      }
+    )
+  }, [settings.soundEnabled])
 
   // Astra event subscriptions (Capture, Move, GameEnd, Reset)
   useEffect(() => {
@@ -359,6 +376,17 @@ export function ThreeBoardCanvas({
           <span className="font-semibold">Dev Preview</span>
         </button>
 
+        {/* Knight vs Bishop Capture Duel Test Button */}
+        <button
+          type="button"
+          onClick={handleTestKnightVsBishop}
+          className="px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 transition font-semibold flex items-center gap-1.5 shadow-sm text-xs"
+          title="Play Warcraft III-inspired Knight vs Bishop capture encounter"
+        >
+          <span>⚔️</span>
+          <span>Duel: Knight vs Bishop</span>
+        </button>
+
         {/* Skip Active Combat Sequence */}
         <button
           type="button"
@@ -397,25 +425,14 @@ export function ThreeBoardCanvas({
               <div className="flex gap-1 bg-[#141A22] p-0.5 rounded-lg border border-[#242E3B]">
                 <button
                   type="button"
-                  onClick={() => handleSwitchManifest('production')}
-                  className={`px-2.5 py-1 rounded-md font-medium transition ${
-                    manifestId === 'production'
-                      ? 'bg-[#2A3748] text-white shadow'
-                      : 'text-[#84919D] hover:text-white'
-                  }`}
-                >
-                  Production (Astra)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSwitchManifest('astra-dev-v01')}
+                  onClick={() => handleSwitchManifest('2p5d-stylized')}
                   className={`px-2.5 py-1 rounded-md font-medium transition flex items-center gap-1 ${
-                    manifestId === 'astra-dev-v01'
-                      ? 'bg-amber-600/30 text-amber-200 border border-amber-500/50 shadow'
+                    manifestId === '2p5d-stylized'
+                      ? 'bg-amber-500/30 text-amber-200 border border-amber-500/50 shadow'
                       : 'text-[#84919D] hover:text-amber-300'
                   }`}
                 >
-                  <span>⚠️ Dev Kit v0.1</span>
+                  <span>✨ 2.5D Stylized</span>
                 </button>
                 <button
                   type="button"
@@ -426,7 +443,18 @@ export function ThreeBoardCanvas({
                       : 'text-[#84919D] hover:text-emerald-300'
                   }`}
                 >
-                  <span>✨ v0.2 Candidates</span>
+                  <span>3D v0.2</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSwitchManifest('production')}
+                  className={`px-2.5 py-1 rounded-md font-medium transition ${
+                    manifestId === 'production'
+                      ? 'bg-[#2A3748] text-white shadow'
+                      : 'text-[#84919D] hover:text-white'
+                  }`}
+                >
+                  Legacy 3D
                 </button>
               </div>
             </div>

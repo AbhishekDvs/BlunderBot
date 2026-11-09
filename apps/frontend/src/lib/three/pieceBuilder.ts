@@ -105,30 +105,18 @@ export interface AssetManifest {
 }
 
 export const ASSET_MANIFESTS: Record<string, AssetManifest> = {
-  production: {
-    id: 'production',
-    name: 'Production (Astra 3D)',
+  '2p5d-stylized': {
+    id: '2p5d-stylized',
+    name: 'Stylized 2.5D Indian War Chess',
+    label: '✨ 2.5D Stylized (Recommended)',
     isExperimental: false,
-    description: 'Production high-readability army models with full combat rig sockets.',
-    getModelPath: (code) => `/models/astra/${code}.glb`,
-  },
-  'astra-dev-v01': {
-    id: 'astra-dev-v01',
-    name: 'White Army Development Kit (v0.1)',
-    label: 'Experimental Geometry',
-    isExperimental: true,
-    description: 'Development geometry studies from White Army AssetKit. For scale, silhouette and integration testing.',
-    getModelPath: (code) => {
-      if (code.startsWith('w')) {
-        return `/models/astra-dev-v01/${code}.glb`
-      }
-      return `/models/astra/${code}.glb`
-    },
+    description: 'Polished 2.5D Indian royal & Asura armies with rich silhouettes, Warcraft III-inspired combat, and sub-second readability.',
+    getModelPath: (code) => `/pieces/2p5d-indian/${code}.png`,
   },
   'astra-dev-v02': {
     id: 'astra-dev-v02',
     name: 'White Army Candidates (v0.2)',
-    label: 'v0.2 Production Candidates',
+    label: 'v0.2 3D Candidates',
     isExperimental: true,
     description: 'Complete rigged White Army candidates from CC0 Human Base with 10 standard animation clips and repaired Bishop.',
     getModelPath: (code) => {
@@ -138,10 +126,41 @@ export const ASSET_MANIFESTS: Record<string, AssetManifest> = {
       return `/models/astra/${code}.glb`
     },
   },
+  production: {
+    id: 'production',
+    name: 'Legacy 3D Blockouts',
+    isExperimental: false,
+    description: 'Legacy 3D geometric blockout models with combat sockets.',
+    getModelPath: (code) => `/models/astra/${code}.glb`,
+  },
+  'astra-dev-v01': {
+    id: 'astra-dev-v01',
+    name: 'Development Kit (v0.1)',
+    label: 'Dev Kit v0.1',
+    isExperimental: true,
+    description: 'Initial development geometry studies from White Army AssetKit.',
+    getModelPath: (code) => {
+      if (code.startsWith('w')) {
+        return `/models/astra-dev-v01/${code}.glb`
+      }
+      return `/models/astra/${code}.glb`
+    },
+  },
 }
 
 export class PieceBuilder3D {
-  private static activeManifestId = 'production'
+  private static activeManifestId = '2p5d-stylized'
+  private static textureLoader = new THREE.TextureLoader()
+  private static textureCache = new Map<string, THREE.Texture>()
+
+  private static readonly DIMENSIONS_2P5D: Record<string, { width: number; height: number; yOffset: number; plinthR: number }> = {
+    P: { width: 0.96, height: 1.05, yOffset: 0.52, plinthR: 0.36 }, // Padati - Infantry Pawn
+    R: { width: 1.10, height: 1.15, yOffset: 0.58, plinthR: 0.40 }, // Durg - Wheeled Fortress Rook
+    N: { width: 1.25, height: 1.28, yOffset: 0.64, plinthR: 0.40 }, // Ashva - Armored Cavalry Knight
+    B: { width: 1.10, height: 1.32, yOffset: 0.66, plinthR: 0.38 }, // Acharya - Preceptor Bishop
+    Q: { width: 1.20, height: 1.38, yOffset: 0.69, plinthR: 0.39 }, // Samrajni - Battle Queen
+    K: { width: 1.30, height: 1.45, yOffset: 0.72, plinthR: 0.42 }, // Raja - Sovereign King
+  }
 
   public static setManifest(manifestId: string) {
     if (ASSET_MANIFESTS[manifestId]) {
@@ -158,11 +177,41 @@ export class PieceBuilder3D {
   }
 
   /**
-   * Preloads army models for the specified or active manifest
+   * Preloads army models or 2.5D textures for the specified or active manifest
    */
   public static async preloadArmyModels(manifestId?: string): Promise<void> {
     const manifest = manifestId ? ASSET_MANIFESTS[manifestId] || this.getManifest() : this.getManifest()
     const codes = ['wP', 'wR', 'wN', 'wB', 'wQ', 'wK', 'bP', 'bR', 'bN', 'bB', 'bQ', 'bK']
+
+    if (manifest.id === '2p5d-stylized') {
+      await Promise.allSettled(
+        codes.map((code) => {
+          return new Promise<void>((resolve) => {
+            if (this.textureCache.has(code)) {
+              resolve()
+              return
+            }
+            this.textureLoader.load(
+              manifest.getModelPath(code),
+              (tex) => {
+                tex.colorSpace = THREE.SRGBColorSpace
+                tex.minFilter = THREE.LinearMipmapLinearFilter
+                tex.magFilter = THREE.LinearFilter
+                tex.generateMipmaps = true
+                this.textureCache.set(code, tex)
+                resolve()
+              },
+              undefined,
+              () => {
+                resolve()
+              }
+            )
+          })
+        })
+      )
+      return
+    }
+
     await Promise.allSettled(
       codes.map(async (code) => {
         const cacheKey = `${manifest.id}:${code}`
@@ -182,6 +231,134 @@ export class PieceBuilder3D {
     )
   }
 
+  private static get2p5dTexture(pieceCode: string): THREE.Texture {
+    let tex = this.textureCache.get(pieceCode)
+    if (!tex) {
+      tex = this.textureLoader.load(`/pieces/2p5d-indian/${pieceCode}.png`)
+      tex.colorSpace = THREE.SRGBColorSpace
+      tex.minFilter = THREE.LinearMipmapLinearFilter
+      tex.magFilter = THREE.LinearFilter
+      tex.generateMipmaps = true
+      this.textureCache.set(pieceCode, tex)
+    }
+    return tex
+  }
+
+  /**
+   * Constructs an authoritative 2.5D stylized Indian war chess miniature:
+   * Upright card with high-res painterly illustration, soft contact plinth,
+   * gold fillet ring, and weapon/contact socket anchors for Warcraft III combat.
+   */
+  private static build2p5dPiece(
+    pieceCode: string,
+    square: string,
+    pal: typeof WHITE_PALETTE
+  ): {
+    group: THREE.Group
+    torsoNode: THREE.Object3D
+    weaponNode: THREE.Object3D
+    shieldNode: THREE.Object3D
+    plinthNode: THREE.Object3D
+  } {
+    const group = new THREE.Group()
+    group.name = `Miniature_2p5D_${pieceCode}_${square}`
+    const classChar = pieceCode.slice(1).toUpperCase()
+    const dim = this.DIMENSIONS_2P5D[classChar] || this.DIMENSIONS_2P5D.P
+
+    // 1. Ground Contact Shadow Disc (Y = 0.005)
+    const shadowGeo = new THREE.CircleGeometry(dim.plinthR * 1.08, 24)
+    const shadowMat = new THREE.MeshBasicMaterial({
+      color: 0x0a0806,
+      transparent: true,
+      opacity: 0.45,
+      depthWrite: false,
+    })
+    const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat)
+    shadowMesh.rotation.x = -Math.PI / 2
+    shadowMesh.position.y = 0.005
+    group.add(shadowMesh)
+
+    // 2. Beveled Stone Plinth Base (Y = 0.02)
+    const plinthGeo = new THREE.CylinderGeometry(dim.plinthR, dim.plinthR * 1.05, 0.04, 32)
+    const plinthMesh = new THREE.Mesh(plinthGeo, pal.stone)
+    plinthMesh.name = 'Plinth_Stone'
+    plinthMesh.position.y = 0.02
+    plinthMesh.receiveShadow = true
+    group.add(plinthMesh)
+
+    // 3. Antique Gold / Brass Inlay Ring on Plinth
+    const rimGeo = new THREE.TorusGeometry(dim.plinthR * 1.01, 0.012, 8, 32)
+    const rimMesh = new THREE.Mesh(rimGeo, pal.gold)
+    rimMesh.rotation.x = Math.PI / 2
+    rimMesh.position.y = 0.04
+    group.add(rimMesh)
+
+    // 4. Upright 2.5D Stylized Character Card Mesh
+    const texture = this.get2p5dTexture(pieceCode)
+    const cardGeo = new THREE.PlaneGeometry(dim.width, dim.height)
+    const cardMat = new THREE.MeshStandardMaterial({
+      map: texture,
+      transparent: true,
+      alphaTest: 0.08,
+      roughness: 0.35,
+      metalness: 0.12,
+      side: THREE.DoubleSide,
+      shadowSide: THREE.DoubleSide,
+    })
+    const cardMesh = new THREE.Mesh(cardGeo, cardMat)
+    cardMesh.name = `Card_${pieceCode}`
+    cardMesh.castShadow = true
+    cardMesh.receiveShadow = false
+    cardMesh.position.set(0, dim.yOffset, 0)
+    // Tilted slightly back (-0.32 rad) to perpendicularly face 67 deg tactical camera
+    cardMesh.rotation.x = -0.32
+    group.add(cardMesh)
+
+    // 5. Authored Socket Anchors for RTS Combat Director
+    const weaponSocket = new THREE.Object3D()
+    weaponSocket.name = 'weapon_tip_socket'
+    const contactAnchor = new THREE.Object3D()
+    contactAnchor.name = 'contact_anchor'
+    const shieldSocket = new THREE.Object3D()
+    shieldSocket.name = 'shield_socket'
+
+    // Class-specific weapon socket offsets
+    switch (classChar) {
+      case 'N': // Cavalry Lance tip
+        weaponSocket.position.set(0.05, dim.yOffset * 1.05, 0.42)
+        break
+      case 'B': // Sacred Staff finial
+        weaponSocket.position.set(0.28, dim.yOffset * 1.35, 0.12)
+        break
+      case 'P': // Infantry Spear tip
+        weaponSocket.position.set(0.22, dim.yOffset * 1.15, 0.25)
+        shieldSocket.position.set(-0.20, dim.yOffset * 0.90, 0.18)
+        break
+      case 'R': // Fortress Siege Ram
+        weaponSocket.position.set(0.0, dim.yOffset * 0.70, 0.35)
+        break
+      case 'Q': // Imperial Talwar
+        weaponSocket.position.set(0.28, dim.yOffset * 0.85, 0.24)
+        break
+      case 'K': // Royal Khanda
+        weaponSocket.position.set(0.0, dim.yOffset * 0.75, 0.28)
+        break
+    }
+    contactAnchor.position.set(0, dim.yOffset * 0.90, 0)
+
+    cardMesh.add(weaponSocket)
+    cardMesh.add(contactAnchor)
+    cardMesh.add(shieldSocket)
+
+    return {
+      group,
+      torsoNode: cardMesh,
+      weaponNode: weaponSocket,
+      shieldNode: shieldSocket,
+      plinthNode: plinthMesh,
+    }
+  }
+
   /**
    * Constructs an articulated 3D piece node
    */
@@ -194,74 +371,84 @@ export class PieceBuilder3D {
     const classChar = pieceCode.slice(1).toUpperCase()
     const activeManifest = manifestId ? (ASSET_MANIFESTS[manifestId] || this.getManifest()) : this.getManifest()
 
-    // Check if GLB is cached by manifest key or legacy key
-    const cacheKey = `${activeManifest.id}:${pieceCode}`
-    const cachedGLB = glbCache.get(cacheKey) || glbCache.get(pieceCode)
     let torsoNode: THREE.Object3D | undefined
     let weaponNode: THREE.Object3D | undefined
     let shieldNode: THREE.Object3D | undefined
     let plinthNode: THREE.Object3D | undefined
 
-    if (cachedGLB) {
-      const cloned = cachedGLB.clone(true)
-      cloned.traverse((obj) => {
-        if ((obj as THREE.Mesh).isMesh) {
-          obj.castShadow = true
-          obj.receiveShadow = true
-        }
-      })
-      group.add(cloned)
-
-      // Find articulation sockets
-      torsoNode =
-        cloned.getObjectByName('Rider_Torso') ||
-        cloned.getObjectByName('Acharya_Torso') ||
-        cloned.getObjectByName('Pawn_Torso') ||
-        cloned.getObjectByName('Samrajni_Torso') ||
-        cloned.getObjectByName('Raja_Cuirass') ||
-        cloned.getObjectByName('Horse_Body') ||
-        cloned.getObjectByName('Durg_Bastion')
-
-      weaponNode =
-        cloned.getObjectByName('Lance_Assembly') ||
-        cloned.getObjectByName('Staff_Assembly') ||
-        cloned.getObjectByName('Acharya_Staff_Assembly') ||
-        cloned.getObjectByName('Pawn_SpearAssembly') ||
-        cloned.getObjectByName('Pawn_Spear_Assembly') ||
-        cloned.getObjectByName('Samrajni_TalwarAssembly') ||
-        cloned.getObjectByName('Samrajni_Talwar_Assembly') ||
-        cloned.getObjectByName('Raja_SwordAssembly') ||
-        cloned.getObjectByName('Raja_Sword_Assembly') ||
-        cloned.getObjectByName('Cavalry_Lance') ||
-        cloned.getObjectByName('Acharya_Staff') ||
-        cloned.getObjectByName('Acharya_Staff_Head') ||
-        cloned.getObjectByName('Pawn_SpearShaft') ||
-        cloned.getObjectByName('Pawn_Spear_Head') ||
-        cloned.getObjectByName('Samrajni_TalwarBlade') ||
-        cloned.getObjectByName('Samrajni_Talwar_Blade') ||
-        cloned.getObjectByName('Raja_Broadsword') ||
-        cloned.getObjectByName('Raja_Sword_Blade') ||
-        cloned.getObjectByName('Durg_Ram')
-
-      shieldNode =
-        cloned.getObjectByName('Pawn_DhalShield') ||
-        cloned.getObjectByName('Pawn_Shield')
-
-      plinthNode =
-        cloned.getObjectByName('Plinth_Stone') ||
-        cloned.getObjectByName('Plinth_Lower')
-    } else {
-      // Procedural model generation matching exact Astra dimensions & materials
-      const model = this.buildProceduralModel(classChar, pal)
+    if (activeManifest.id === '2p5d-stylized') {
+      const model = this.build2p5dPiece(pieceCode, square, pal)
       group.add(model.group)
       torsoNode = model.torsoNode
       weaponNode = model.weaponNode
       shieldNode = model.shieldNode
       plinthNode = model.plinthNode
+    } else {
+      // Check if GLB is cached by manifest key or legacy key
+      const cacheKey = `${activeManifest.id}:${pieceCode}`
+      const cachedGLB = glbCache.get(cacheKey) || glbCache.get(pieceCode)
+
+      if (cachedGLB) {
+        const cloned = cachedGLB.clone(true)
+        cloned.traverse((obj) => {
+          if ((obj as THREE.Mesh).isMesh) {
+            obj.castShadow = true
+            obj.receiveShadow = true
+          }
+        })
+        group.add(cloned)
+
+        // Find articulation sockets
+        torsoNode =
+          cloned.getObjectByName('Rider_Torso') ||
+          cloned.getObjectByName('Acharya_Torso') ||
+          cloned.getObjectByName('Pawn_Torso') ||
+          cloned.getObjectByName('Samrajni_Torso') ||
+          cloned.getObjectByName('Raja_Cuirass') ||
+          cloned.getObjectByName('Horse_Body') ||
+          cloned.getObjectByName('Durg_Bastion')
+
+        weaponNode =
+          cloned.getObjectByName('Lance_Assembly') ||
+          cloned.getObjectByName('Staff_Assembly') ||
+          cloned.getObjectByName('Acharya_Staff_Assembly') ||
+          cloned.getObjectByName('Pawn_SpearAssembly') ||
+          cloned.getObjectByName('Pawn_Spear_Assembly') ||
+          cloned.getObjectByName('Samrajni_TalwarAssembly') ||
+          cloned.getObjectByName('Samrajni_Talwar_Assembly') ||
+          cloned.getObjectByName('Raja_SwordAssembly') ||
+          cloned.getObjectByName('Raja_Sword_Assembly') ||
+          cloned.getObjectByName('Cavalry_Lance') ||
+          cloned.getObjectByName('Acharya_Staff') ||
+          cloned.getObjectByName('Acharya_Staff_Head') ||
+          cloned.getObjectByName('Pawn_SpearShaft') ||
+          cloned.getObjectByName('Pawn_Spear_Head') ||
+          cloned.getObjectByName('Samrajni_TalwarBlade') ||
+          cloned.getObjectByName('Samrajni_Talwar_Blade') ||
+          cloned.getObjectByName('Raja_Broadsword') ||
+          cloned.getObjectByName('Raja_Sword_Blade') ||
+          cloned.getObjectByName('Durg_Ram')
+
+        shieldNode =
+          cloned.getObjectByName('Pawn_DhalShield') ||
+          cloned.getObjectByName('Pawn_Shield')
+
+        plinthNode =
+          cloned.getObjectByName('Plinth_Stone') ||
+          cloned.getObjectByName('Plinth_Lower')
+      } else {
+        // Procedural model generation matching exact Astra dimensions & materials
+        const model = this.buildProceduralModel(classChar, pal)
+        group.add(model.group)
+        torsoNode = model.torsoNode
+        weaponNode = model.weaponNode
+        shieldNode = model.shieldNode
+        plinthNode = model.plinthNode
+      }
     }
 
-    // Orient Black pieces 180 deg to face White
-    if (!isWhite) {
+    // Orient Black pieces 180 deg to face White for 3D models (2.5D cards stay facing the player)
+    if (!isWhite && activeManifest.id !== '2p5d-stylized') {
       group.rotation.y = Math.PI
     }
 

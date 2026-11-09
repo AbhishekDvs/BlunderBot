@@ -42,6 +42,9 @@ export class CameraController3D {
   private orbitAngle = 0
   private isOrbiting = false
 
+  // Camera trauma / impact shake
+  private trauma = 0
+
   constructor(aspect = 1.0) {
     // 34 deg FOV gives crisp long-focal-length perspective, preventing wide-angle edge warping
     this.camera = new THREE.PerspectiveCamera(34, aspect, 0.1, 100)
@@ -250,6 +253,13 @@ export class CameraController3D {
   }
 
   /**
+   * Triggers impact camera trauma micro-shake
+   */
+  public triggerTrauma(amount = 0.06) {
+    this.trauma = Math.min(1.0, this.trauma + amount)
+  }
+
+  /**
    * Smooth update loop (rAF)
    */
   public update(delta: number) {
@@ -271,5 +281,13 @@ export class CameraController3D {
     // Smooth lookAt interpolation
     this.currentLookAt.lerp(this.targetLookAt, lerpFactor)
     this.camera.lookAt(this.currentLookAt)
+
+    // Apply trauma shake decay
+    if (this.trauma > 0.001) {
+      const shakeFactor = this.trauma * this.trauma * 0.16
+      this.camera.position.x += (Math.random() - 0.5) * shakeFactor
+      this.camera.position.y += (Math.random() - 0.5) * shakeFactor
+      this.trauma = Math.max(0, this.trauma - delta * 3.2)
+    }
   }
 }
