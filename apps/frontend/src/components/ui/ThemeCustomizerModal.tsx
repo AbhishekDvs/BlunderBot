@@ -120,9 +120,9 @@ export function ThemeCustomizerModal() {
 
               {/* Astra Special Banner if active */}
               {settings.boardPresetId === 'ancient-battlefield' && (
-                <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-amber-950/40 border border-amber-800/50 text-xs text-amber-200">
-                  <SparklesIcon className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                  <span>Experimental board palette only. Sculpted armies and combat animation are unavailable.</span>
+                <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-yellow-950/40 border border-yellow-700/50 text-xs text-yellow-200">
+                  <SparklesIcon className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+                  <span>Astra Royal War Miniatures (True 3D) active with two-piece combat choreography and physical destruction.</span>
                 </div>
               )}
             </div>
@@ -214,7 +214,7 @@ export function ThemeCustomizerModal() {
                             </div>
                           ) : (
                             <div className="relative w-8 h-8 flex items-center justify-center">
-                              <span aria-hidden="true">—</span>
+                              <span className="text-xl">⚔️</span>
                             </div>
                           )}
                         </div>
@@ -255,7 +255,11 @@ export function ThemeCustomizerModal() {
                   <div className="flex items-center justify-between">
                     <PerspectiveIcon className="w-5 h-5 text-yellow-400" />
                     <span className="text-[11px] px-2 py-0.5 rounded bg-white/[0.06] font-medium">
-                      {settings.perspective === 'elevated-2.5d' ? '2.5D Physical' : '2D Flat'}
+                      {settings.perspective === 'true-3d'
+                        ? 'True 3D Battlefield'
+                        : settings.perspective === 'elevated-2.5d'
+                        ? '2.5D Physical'
+                        : '2D Flat'}
                     </span>
                   </div>
                   <div className="font-semibold text-sm text-white mt-2">Board Elevation</div>

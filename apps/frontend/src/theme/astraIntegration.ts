@@ -15,10 +15,14 @@ import { AstraCaptureEvent, AstraPieceModelProvider } from './themeTypes'
 
 type CaptureListener = (event: AstraCaptureEvent) => void
 type MoveListener = (from: string, to: string, piece: string) => void
+type GameEndListener = (outcome: 'white_wins' | 'black_wins' | 'draw') => void
+type GameResetListener = () => void
 
 class AstraIntegrationHub {
   private captureListeners: Set<CaptureListener> = new Set()
   private moveListeners: Set<MoveListener> = new Set()
+  private gameEndListeners: Set<GameEndListener> = new Set()
+  private gameResetListeners: Set<GameResetListener> = new Set()
   private provider: AstraPieceModelProvider = {
     isLoaded: false,
     version: '1.0.0-preview',
@@ -69,19 +73,46 @@ class AstraIntegrationHub {
   }
 
   /**
-   * Subscribe to capture events
+   * Dispatches game end outcome to Astra's 3D cinematic ending director
    */
+  public notifyGameEnd(outcome: 'white_wins' | 'black_wins' | 'draw') {
+    this.gameEndListeners.forEach((listener) => {
+      try {
+        listener(outcome)
+      } catch (err) {
+        console.error('[AstraIntegration] Game end listener error:', err)
+      }
+    })
+  }
+
+  public notifyGameReset() {
+    this.gameResetListeners.forEach((listener) => {
+      try {
+        listener()
+      } catch (err) {
+        console.error('[AstraIntegration] Game reset listener error:', err)
+      }
+    })
+  }
+
   public onCapture(listener: CaptureListener): () => void {
     this.captureListeners.add(listener)
     return () => this.captureListeners.delete(listener)
   }
 
-  /**
-   * Subscribe to move events
-   */
   public onMove(listener: MoveListener): () => void {
     this.moveListeners.add(listener)
     return () => this.moveListeners.delete(listener)
+  }
+
+  public onGameEnd(listener: GameEndListener): () => void {
+    this.gameEndListeners.add(listener)
+    return () => this.gameEndListeners.delete(listener)
+  }
+
+  public onGameReset(listener: GameResetListener): () => void {
+    this.gameResetListeners.add(listener)
+    return () => this.gameResetListeners.delete(listener)
   }
 }
 

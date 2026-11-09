@@ -186,6 +186,8 @@ export function GameBoard({
 
     if (game.current.isCheckmate()) {
       const winner = game.current.turn() === 'w' ? 'b' : 'w'
+      const outcome = winner === 'w' ? 'white_wins' : 'black_wins'
+      astraHub.notifyGameEnd(outcome)
       if (winner === playerColor) {
         type = 'win'
         title = 'Glorious Victory!'
@@ -209,6 +211,10 @@ export function GameBoard({
     } else if (game.current.isDraw()) {
       title = '50-Move Draw'
       subtitle = '50 moves occurred without a pawn move or capture.'
+    }
+
+    if (!game.current.isCheckmate()) {
+      astraHub.notifyGameEnd('draw')
     }
 
     setResultData({ type, title, subtitle })
@@ -253,7 +259,7 @@ export function GameBoard({
               if (move.captured) {
                 soundService.playPieceCapture(activePreset.defaultSoundPack, settings.soundEnabled)
                 astraHub.notifyCapture({
-                  attackerSquare: to,
+                  attackerSquare: from,
                   victimSquare: to,
                   attackerPiece: `${move.color}${move.piece.toUpperCase()}`,
                   victimPiece: `${move.color === 'w' ? 'b' : 'w'}${move.captured.toUpperCase()}`,
@@ -347,7 +353,7 @@ export function GameBoard({
           if (move.captured) {
             soundService.playPieceCapture(activePreset.defaultSoundPack, settings.soundEnabled)
             astraHub.notifyCapture({
-              attackerSquare: square,
+              attackerSquare: selectedSquare,
               victimSquare: square,
               attackerPiece: `${move.color}${move.piece.toUpperCase()}`,
               victimPiece: `${move.color === 'w' ? 'b' : 'w'}${move.captured.toUpperCase()}`,
@@ -406,7 +412,7 @@ export function GameBoard({
       if (move.captured) {
         soundService.playPieceCapture(activePreset.defaultSoundPack, settings.soundEnabled)
         astraHub.notifyCapture({
-          attackerSquare: target,
+          attackerSquare: source,
           victimSquare: target,
           attackerPiece: `${move.color}${move.piece.toUpperCase()}`,
           victimPiece: `${move.color === 'w' ? 'b' : 'w'}${move.captured.toUpperCase()}`,
@@ -453,6 +459,7 @@ export function GameBoard({
   const handleResetGame = () => {
     if (botTimeoutRef.current) clearTimeout(botTimeoutRef.current)
     game.current.reset()
+    astraHub.notifyGameReset()
     setFen(game.current.fen())
     setLastMove(null)
     setSelectedSquare(null)

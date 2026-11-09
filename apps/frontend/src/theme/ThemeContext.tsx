@@ -123,10 +123,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const togglePerspective = useCallback(() => {
-    setSettings((prev) => ({
-      ...prev,
-      perspective: prev.perspective === 'flat-2d' ? 'elevated-2.5d' : 'flat-2d',
-    }))
+    setSettings((prev) => {
+      const order: BoardPerspective[] = ['true-3d', 'elevated-2.5d', 'flat-2d']
+      const nextIdx = (order.indexOf(prev.perspective) + 1) % order.length
+      return {
+        ...prev,
+        perspective: order[nextIdx],
+      }
+    })
   }, [])
 
   const updateSettings = useCallback((partial: Partial<ThemeSettings>) => {

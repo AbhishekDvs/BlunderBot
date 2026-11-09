@@ -7,6 +7,7 @@ import { BoardOrientation } from 'react-chessboard/dist/chessboard/types'
 import { useTheme } from '@/theme/ThemeContext'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { boardAnimationDuration } from '@/lib/astra/motion'
+import { ThreeBoardCanvas } from './ThreeBoardCanvas'
 
 interface ChessboardFrameProps {
   fen: string
@@ -132,8 +133,26 @@ export function ChessboardFrame({
   }, [settings.pieceSetId])
 
   const is25D = settings.perspective === 'elevated-2.5d'
+  const is3D = settings.perspective === 'true-3d'
   const systemReducedMotion = useReducedMotion()
   const animDuration = boardAnimationDuration('system', systemReducedMotion, side)
+
+  if (is3D) {
+    return (
+      <div className="relative flex flex-col items-center justify-center p-1">
+        <ThreeBoardCanvas
+          fen={fen}
+          side={side}
+          boardWidth={boardWidth}
+          selectedSquare={selectedSquare}
+          legalMoves={legalMoves}
+          lastMove={lastMove}
+          inCheckSquare={inCheckSquare}
+          onSquareClick={onSquareClick}
+        />
+      </div>
+    )
+  }
 
   return (
     <div

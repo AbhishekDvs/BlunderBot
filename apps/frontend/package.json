@@ -9,13 +9,15 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@types/three": "^0.187.0",
     "chess.js": "^1.4.0",
     "framer-motion": "^12.23.0",
     "html-to-image": "^1.11.13",
     "next": "15.5.29",
     "react": "^19.0.0",
     "react-chessboard": "4.2.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

@@ -1,4 +1,4 @@
-import { BoardPreset, PieceSet, ThemeSettings } from './themeTypes'
+import type { BoardPreset, PieceSet, ThemeSettings } from './themeTypes.ts'
 
 export const BOARD_PRESETS: Record<string, BoardPreset> = {
   'classic-tournament': {
@@ -174,21 +174,21 @@ export const PIECE_SETS: Record<string, PieceSet> = {
   },
   'astra-medieval': {
     id: 'astra-medieval',
-    name: 'Astra Medieval Army · Unavailable',
+    name: 'Astra Medieval Army (3D)',
     author: 'Astra Studio (Ancient Indian War Chess)',
-    description: 'Awaiting approved sculpted masters, rendered atlases and animation review. Vector placeholders are retired.',
+    description: 'Padati (Pawn), Ashva Senani (Knight), Durg (Rook), Acharya (Bishop), Samrajni (Queen), Raja (King). True 3D animated war chess.',
     type: 'astra-3d-model',
-    isAvailable: false,
+    isAvailable: true,
     previewPieceCode: 'wN',
-    tag: 'Production gate closed',
+    tag: 'Astra Royal War Miniatures (3D)',
   },
 }
 
 export const DEFAULT_THEME_SETTINGS: ThemeSettings = {
-  boardPresetId: 'royal-walnut',
-  pieceSetId: 'default',
-  soundPackId: 'wood',
-  perspective: 'flat-2d',
+  boardPresetId: 'ancient-battlefield',
+  pieceSetId: 'astra-medieval',
+  soundPackId: 'stone',
+  perspective: 'true-3d',
   showCoordinates: true,
   soundEnabled: true,
   animationDuration: 250,

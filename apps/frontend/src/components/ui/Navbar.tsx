@@ -81,19 +81,25 @@ export function Navbar({ onNewGameClick }: { onNewGameClick?: () => void }) {
             {settings.soundEnabled ? <VolumeOnIcon className="w-4 h-4" /> : <VolumeOffIcon className="w-4 h-4" />}
           </button>
 
-          {/* 2.5D Physical Perspective Toggle */}
+          {/* 3D / 2.5D Perspective Toggle */}
           <button
             type="button"
             onClick={handlePerspectiveClick}
             className={`p-2 rounded-lg border transition hidden sm:flex items-center gap-1.5 text-xs font-medium ${
-              settings.perspective === 'elevated-2.5d'
+              settings.perspective === 'true-3d' || settings.perspective === 'elevated-2.5d'
                 ? 'bg-yellow-500/15 border-yellow-500/40 text-yellow-300'
                 : 'bg-white/[0.04] border-white/10 text-zinc-300 hover:bg-white/[0.08]'
             }`}
-            title="Toggle 2.5D Physical Elevation"
+            title="Toggle between True 3D Battlefield, 2.5D Elevation, and 2D Flat"
           >
             <PerspectiveIcon className="w-4 h-4" />
-            <span className="hidden lg:inline">{settings.perspective === 'elevated-2.5d' ? '2.5D' : '2D'}</span>
+            <span className="hidden lg:inline">
+              {settings.perspective === 'true-3d'
+                ? '3D War Chess'
+                : settings.perspective === 'elevated-2.5d'
+                ? '2.5D'
+                : '2D'}
+            </span>
           </button>
 
           {/* Theme Customizer Trigger */}

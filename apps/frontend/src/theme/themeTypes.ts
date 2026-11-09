@@ -24,7 +24,7 @@ export type PieceSetId =
 
 export type SoundPackId = 'wood' | 'marble' | 'stone' | 'soft' | 'silent'
 
-export type BoardPerspective = 'flat-2d' | 'elevated-2.5d'
+export type BoardPerspective = 'flat-2d' | 'elevated-2.5d' | 'true-3d'
 
 export interface BoardPreset {
   id: BoardPresetId
