@@ -1,0 +1,14 @@
+{
+  "environment": "Ubuntu Linux, Snap Firefox 160.2, WebGL SWGL / Mesa",
+  "viewport": "1280x900",
+  "testDurationSec": 12.5,
+  "metrics": {
+    "samples": 596,
+    "avgMs": 17.92,
+    "p95Ms": 33.26,
+    "minMs": 16.06,
+    "maxMs": 50.64,
+    "approxFPS": 56,
+    "memoryMB": null
+  }
+}

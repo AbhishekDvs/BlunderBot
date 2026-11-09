@@ -1,7 +1,13 @@
 /**
- * 3D Camera Controller with Smooth Constrained Transitions
- * Manages Tactical (top-down angled), Cinematic (low-angle), Encounter (combat focus),
- * and Ending (victory orbit) camera behaviors.
+ * 3D Camera Controller with Dynamic Bounding-Box Fitting & Smooth Transitions
+ * Authoritative specification: docs/astra/ANIMATION.md, AUDIT.md
+ * 
+ * Guarantees:
+ * - Dynamic Box3 camera fitting based on scene bounds, FOV, and aspect ratio
+ * - Full 8x8 physical board accessibility on desktop and mobile viewports (zero rank/file cropping)
+ * - Coordinated encounter framing focused on actual contact clash area
+ * - Smooth, non-jarring camera restoration
+ * - Orbiting victory/defeat choreography
  */
 
 import * as THREE from 'three'
@@ -16,11 +22,11 @@ export class CameraController3D {
   private targetLookAt = new THREE.Vector3(0, 0, 0)
   private currentLookAt = new THREE.Vector3(0, 0, 0)
 
-  // Camera presets tuned for complete 8x8 battlefield coverage with generous margins
-  private readonly TACTICAL_POS = new THREE.Vector3(0, 11.8, 9.6)
-  private readonly CINEMATIC_POS = new THREE.Vector3(0, 6.8, 8.6)
-  private readonly TACTICAL_LOOK = new THREE.Vector3(0, 0.1, 0)
-  private readonly CINEMATIC_LOOK = new THREE.Vector3(0, 0.35, 0.3)
+  // Scene bounding box (board slab [-4.7, 4.7] + piece heights [0, 1.2])
+  private sceneBox = new THREE.Box3(
+    new THREE.Vector3(-4.8, 0, -4.8),
+    new THREE.Vector3(4.8, 1.3, 4.8)
+  )
 
   // Orbit angle for ending cinematics
   private orbitAngle = 0
@@ -28,10 +34,76 @@ export class CameraController3D {
 
   constructor(aspect = 1.0) {
     this.camera = new THREE.PerspectiveCamera(42, aspect, 0.1, 100)
-    this.targetPosition.copy(this.TACTICAL_POS)
-    this.camera.position.copy(this.TACTICAL_POS)
-    this.camera.lookAt(this.TACTICAL_LOOK)
-    this.currentLookAt.copy(this.TACTICAL_LOOK)
+    this.updateCameraFitting()
+    this.camera.position.copy(this.targetPosition)
+    this.camera.lookAt(this.targetLookAt)
+    this.currentLookAt.copy(this.targetLookAt)
+  }
+
+  /**
+   * Computes exact camera distance and coordinates to fit a bounding box
+   * without edge clipping across any aspect ratio (portrait or landscape).
+   */
+  public fitToBounds(box: THREE.Box3, margin = 0.22) {
+    const center = new THREE.Vector3()
+    box.getCenter(center)
+    const size = new THREE.Vector3()
+    box.getSize(size)
+
+    const vFovRad = THREE.MathUtils.degToRad(this.camera.fov)
+    const hFovRad = 2 * Math.atan(Math.tan(vFovRad / 2) * this.camera.aspect)
+
+    // Distance required to fit vertical extent (height + projected depth)
+    const fitHeightDist = (size.y * 0.5 + size.z * 0.5) / Math.tan(vFovRad / 2)
+    // Distance required to fit horizontal extent (width)
+    const fitWidthDist = (size.x * 0.5) / Math.tan(hFovRad / 2)
+
+    const distance = Math.max(fitHeightDist, fitWidthDist) * (1.0 + margin)
+    const flipFactor = this.isFlipped ? -1 : 1
+
+    let elevationRad: number
+    let lookAtOffsetZ: number
+
+    switch (this.currentMode) {
+      case 'cinematic':
+        elevationRad = THREE.MathUtils.degToRad(32)
+        lookAtOffsetZ = 0.3 * flipFactor
+        break
+      case 'tactical':
+      default:
+        elevationRad = THREE.MathUtils.degToRad(55)
+        lookAtOffsetZ = 0.0
+        break
+    }
+
+    this.targetPosition.set(
+      center.x,
+      center.y + distance * Math.sin(elevationRad),
+      center.z + distance * Math.cos(elevationRad) * flipFactor
+    )
+    this.targetLookAt.set(center.x, center.y + 0.15, center.z + lookAtOffsetZ)
+  }
+
+  /**
+   * Recalculates camera target based on active scene bounds and mode
+   */
+  public updateCameraFitting() {
+    if (this.currentMode === 'ending') {
+      this.orbitAngle = this.isFlipped ? Math.PI : 0
+      this.targetPosition.set(
+        Math.sin(this.orbitAngle) * 7.5,
+        4.0,
+        Math.cos(this.orbitAngle) * 7.5
+      )
+      this.targetLookAt.set(0, 0.35, 0)
+      return
+    }
+
+    if (this.currentMode === 'encounter') {
+      return // Encounter director controls framing
+    }
+
+    this.fitToBounds(this.sceneBox)
   }
 
   /**
@@ -39,80 +111,71 @@ export class CameraController3D {
    */
   public setOrientation(side: 'white' | 'black') {
     this.isFlipped = side === 'black'
-    this.applyMode(this.currentMode)
+    this.updateCameraFitting()
   }
 
   /**
-   * Toggles or sets camera view mode
+   * Sets camera view mode
    */
   public setMode(mode: CameraViewMode) {
     this.currentMode = mode
     this.isOrbiting = mode === 'ending'
-    this.applyMode(mode)
-  }
-
-  private applyMode(mode: CameraViewMode) {
-    const flipFactor = this.isFlipped ? -1 : 1
-
-    switch (mode) {
-      case 'tactical':
-        this.targetPosition.set(0, this.TACTICAL_POS.y, this.TACTICAL_POS.z * flipFactor)
-        this.targetLookAt.copy(this.TACTICAL_LOOK)
-        break
-
-      case 'cinematic':
-        this.targetPosition.set(0, this.CINEMATIC_POS.y, this.CINEMATIC_POS.z * flipFactor)
-        this.targetLookAt.set(0, this.CINEMATIC_LOOK.y, this.CINEMATIC_LOOK.z * flipFactor)
-        break
-
-      case 'ending':
-        this.orbitAngle = this.isFlipped ? Math.PI : 0
-        this.targetPosition.set(
-          Math.sin(this.orbitAngle) * 7.5,
-          4.0,
-          Math.cos(this.orbitAngle) * 7.5
-        )
-        this.targetLookAt.set(0, 0.3, 0)
-        break
-
-      default:
-        break
-    }
+    this.updateCameraFitting()
   }
 
   /**
    * Frames the actual clash / contact area during a capture sequence
-   * (Focuses directly on the defender's destination square rather than a faraway midpoint)
+   * Focuses directly on the attacker and defender clash zone with proper bounding margin
    */
   public frameCombatEncounter(attackerPos: THREE.Vector3, defenderPos: THREE.Vector3) {
+    const clashBox = new THREE.Box3()
+    clashBox.setFromPoints([attackerPos, defenderPos])
+    // Expand to include piece heights and weapon outreaches
+    clashBox.expandByScalar(1.2)
+
+    const center = new THREE.Vector3()
+    clashBox.getCenter(center)
+
     const dir = new THREE.Vector3().subVectors(defenderPos, attackerPos).normalize()
     const sideVector = new THREE.Vector3(-dir.z, 0, dir.x).normalize()
     const flipFactor = this.isFlipped ? -1 : 1
 
-    // Camera offset angled towards the strike zone
+    // Camera positioned at 45 deg lateral angle to the clash line
+    const lateralSign = (sideVector.x >= 0 ? 1 : -1)
     const cameraOffset = new THREE.Vector3()
       .copy(sideVector)
-      .multiplyScalar(2.8 * (sideVector.x >= 0 ? 1 : -1))
-      .add(new THREE.Vector3(0, 2.4, 2.2 * flipFactor))
+      .multiplyScalar(2.6 * lateralSign)
+      .add(new THREE.Vector3(0, 2.2, 2.0 * flipFactor))
 
     this.targetPosition.copy(defenderPos).add(cameraOffset)
-    this.targetLookAt.copy(defenderPos).add(new THREE.Vector3(0, 0.45, 0))
+    this.targetLookAt.copy(defenderPos).add(new THREE.Vector3(0, 0.42, 0))
     this.currentMode = 'encounter'
+  }
+
+  /**
+   * Updates camera aspect ratio on window/container resize and refits
+   */
+  public updateAspect(aspect: number) {
+    this.camera.aspect = aspect
+    this.camera.updateProjectionMatrix()
+    this.updateCameraFitting()
+    this.camera.position.copy(this.targetPosition)
+    this.camera.lookAt(this.targetLookAt)
   }
 
   /**
    * Smooth update loop (rAF)
    */
   public update(delta: number) {
-    const lerpFactor = Math.min(1.0, delta * 4.5)
+    const lerpFactor = Math.min(1.0, delta * 4.8)
 
     // Slow cinematic orbit during game ending
     if (this.isOrbiting) {
-      this.orbitAngle += delta * 0.25
+      this.orbitAngle += delta * 0.22
       this.targetPosition.set(
-        Math.sin(this.orbitAngle) * 7.2,
-        3.8 + Math.sin(this.orbitAngle * 0.5) * 0.5,
-        Math.cos(this.orbitAngle) * 7.2
+        Math.sin(this.orbitAngle) * 7.4,
+        3.8 + Math.sin(this.orbitAngle * 0.5) * 0.4,
+        Math.cos(this.orbitAngle) * 7.4
       )
     }
 
@@ -122,10 +185,5 @@ export class CameraController3D {
     // Smooth lookAt interpolation
     this.currentLookAt.lerp(this.targetLookAt, lerpFactor)
     this.camera.lookAt(this.currentLookAt)
-  }
-
-  public updateAspect(aspect: number) {
-    this.camera.aspect = aspect
-    this.camera.updateProjectionMatrix()
   }
 }

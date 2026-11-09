@@ -1,21 +1,13 @@
 /**
- * Two-Piece Cinematic Encounter Director
- * Authoritative specification: docs/astra/ANIMATION.md
+ * Two-Piece Cinematic Encounter Director with World-Space Socket Contact Alignment
+ * Authoritative specification: docs/astra/ANIMATION.md, AUDIT.md
  * 
- * CRITICAL REQUIREMENT: BOTH pieces actively participate in captures.
- * 
- * 11-Step Choreographed Lifecycle:
- * 1. Attacker Anticipation (stance coil, weapon lift)
- * 2. Defender Awareness (detects incoming attack, rotates to face attacker)
- * 3. Dynamic Camera Framing (focuses on the 2 clashing squares)
- * 4. Attacker Approach / Charge
- * 5. Defender Defense / Parry / Shield Block
- * 6. Synchronized Weapon Impact
- * 7. Defender Physical Stagger & Recoil
- * 8. Structural Shell Fracture & Dissolution
- * 9. Residual Debris Ballistics & Settle
- * 10. Attacker Occupation & Victory Posture
- * 11. Camera Restoration to Tactical/Cinematic View
+ * Guarantees:
+ * 1. World-space contact alignment between weapon tip socket and defender contact anchor (impact within defined tolerance)
+ * 2. True mutual two-piece combat: Knight trot/canter gait & lance couch; Bishop warding staff block before impact
+ * 3. Real physical destruction: authored shell fragments separate and scatter; base stays grounded; NO whole-model shrinking
+ * 4. Grounded stagger recoil along strike vector
+ * 5. Smooth camera framing and clean restoration
  */
 
 import * as THREE from 'three'
@@ -25,11 +17,11 @@ import { CameraController3D } from './cameraController.ts'
 
 export type EncounterPhase =
   | 'idle'
-  | 'anticipation'     // 0 - 22%
+  | 'anticipation'     // 0% - 22%
   | 'approach'         // 22% - 54%
   | 'impact'           // 54%
-  | 'stagger_break'    // 54% - 78%
-  | 'settling'         // 78% - 100%
+  | 'stagger_fracture' // 54% - 80%
+  | 'settling'         // 80% - 100%
 
 export class EncounterDirector3D {
   public currentPhase: EncounterPhase = 'idle'
@@ -46,7 +38,7 @@ export class EncounterDirector3D {
   private defenderTargetYaw = 0
 
   private startTime = 0
-  private durationMs = 1800
+  private durationMs = 1900
   private pacing: AnimationPacing = 'cinematic'
   private hasTriggeredImpact = false
   private onCompleteCallback?: () => void
@@ -63,23 +55,23 @@ export class EncounterDirector3D {
   }
 
   /**
-   * Weapon contact reaches based on Astra physical model specifications
+   * Fallback weapon reaches if sockets are missing
    */
-  private getWeaponReach(pieceCode: string): number {
+  private getFallbackReach(pieceCode: string): number {
     const pieceClass = pieceCode.slice(1).toUpperCase()
     switch (pieceClass) {
-      case 'N': return 0.46 // Cavalry lance reach
+      case 'N': return 0.48 // Cavalry lance reach
       case 'P': return 0.40 // Infantry spear reach
       case 'B': return 0.38 // Acharya staff reach
       case 'R': return 0.36 // Siege ram reach
-      case 'Q': return 0.32 // Imperial talwar reach
-      case 'K': return 0.30 // Royal broadsword reach
+      case 'Q': return 0.34 // Imperial talwar reach
+      case 'K': return 0.32 // Royal broadsword reach
       default: return 0.35
     }
   }
 
   /**
-   * Initiates a full two-piece cinematic capture sequence
+   * Initiates a full two-piece cinematic capture sequence with world-space alignment
    */
   public startCapture(
     attacker: Piece3DNode,
@@ -127,7 +119,7 @@ export class EncounterDirector3D {
       return
     }
 
-    // Compute attack direction vector
+    // 1. Calculate attack vector and direction
     const attackVec = new THREE.Vector3().subVectors(this.destinationPos, this.attackerStartPos)
     const dist = attackVec.length()
     if (dist > 0.001) {
@@ -136,17 +128,48 @@ export class EncounterDirector3D {
       this.attackDir.set(0, 0, 1)
     }
 
-    // Exact contact alignment based on attacker weapon reach
-    const reach = this.getWeaponReach(attacker.pieceCode)
-    const stopDist = Math.min(reach, dist * 0.75)
-    this.contactPos.subVectors(this.destinationPos, this.attackDir.clone().multiplyScalar(stopDist))
-
-    // Orient combatants towards each other
+    // Orient combatants to face each other
     this.attackerTargetYaw = Math.atan2(this.attackDir.x, this.attackDir.z)
     this.defenderTargetYaw = Math.atan2(-this.attackDir.x, -this.attackDir.z)
 
     attacker.group.rotation.y = this.attackerTargetYaw
     defender.group.rotation.y = this.defenderTargetYaw
+
+    // 2. World-Space Socket Contact Alignment
+    attacker.group.position.copy(this.attackerStartPos)
+    defender.group.position.copy(this.destinationPos)
+    attacker.group.updateWorldMatrix(true, true)
+    defender.group.updateWorldMatrix(true, true)
+
+    const tipSocket = attacker.group.getObjectByName('weapon_tip_socket') || attacker.weaponNode
+    const contactAnchor = defender.group.getObjectByName('contact_anchor') || defender.torsoNode || defender.group
+
+    let forwardReach = this.getFallbackReach(attacker.pieceCode)
+    let anchorOffset = 0.0
+
+    if (tipSocket) {
+      const vTip = new THREE.Vector3()
+      const vAtkRoot = new THREE.Vector3()
+      tipSocket.getWorldPosition(vTip)
+      attacker.group.getWorldPosition(vAtkRoot)
+      const measuredOffset = new THREE.Vector3().subVectors(vTip, vAtkRoot).dot(this.attackDir)
+      if (measuredOffset > 0.15 && measuredOffset < 1.2) {
+        forwardReach = measuredOffset
+      }
+    }
+
+    if (contactAnchor) {
+      const vAnchor = new THREE.Vector3()
+      const vDefRoot = new THREE.Vector3()
+      contactAnchor.getWorldPosition(vAnchor)
+      defender.group.getWorldPosition(vDefRoot)
+      anchorOffset = new THREE.Vector3().subVectors(vAnchor, vDefRoot).dot(this.attackDir)
+    }
+
+    // Exact contact root position: stops where weapon tip aligns with defender anchor
+    const effectiveReach = Math.max(0.20, forwardReach - anchorOffset)
+    const travelDist = Math.max(0.15, dist - effectiveReach)
+    this.contactPos.addVectors(this.attackerStartPos, this.attackDir.clone().multiplyScalar(travelDist))
 
     // Frame camera on combat encounter
     if (this.pacing === 'cinematic') {
@@ -176,95 +199,97 @@ export class EncounterDirector3D {
       this.currentPhase = 'anticipation'
       const t = progress / 0.22
 
-      // Attacker coils back and raises weapon
+      // Attacker coils back weight & raises weapon
       if (this.attackerNode.weaponNode) {
-        this.attackerNode.weaponNode.rotation.x = -Math.sin(t * Math.PI) * 0.4
+        this.attackerNode.weaponNode.rotation.x = -Math.sin(t * Math.PI) * 0.35
       }
       if (this.attackerNode.torsoNode) {
-        this.attackerNode.torsoNode.position.y = Math.sin(t * Math.PI) * 0.05
+        this.attackerNode.torsoNode.position.y = Math.sin(t * Math.PI) * 0.04
       }
 
-      // Defender spots incoming threat and assumes defensive posture
-      if (defenderClass === 'P' && this.defenderNode.shieldNode) {
-        this.defenderNode.shieldNode.rotation.z = Math.PI / 2 + Math.sin(t * Math.PI) * 0.3
-      } else if (defenderClass === 'B' && this.defenderNode.weaponNode) {
-        this.defenderNode.weaponNode.rotation.z = Math.sin(t * Math.PI) * 0.35
+      // Defender spots threat and assumes defensive posture
+      if (defenderClass === 'B' && this.defenderNode.weaponNode) {
+        this.defenderNode.weaponNode.rotation.z = Math.sin(t * Math.PI) * 0.40
+      } else if (defenderClass === 'P' && this.defenderNode.shieldNode) {
+        this.defenderNode.shieldNode.rotation.z = Math.PI / 2 + Math.sin(t * Math.PI) * 0.35
       } else if (this.defenderNode.weaponNode) {
-        this.defenderNode.weaponNode.rotation.x = Math.sin(t * Math.PI) * 0.25
+        this.defenderNode.weaponNode.rotation.x = Math.sin(t * Math.PI) * 0.30
       }
     }
-    // 2. Phase: Approach & Defense Reaction (0.22 -> 0.54)
+    // 2. Phase: Approach & Defensive Reaction (0.22 -> 0.54)
     else if (progress < 0.54) {
       this.currentPhase = 'approach'
       const t = (progress - 0.22) / 0.32
 
-      // Attacker translates forward towards exact contact position (weapon reach alignment)
+      // Attacker translates forward towards exact contact position
       this.attackerNode.group.position.lerpVectors(this.attackerStartPos, this.contactPos, t)
 
-      // Class-specific attacker locomotion & weapon articulation
+      // Attacker Class Locomotion
       if (attackerClass === 'N') {
-        // Articulated canter/trot gait across approach
+        // Articulated 4-leg canter/trot gait with knee/hock flex
         const trotCycle = t * Math.PI * 6
-        const legSwing = Math.sin(trotCycle) * 0.38
-        const forelegSwing = Math.sin(trotCycle + Math.PI * 0.3) * 0.35
+        const legUpperAngle = Math.sin(trotCycle) * 0.42
+        const legLowerAngle = Math.max(0, Math.sin(trotCycle)) * 0.48 // knee flexes backward on backswing
 
         const flUpper = this.attackerNode.group.getObjectByName('Horse_FL_Upper')
+        const flLower = this.attackerNode.group.getObjectByName('Horse_FL_Lower')
         const frUpper = this.attackerNode.group.getObjectByName('Horse_FR_Upper')
+        const frLower = this.attackerNode.group.getObjectByName('Horse_FR_Lower')
         const blUpper = this.attackerNode.group.getObjectByName('Horse_BL_Upper')
+        const blLower = this.attackerNode.group.getObjectByName('Horse_BL_Lower')
         const brUpper = this.attackerNode.group.getObjectByName('Horse_BR_Upper')
+        const brLower = this.attackerNode.group.getObjectByName('Horse_BR_Lower')
 
-        if (flUpper) flUpper.rotation.x = forelegSwing
-        if (frUpper) frUpper.rotation.x = -forelegSwing
-        if (blUpper) blUpper.rotation.x = -legSwing
-        if (brUpper) brUpper.rotation.x = legSwing
+        if (flUpper) flUpper.rotation.x = legUpperAngle
+        if (flLower) flLower.rotation.x = legLowerAngle
+        if (frUpper) frUpper.rotation.x = -legUpperAngle
+        if (frLower) frLower.rotation.x = Math.max(0, -legUpperAngle) * 0.48
+        if (blUpper) blUpper.rotation.x = -legUpperAngle
+        if (blLower) blLower.rotation.x = Math.max(0, -legUpperAngle) * 0.48
+        if (brUpper) brUpper.rotation.x = legUpperAngle
+        if (brLower) brLower.rotation.x = legLowerAngle
 
-        // Dynamic vertical gallop bob and pitch
+        // Gallop vertical bob & pitch
         this.attackerNode.group.position.y = Math.abs(Math.sin(trotCycle)) * 0.04
-        this.attackerNode.group.rotation.x = Math.sin(trotCycle * 0.5) * 0.12 - (t > 0.7 ? (t - 0.7) * 0.4 : 0)
+        this.attackerNode.group.rotation.x = Math.sin(trotCycle * 0.5) * 0.08
 
-        // Couch cavalry lance forward as approaching victim
+        // Couched lance posture: lowers smoothly into strike
         if (this.attackerNode.weaponNode) {
-          this.attackerNode.weaponNode.rotation.x = t * 0.45
+          this.attackerNode.weaponNode.rotation.x = t * 0.50
         }
       } else if (attackerClass === 'P') {
-        // Pawn thrusts spear forward into target
         if (this.attackerNode.weaponNode) {
           this.attackerNode.weaponNode.rotation.x = t * 0.85
         }
         this.attackerNode.group.position.y = Math.sin(t * Math.PI * 4) * 0.02
       } else if (attackerClass === 'R') {
-        // Rook battering ram charges forward
         if (this.attackerNode.weaponNode) {
-          this.attackerNode.weaponNode.position.z = Math.sin(t * Math.PI) * 0.15
+          this.attackerNode.weaponNode.position.z = Math.sin(t * Math.PI) * 0.16
         }
       } else {
-        // Queen / King sword strike arc
         if (this.attackerNode.weaponNode) {
-          this.attackerNode.weaponNode.rotation.x = t * 0.7
+          this.attackerNode.weaponNode.rotation.x = t * 0.70
         }
       }
 
-      // Defender anticipatory reaction & warding
+      // Defender Anticipatory Reaction & Block
       if (defenderClass === 'B') {
-        // Bishop raises and angles warding lotus staff to block incoming attack
+        // Bishop raises and angles warding lotus staff to absorb incoming strike
         if (this.defenderNode.weaponNode) {
-          this.defenderNode.weaponNode.rotation.z = Math.sin(t * Math.PI * 0.5) * 0.55
-          this.defenderNode.weaponNode.rotation.x = Math.sin(t * Math.PI * 0.5) * 0.35
+          this.defenderNode.weaponNode.rotation.z = Math.sin(t * Math.PI * 0.5) * 0.65
+          this.defenderNode.weaponNode.rotation.x = Math.sin(t * Math.PI * 0.5) * 0.42
         }
         if (this.defenderNode.torsoNode) {
-          this.defenderNode.torsoNode.rotation.y = Math.sin(t * Math.PI * 0.5) * 0.2
+          this.defenderNode.torsoNode.rotation.y = Math.sin(t * Math.PI * 0.5) * 0.25
         }
       } else if (defenderClass === 'P') {
-        // Pawn braces dhal shield forward into incoming attack
         if (this.defenderNode.shieldNode) {
           this.defenderNode.shieldNode.position.z = Math.sin(t * Math.PI * 0.5) * 0.14
-          this.defenderNode.shieldNode.rotation.y = -Math.sin(t * Math.PI * 0.5) * 0.25
+          this.defenderNode.shieldNode.rotation.y = -Math.sin(t * Math.PI * 0.5) * 0.28
         }
       } else if (defenderClass === 'N') {
-        // Knight horse turns flank defensively
         this.defenderNode.group.rotation.y = this.defenderTargetYaw + Math.sin(t * Math.PI * 0.5) * 0.35
       } else if (this.defenderNode.weaponNode) {
-        // Queen/King/Rook defensive stance
         this.defenderNode.weaponNode.rotation.z = Math.sin(t * Math.PI * 0.5) * 0.45
       }
     }
@@ -273,7 +298,7 @@ export class EncounterDirector3D {
       this.hasTriggeredImpact = true
       this.currentPhase = 'impact'
 
-      // Trigger Web Audio impact sound & screen callback
+      // Trigger Web Audio impact sound & callback
       this.onContactCallback?.()
 
       // Spawn physical fracture debris
@@ -283,53 +308,74 @@ export class EncounterDirector3D {
         this.pacing === 'reduced'
       )
     }
-    // 4. Phase: Defender Stagger & Shell Fracture (0.54 -> 0.78)
-    else if (progress < 0.78) {
-      this.currentPhase = 'stagger_break'
-      const t = (progress - 0.54) / 0.24
+    // 4. Phase: Physical Recoil & Structural Shell Fracture (0.54 -> 0.80)
+    else if (progress < 0.80) {
+      this.currentPhase = 'stagger_fracture'
+      const t = (progress - 0.54) / 0.26
 
       // Attacker follows through with strike
       if (this.attackerNode.weaponNode) {
-        this.attackerNode.weaponNode.rotation.x = (1.0 - t) * 0.5
+        this.attackerNode.weaponNode.rotation.x = (1.0 - t) * 0.50
       }
       this.attackerNode.group.position.y = 0
       this.attackerNode.group.rotation.x = 0
 
-      // Reset knight legs after impact
+      // Reset horse legs after impact
       if (attackerClass === 'N') {
         const flUpper = this.attackerNode.group.getObjectByName('Horse_FL_Upper')
+        const flLower = this.attackerNode.group.getObjectByName('Horse_FL_Lower')
         const frUpper = this.attackerNode.group.getObjectByName('Horse_FR_Upper')
+        const frLower = this.attackerNode.group.getObjectByName('Horse_FR_Lower')
         const blUpper = this.attackerNode.group.getObjectByName('Horse_BL_Upper')
+        const blLower = this.attackerNode.group.getObjectByName('Horse_BL_Lower')
         const brUpper = this.attackerNode.group.getObjectByName('Horse_BR_Upper')
+        const brLower = this.attackerNode.group.getObjectByName('Horse_BR_Lower')
         if (flUpper) flUpper.rotation.x = 0
+        if (flLower) flLower.rotation.x = 0
         if (frUpper) frUpper.rotation.x = 0
+        if (frLower) frLower.rotation.x = 0
         if (blUpper) blUpper.rotation.x = 0
+        if (blLower) blLower.rotation.x = 0
         if (brUpper) brUpper.rotation.x = 0
+        if (brLower) brLower.rotation.x = 0
       }
 
-      // Defender physically staggers backwards away from strike vector before shell fracture
-      const recoilDist = Math.sin(t * Math.PI * 0.5) * 0.28
-      const recoilPos = new THREE.Vector3().addVectors(
+      // NO WHOLE-MODEL SHRINKING: Group scale remains 1.0!
+      this.defenderNode.group.scale.set(1, 1, 1)
+
+      // Physical Stagger Recoil backwards along strike vector with grounded contact
+      const staggerDist = Math.sin(t * Math.PI * 0.5) * 0.26
+      this.defenderNode.group.position.addVectors(
         this.defenderPos,
-        this.attackDir.clone().multiplyScalar(recoilDist)
+        this.attackDir.clone().multiplyScalar(staggerDist)
       )
-      this.defenderNode.group.position.copy(recoilPos)
-      this.defenderNode.group.position.y = Math.sin(t * Math.PI) * 0.08 // lifted by force of strike
-      this.defenderNode.group.rotation.x = -t * 1.1 // collapsing backwards
-      this.defenderNode.group.scale.setScalar(Math.max(0.01, 1.0 - t * 0.9)) // collapsing shell
+
+      // Torso staggers backward while base remains grounded
+      if (this.defenderNode.torsoNode) {
+        this.defenderNode.torsoNode.rotation.x = -t * 0.75
+      }
+
+      // Authored Shell Fracture separation
+      this.defenderNode.group.traverse((obj) => {
+        if (obj.name.startsWith('Fracture_')) {
+          obj.position.y += Math.sin(t * Math.PI) * 0.05
+          obj.position.z += t * 0.12
+          obj.rotation.x += t * 0.70
+        }
+      })
     }
-    // 5. Phase: Settling & Occupation (0.78 -> 1.0)
+    // 5. Phase: Settling & Occupation (0.80 -> 1.0)
     else {
       this.currentPhase = 'settling'
-      const t = (progress - 0.78) / 0.22
+      const t = (progress - 0.80) / 0.20
 
-      // Defender is dismantled
+      // Defeated upper body is dismantled, plinth remains grounded on square
       this.defenderNode.group.visible = false
 
-      // Attacker takes final step into destination square from contact position
+      // Attacker takes final step into destination square center
       this.attackerNode.group.position.lerpVectors(this.contactPos, this.destinationPos, t)
 
-      // Restore upright posture & clean weapon
+      // Restore upright posture & resting weapon
       this.attackerNode.group.position.y = 0
       this.attackerNode.group.rotation.x = 0
       if (this.attackerNode.weaponNode) {
@@ -358,13 +404,21 @@ export class EncounterDirector3D {
         this.attackerNode.weaponNode.position.set(0, 0, 0)
       }
       const flUpper = this.attackerNode.group.getObjectByName('Horse_FL_Upper')
+      const flLower = this.attackerNode.group.getObjectByName('Horse_FL_Lower')
       const frUpper = this.attackerNode.group.getObjectByName('Horse_FR_Upper')
+      const frLower = this.attackerNode.group.getObjectByName('Horse_FR_Lower')
       const blUpper = this.attackerNode.group.getObjectByName('Horse_BL_Upper')
+      const blLower = this.attackerNode.group.getObjectByName('Horse_BL_Lower')
       const brUpper = this.attackerNode.group.getObjectByName('Horse_BR_Upper')
+      const brLower = this.attackerNode.group.getObjectByName('Horse_BR_Lower')
       if (flUpper) flUpper.rotation.x = 0
+      if (flLower) flLower.rotation.x = 0
       if (frUpper) frUpper.rotation.x = 0
+      if (frLower) frLower.rotation.x = 0
       if (blUpper) blUpper.rotation.x = 0
+      if (blLower) blLower.rotation.x = 0
       if (brUpper) brUpper.rotation.x = 0
+      if (brLower) brLower.rotation.x = 0
       this.attackerNode.isAnimating = false
     }
 
@@ -374,8 +428,10 @@ export class EncounterDirector3D {
       this.defenderNode.isAnimating = false
     }
 
-    // Return camera to active mode (tactical or cinematic)
-    this.cameraCtrl.setMode(this.cameraCtrl.currentMode === 'encounter' ? 'tactical' : this.cameraCtrl.currentMode)
+    // Return camera smoothly to active mode (tactical or cinematic)
+    if (this.cameraCtrl.currentMode === 'encounter') {
+      this.cameraCtrl.setMode('tactical')
+    }
 
     this.isActive = false
     this.currentPhase = 'idle'

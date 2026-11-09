@@ -145,25 +145,31 @@ export class PieceBuilder3D {
 
       // Find articulation sockets
       torsoNode =
+        cloned.getObjectByName('Rider_Torso') ||
+        cloned.getObjectByName('Acharya_Torso') ||
         cloned.getObjectByName('Pawn_Torso') ||
         cloned.getObjectByName('Samrajni_Torso') ||
         cloned.getObjectByName('Raja_Cuirass') ||
-        cloned.getObjectByName('Rider_Torso') ||
-        cloned.getObjectByName('Horse_Torso') ||
-        cloned.getObjectByName('Acharya_Torso') ||
+        cloned.getObjectByName('Horse_Body') ||
         cloned.getObjectByName('Durg_Bastion')
+
       weaponNode =
-        cloned.getObjectByName('Pawn_SpearShaft') ||
+        cloned.getObjectByName('Lance_Assembly') ||
+        cloned.getObjectByName('Staff_Assembly') ||
+        cloned.getObjectByName('Pawn_SpearAssembly') ||
+        cloned.getObjectByName('Samrajni_TalwarAssembly') ||
+        cloned.getObjectByName('Raja_SwordAssembly') ||
         cloned.getObjectByName('Cavalry_Lance') ||
-        cloned.getObjectByName('Samrajni_TalwarBlade') ||
-        cloned.getObjectByName('Samrajni_Sword') ||
-        cloned.getObjectByName('Raja_Broadsword') ||
-        cloned.getObjectByName('Raja_Sword') ||
         cloned.getObjectByName('Acharya_Staff') ||
+        cloned.getObjectByName('Pawn_SpearShaft') ||
+        cloned.getObjectByName('Samrajni_TalwarBlade') ||
+        cloned.getObjectByName('Raja_Broadsword') ||
         cloned.getObjectByName('Durg_Ram')
+
       shieldNode =
         cloned.getObjectByName('Pawn_DhalShield') ||
         cloned.getObjectByName('Pawn_Shield')
+
       plinthNode =
         cloned.getObjectByName('Plinth_Stone') ||
         cloned.getObjectByName('Plinth_Lower')
