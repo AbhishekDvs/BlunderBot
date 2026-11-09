@@ -1,13 +1,14 @@
 /**
- * 3D Camera Controller with Dynamic Bounding-Box Fitting & Smooth Transitions
- * Authoritative specification: docs/astra/ANIMATION.md, AUDIT.md
- * 
+ * 3D Camera Controller with Long-Focal-Length Tactical Fitting & Dedicated Cinematic Framing
+ * Authoritative specifications: FLASH — BLUNDERBOT: ASSET KIT INTEGRATION, CAMERA & BOARD RECOVERY
+ *
  * Guarantees:
- * - Dynamic Box3 camera fitting based on scene bounds, FOV, and aspect ratio
- * - Full 8x8 physical board accessibility on desktop and mobile viewports (zero rank/file cropping)
- * - Coordinated encounter framing focused on actual contact clash area
- * - Smooth, non-jarring camera restoration
- * - Orbiting victory/defeat choreography
+ * 1. Default Tactical View: Elevation 65–70 degrees (67°), long-focal-length perspective (FOV 34°),
+ *    eliminating rank occlusion, clipping, and excessive empty vertical canvas space.
+ * 2. Dedicated Cinematic View: Elevation 30–40 degrees (34°), framing attacker & defender clash zone.
+ * 3. Automatic Tactical State Preservation & Clean Restoration after combat encounters.
+ * 4. User Interaction: Safe orbit and zoom within calibrated physical limits with instant snap-back.
+ * 5. Full Mobile Responsiveness: Dynamic horizontal bounding fitting without desktop shrinking.
  */
 
 import * as THREE from 'three'
@@ -22,29 +23,41 @@ export class CameraController3D {
   private targetLookAt = new THREE.Vector3(0, 0, 0)
   private currentLookAt = new THREE.Vector3(0, 0, 0)
 
-  // Scene bounding box (board slab [-4.7, 4.7] + piece heights [0, 2.0])
+  // Saved tactical state for combat encounter return
+  private savedTacticalPosition = new THREE.Vector3()
+  private savedTacticalLookAt = new THREE.Vector3()
+
+  // Scene bounding box: physical board slab [-4.7, 4.7] + maximum piece height 2.0
   private sceneBox = new THREE.Box3(
     new THREE.Vector3(-4.8, 0, -4.8),
     new THREE.Vector3(4.8, 2.0, 4.8)
   )
+
+  // User interactive orbit & zoom offsets
+  private userAzimuth = 0 // Horizontal orbit radians
+  private userPitchOffset = 0 // Vertical pitch adjustment radians
+  private userZoom = 1.0 // Zoom factor (0.75x to 1.35x)
 
   // Orbit angle for ending cinematics
   private orbitAngle = 0
   private isOrbiting = false
 
   constructor(aspect = 1.0) {
-    this.camera = new THREE.PerspectiveCamera(42, aspect, 0.1, 100)
+    // 34 deg FOV gives crisp long-focal-length perspective, preventing wide-angle edge warping
+    this.camera = new THREE.PerspectiveCamera(34, aspect, 0.1, 100)
     this.updateCameraFitting()
     this.camera.position.copy(this.targetPosition)
     this.camera.lookAt(this.targetLookAt)
     this.currentLookAt.copy(this.targetLookAt)
+    this.savedTacticalPosition.copy(this.targetPosition)
+    this.savedTacticalLookAt.copy(this.targetLookAt)
   }
 
   /**
-   * Computes exact camera distance and coordinates to fit a bounding box
-   * without edge clipping across any aspect ratio (portrait or landscape).
+   * Fits camera based on projected bounding geometry, viewport aspect ratio,
+   * board dimensions, and occupied piece bounds.
    */
-  public fitToBounds(box: THREE.Box3, margin = 0.22) {
+  public fitToBounds(box: THREE.Box3, margin = 0.08) {
     const center = new THREE.Vector3()
     box.getCenter(center)
     const size = new THREE.Vector3()
@@ -52,38 +65,61 @@ export class CameraController3D {
 
     const vFovRad = THREE.MathUtils.degToRad(this.camera.fov)
     const hFovRad = 2 * Math.atan(Math.tan(vFovRad / 2) * this.camera.aspect)
-
     const flipFactor = this.isFlipped ? -1 : 1
 
     let elevationRad: number
     let lookAtOffsetZ: number
-    let baseDistance: number
+    let fitHeightDist: number
 
     switch (this.currentMode) {
       case 'cinematic':
-        elevationRad = THREE.MathUtils.degToRad(32)
-        lookAtOffsetZ = 0.3 * flipFactor
-        baseDistance = ((size.y * 0.5 + size.z * 0.5) / Math.tan(vFovRad / 2)) * (1.0 + margin)
+        // Dedicated combat cinematic angle (30–40 deg)
+        elevationRad = THREE.MathUtils.degToRad(34)
+        lookAtOffsetZ = 0.25 * flipFactor
+        fitHeightDist = ((size.y * 0.5 + size.z * 0.5) / Math.tan(vFovRad / 2)) * (1.0 + margin)
         break
+
       case 'tactical':
-      default:
-        // Precise tactical camera angle (y = 10.5, z = 7.8) -> elevation ~53.4 deg, distance ~13.08
-        elevationRad = Math.atan2(10.5, 7.8)
+      default: {
+        // High tactical elevation (65–70 deg, exactly 67 deg)
+        elevationRad = THREE.MathUtils.degToRad(67) + this.userPitchOffset
+        // Clamp elevation to safe readable limits (52 deg to 82 deg)
+        elevationRad = THREE.MathUtils.clamp(
+          elevationRad,
+          THREE.MathUtils.degToRad(52),
+          THREE.MathUtils.degToRad(82)
+        )
         lookAtOffsetZ = 0.0
-        baseDistance = 13.08 * (1.0 + margin * 0.1)
+
+        // Projected vertical extent in camera plane: board depth * cos(elev) + piece height * sin(elev)
+        const projDepth = size.z * Math.cos(elevationRad) + size.y * Math.sin(elevationRad)
+        fitHeightDist = ((projDepth * 0.5) / Math.tan(vFovRad / 2)) * (1.0 + margin)
         break
+      }
     }
 
-    // Ensure horizontal extent fits on narrow/portrait screens (mobile responsiveness)
-    const fitWidthDist = (size.x * 0.5) / Math.tan(hFovRad / 2) * (1.0 + margin)
-    const distance = Math.max(baseDistance, fitWidthDist)
+    // Horizontal extent distance to prevent left/right board cropping across aspect ratios
+    const fitWidthDist = ((size.x * 0.5) / Math.tan(hFovRad / 2)) * (1.0 + margin)
 
-    this.targetPosition.set(
-      center.x,
-      center.y + distance * Math.sin(elevationRad),
-      center.z + distance * Math.cos(elevationRad) * flipFactor
-    )
+    // Base distance fitted tightly to whichever axis constrains the viewport
+    const baseDistance = Math.max(fitHeightDist, fitWidthDist)
+    const distance = baseDistance * this.userZoom
+
+    // Base azimuth based on board orientation + user drag offset
+    const baseAzimuth = (this.isFlipped ? Math.PI : 0) + this.userAzimuth
+
+    const horizontalDist = distance * Math.cos(elevationRad)
+    const posX = center.x + horizontalDist * Math.sin(baseAzimuth)
+    const posY = center.y + distance * Math.sin(elevationRad)
+    const posZ = center.z + horizontalDist * Math.cos(baseAzimuth)
+
+    this.targetPosition.set(posX, posY, posZ)
     this.targetLookAt.set(center.x, center.y + 0.15, center.z + lookAtOffsetZ)
+
+    if (this.currentMode === 'tactical') {
+      this.savedTacticalPosition.copy(this.targetPosition)
+      this.savedTacticalLookAt.copy(this.targetLookAt)
+    }
   }
 
   /**
@@ -102,7 +138,7 @@ export class CameraController3D {
     }
 
     if (this.currentMode === 'encounter') {
-      return // Encounter director controls framing
+      return // Encounter director controls framing during combat
     }
 
     this.fitToBounds(this.sceneBox)
@@ -113,6 +149,8 @@ export class CameraController3D {
    */
   public setOrientation(side: 'white' | 'black') {
     this.isFlipped = side === 'black'
+    this.userAzimuth = 0 // Reset user rotation on orientation flip
+    this.userPitchOffset = 0
     this.updateCameraFitting()
   }
 
@@ -126,32 +164,78 @@ export class CameraController3D {
   }
 
   /**
-   * Frames the actual clash / contact area during a capture sequence
-   * Focuses directly on the attacker and defender clash zone with proper bounding margin
+   * Dedicated Combat Cinematic Camera Framing
+   * Positions camera at 30–40 deg (34°) focused on the clash line between attacker and defender
    */
   public frameCombatEncounter(attackerPos: THREE.Vector3, defenderPos: THREE.Vector3) {
-    const clashBox = new THREE.Box3()
-    clashBox.setFromPoints([attackerPos, defenderPos])
-    // Expand to include piece heights and weapon outreaches
-    clashBox.expandByScalar(1.2)
+    // 1. Save tactical camera state for clean return
+    this.savedTacticalPosition.copy(this.camera.position)
+    this.savedTacticalLookAt.copy(this.currentLookAt)
 
-    const center = new THREE.Vector3()
-    clashBox.getCenter(center)
-
-    const dir = new THREE.Vector3().subVectors(defenderPos, attackerPos).normalize()
-    const sideVector = new THREE.Vector3(-dir.z, 0, dir.x).normalize()
+    // 2. Identify midpoint and attack direction
+    const midpoint = new THREE.Vector3().addVectors(attackerPos, defenderPos).multiplyScalar(0.5)
+    const attackDir = new THREE.Vector3().subVectors(defenderPos, attackerPos).normalize()
+    const sideVector = new THREE.Vector3(-attackDir.z, 0, attackDir.x).normalize()
     const flipFactor = this.isFlipped ? -1 : 1
 
-    // Camera positioned at 45 deg lateral angle to the clash line
+    // 3. Position camera at 34 deg elevation, offset laterally to frame weapon contact & defender ward
     const lateralSign = (sideVector.x >= 0 ? 1 : -1)
-    const cameraOffset = new THREE.Vector3()
-      .copy(sideVector)
-      .multiplyScalar(2.6 * lateralSign)
-      .add(new THREE.Vector3(0, 2.2, 2.0 * flipFactor))
+    const combatElevationRad = THREE.MathUtils.degToRad(34)
+    const cameraDistance = 3.6
 
-    this.targetPosition.copy(defenderPos).add(cameraOffset)
-    this.targetLookAt.copy(defenderPos).add(new THREE.Vector3(0, 0.42, 0))
+    const camOffset = new THREE.Vector3()
+      .copy(sideVector)
+      .multiplyScalar(cameraDistance * Math.cos(combatElevationRad) * 0.75 * lateralSign)
+      .add(new THREE.Vector3(0, cameraDistance * Math.sin(combatElevationRad), 1.2 * flipFactor))
+
+    this.targetPosition.copy(midpoint).add(camOffset)
+    this.targetLookAt.copy(midpoint).add(new THREE.Vector3(0, 0.45, 0))
     this.currentMode = 'encounter'
+  }
+
+  /**
+   * Smoothly returns camera from combat encounter to tactical gameplay framing
+   */
+  public returnFromCombat() {
+    this.currentMode = 'tactical'
+    this.updateCameraFitting()
+  }
+
+  /**
+   * User interaction: safely orbit camera horizontally and vertically within limits
+   */
+  public orbit(deltaX: number, deltaY: number) {
+    if (this.currentMode !== 'tactical') return
+    this.userAzimuth += deltaX * 0.005
+    this.userPitchOffset -= deltaY * 0.004
+    // Clamp pitch offset to stay within 52–82 deg range
+    this.userPitchOffset = THREE.MathUtils.clamp(
+      this.userPitchOffset,
+      THREE.MathUtils.degToRad(-15),
+      THREE.MathUtils.degToRad(15)
+    )
+    this.updateCameraFitting()
+  }
+
+  /**
+   * User interaction: safely zoom camera in/out within limits
+   */
+  public zoom(deltaY: number) {
+    if (this.currentMode !== 'tactical') return
+    const zoomDelta = deltaY > 0 ? 0.05 : -0.05
+    this.userZoom = THREE.MathUtils.clamp(this.userZoom + zoomDelta, 0.75, 1.35)
+    this.updateCameraFitting()
+  }
+
+  /**
+   * Resets camera to exact default tactical framing
+   */
+  public resetView() {
+    this.userAzimuth = 0
+    this.userPitchOffset = 0
+    this.userZoom = 1.0
+    this.currentMode = 'tactical'
+    this.updateCameraFitting()
   }
 
   /**
@@ -169,7 +253,7 @@ export class CameraController3D {
    * Smooth update loop (rAF)
    */
   public update(delta: number) {
-    const lerpFactor = Math.min(1.0, delta * 4.8)
+    const lerpFactor = Math.min(1.0, delta * 5.2)
 
     // Slow cinematic orbit during game ending
     if (this.isOrbiting) {

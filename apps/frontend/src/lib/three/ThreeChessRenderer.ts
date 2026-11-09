@@ -42,6 +42,7 @@ export class ThreeChessRenderer {
   public pacing: AnimationPacing = 'cinematic'
   public onSquareClick: (square: string) => void
   private options: ThreeRendererOptions
+  private currentFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
   constructor(options: ThreeRendererOptions) {
     this.options = options
@@ -132,6 +133,7 @@ export class ThreeChessRenderer {
    * Synchronizes 3D piece nodes with authoritative chess FEN
    */
   public setFen(fen: string) {
+    this.currentFen = fen
     if (this.encounterDirector.isActive) return // Let combat finish first
 
     const positionPart = fen.split(' ')[0]
@@ -304,24 +306,18 @@ export class ThreeChessRenderer {
   }
 
   /**
-   * Event handlers for 3D mouse/touch interaction
+   * Event handlers for 3D mouse/touch interaction & safe camera orbit/zoom
    */
   private setupEventListeners() {
     const dom = this.renderer.domElement
 
-    const handleClick = (e: MouseEvent | TouchEvent) => {
+    let isPointerDown = false
+    let startX = 0
+    let startY = 0
+    let hasDragged = false
+
+    const handleClick = (clientX: number, clientY: number) => {
       const rect = dom.getBoundingClientRect()
-      let clientX = 0
-      let clientY = 0
-
-      if (e instanceof MouseEvent) {
-        clientX = e.clientX
-        clientY = e.clientY
-      } else if (e.touches && e.touches.length > 0) {
-        clientX = e.touches[0].clientX
-        clientY = e.touches[0].clientY
-      }
-
       this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1
       this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1
 
@@ -348,8 +344,47 @@ export class ThreeChessRenderer {
       }
     }
 
-    dom.addEventListener('click', handleClick)
-    dom.addEventListener('touchend', handleClick)
+    const onPointerDown = (e: PointerEvent) => {
+      isPointerDown = true
+      startX = e.clientX
+      startY = e.clientY
+      hasDragged = false
+    }
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!isPointerDown) return
+      const dx = e.clientX - startX
+      const dy = e.clientY - startY
+      if (Math.hypot(dx, dy) > 5) {
+        hasDragged = true
+        this.cameraCtrl.orbit(dx * 0.4, dy * 0.4)
+        startX = e.clientX
+        startY = e.clientY
+      }
+    }
+
+    const onPointerUp = (e: PointerEvent) => {
+      if (isPointerDown && !hasDragged) {
+        handleClick(e.clientX, e.clientY)
+      }
+      isPointerDown = false
+      hasDragged = false
+    }
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      this.cameraCtrl.zoom(e.deltaY)
+    }
+
+    const onDblClick = () => {
+      this.cameraCtrl.resetView()
+    }
+
+    dom.addEventListener('pointerdown', onPointerDown)
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerUp)
+    dom.addEventListener('wheel', onWheel, { passive: false })
+    dom.addEventListener('dblclick', onDblClick)
   }
 
   /**
@@ -389,6 +424,21 @@ export class ThreeChessRenderer {
 
   public setCameraMode(mode: CameraViewMode) {
     this.cameraCtrl.setMode(mode)
+  }
+
+  public resetView() {
+    this.cameraCtrl.resetView()
+  }
+
+  public async setAssetManifest(manifestId: string) {
+    PieceBuilder3D.setManifest(manifestId)
+    await PieceBuilder3D.preloadArmyModels(manifestId)
+    this.clearPieces()
+    this.setFen(this.currentFen)
+  }
+
+  public getAssetManifest() {
+    return PieceBuilder3D.getManifest()
   }
 
   public setOrientation(side: 'white' | 'black') {

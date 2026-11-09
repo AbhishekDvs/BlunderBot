@@ -95,21 +95,75 @@ const BLACK_PALETTE = {
   }),
 }
 
+export interface AssetManifest {
+  id: string
+  name: string
+  label?: string
+  isExperimental: boolean
+  description: string
+  getModelPath: (pieceCode: string) => string
+}
+
+export const ASSET_MANIFESTS: Record<string, AssetManifest> = {
+  production: {
+    id: 'production',
+    name: 'Production (Astra 3D)',
+    isExperimental: false,
+    description: 'Production high-readability army models with full combat rig sockets.',
+    getModelPath: (code) => `/models/astra/${code}.glb`,
+  },
+  'astra-dev-v01': {
+    id: 'astra-dev-v01',
+    name: 'White Army Development Kit (v0.1)',
+    label: 'Experimental Geometry',
+    isExperimental: true,
+    description: 'Development geometry studies from White Army AssetKit. For scale, silhouette and integration testing.',
+    getModelPath: (code) => {
+      if (code.startsWith('w')) {
+        return `/models/astra-dev-v01/${code}.glb`
+      }
+      return `/models/astra/${code}.glb`
+    },
+  },
+}
+
 export class PieceBuilder3D {
+  private static activeManifestId = 'production'
+
+  public static setManifest(manifestId: string) {
+    if (ASSET_MANIFESTS[manifestId]) {
+      this.activeManifestId = manifestId
+    }
+  }
+
+  public static getManifest(): AssetManifest {
+    return ASSET_MANIFESTS[this.activeManifestId] || ASSET_MANIFESTS.production
+  }
+
+  public static getAvailableManifests(): AssetManifest[] {
+    return Object.values(ASSET_MANIFESTS)
+  }
+
   /**
-   * Preloads all 12 GLB army models
+   * Preloads army models for the specified or active manifest
    */
-  public static async preloadArmyModels(): Promise<void> {
+  public static async preloadArmyModels(manifestId?: string): Promise<void> {
+    const manifest = manifestId ? ASSET_MANIFESTS[manifestId] || this.getManifest() : this.getManifest()
     const codes = ['wP', 'wR', 'wN', 'wB', 'wQ', 'wK', 'bP', 'bR', 'bN', 'bB', 'bQ', 'bK']
     await Promise.allSettled(
       codes.map(async (code) => {
-        if (glbCache.has(code)) return
+        const cacheKey = `${manifest.id}:${code}`
+        if (glbCache.has(cacheKey)) return
         try {
-          const gltf = await loader.loadAsync(`/models/astra/${code}.glb`)
-          glbCache.set(code, gltf.scene)
+          const modelUrl = manifest.getModelPath(code)
+          const gltf = await loader.loadAsync(modelUrl)
+          glbCache.set(cacheKey, gltf.scene)
+          // Also set legacy key for active manifest
+          if (manifest.id === this.activeManifestId) {
+            glbCache.set(code, gltf.scene)
+          }
         } catch (err) {
-          // Graceful fallback to procedural mesh
-          console.error(`[Astra3D] Failed to load GLB for ${code}:`, err)
+          console.error(`[Astra3D] Failed to load GLB for ${code} (${manifest.id}):`, err)
         }
       })
     )
@@ -118,16 +172,18 @@ export class PieceBuilder3D {
   /**
    * Constructs an articulated 3D piece node
    */
-  public static createPieceNode(pieceCode: string, square: string): Piece3DNode {
+  public static createPieceNode(pieceCode: string, square: string, manifestId?: string): Piece3DNode {
     const group = new THREE.Group()
     group.name = `Piece_${pieceCode}_${square}`
 
     const isWhite = pieceCode.startsWith('w')
     const pal = isWhite ? WHITE_PALETTE : BLACK_PALETTE
     const classChar = pieceCode.slice(1).toUpperCase()
+    const activeManifest = manifestId ? (ASSET_MANIFESTS[manifestId] || this.getManifest()) : this.getManifest()
 
-    // Check if GLB is cached
-    const cachedGLB = glbCache.get(pieceCode)
+    // Check if GLB is cached by manifest key or legacy key
+    const cacheKey = `${activeManifest.id}:${pieceCode}`
+    const cachedGLB = glbCache.get(cacheKey) || glbCache.get(pieceCode)
     let torsoNode: THREE.Object3D | undefined
     let weaponNode: THREE.Object3D | undefined
     let shieldNode: THREE.Object3D | undefined
@@ -156,14 +212,22 @@ export class PieceBuilder3D {
       weaponNode =
         cloned.getObjectByName('Lance_Assembly') ||
         cloned.getObjectByName('Staff_Assembly') ||
+        cloned.getObjectByName('Acharya_Staff_Assembly') ||
         cloned.getObjectByName('Pawn_SpearAssembly') ||
+        cloned.getObjectByName('Pawn_Spear_Assembly') ||
         cloned.getObjectByName('Samrajni_TalwarAssembly') ||
+        cloned.getObjectByName('Samrajni_Talwar_Assembly') ||
         cloned.getObjectByName('Raja_SwordAssembly') ||
+        cloned.getObjectByName('Raja_Sword_Assembly') ||
         cloned.getObjectByName('Cavalry_Lance') ||
         cloned.getObjectByName('Acharya_Staff') ||
+        cloned.getObjectByName('Acharya_Staff_Head') ||
         cloned.getObjectByName('Pawn_SpearShaft') ||
+        cloned.getObjectByName('Pawn_Spear_Head') ||
         cloned.getObjectByName('Samrajni_TalwarBlade') ||
+        cloned.getObjectByName('Samrajni_Talwar_Blade') ||
         cloned.getObjectByName('Raja_Broadsword') ||
+        cloned.getObjectByName('Raja_Sword_Blade') ||
         cloned.getObjectByName('Durg_Ram')
 
       shieldNode =

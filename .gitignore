@@ -24,6 +24,7 @@ logs
 *.pid
 *.seed
 *.tgz
+*.zip
 
 # Env
 .env
