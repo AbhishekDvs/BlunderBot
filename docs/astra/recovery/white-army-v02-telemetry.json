@@ -1,0 +1,59 @@
+{
+  "milestone": "Complete White Army Model Production v0.2",
+  "date": "2026-11-09",
+  "status": "PASS",
+  "army": "White Army (Astra Ancient Indian War Chess)",
+  "models": {
+    "wP": {
+      "class": "Pawn",
+      "triangles": 10100,
+      "actions": 10,
+      "height": 1.07
+    },
+    "wR": {
+      "class": "Rook",
+      "triangles": 1179,
+      "actions": 10,
+      "height": 1.15
+    },
+    "wN": {
+      "class": "Knight",
+      "triangles": 2108,
+      "actions": 10,
+      "height": 1.25
+    },
+    "wB": {
+      "class": "Bishop",
+      "triangles": 9938,
+      "actions": 10,
+      "height": 1.39
+    },
+    "wQ": {
+      "class": "Queen",
+      "triangles": 10308,
+      "actions": 10,
+      "height": 1.32
+    },
+    "wK": {
+      "class": "King",
+      "triangles": 10486,
+      "actions": 10,
+      "height": 1.43
+    }
+  },
+  "performance": {
+    "total_army_triangles": 44119,
+    "mean_frame_time_ms": 23.85,
+    "p95_frame_time_ms": 32.1,
+    "fps_software_webgl": 42.0,
+    "fps_gpu_hardware": ">60.0 locked"
+  },
+  "quality_gates": {
+    "Stage A (Rook & Pawn)": "PASS",
+    "Stage B (King & Queen)": "PASS",
+    "Stage C (Knight Articulation)": "PASS (Procedural Quad Equine Mesh + Rider)",
+    "Stage D (Bishop Repair)": "PASS (93% Poly Reduction, Continuous Tunic, Verified Grip)",
+    "Stage E (Complete 16 Army)": "PASS",
+    "Stage F (Combat Readiness)": "PASS"
+  }
+}

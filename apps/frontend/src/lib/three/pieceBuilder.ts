@@ -125,6 +125,19 @@ export const ASSET_MANIFESTS: Record<string, AssetManifest> = {
       return `/models/astra/${code}.glb`
     },
   },
+  'astra-dev-v02': {
+    id: 'astra-dev-v02',
+    name: 'White Army Candidates (v0.2)',
+    label: 'v0.2 Production Candidates',
+    isExperimental: true,
+    description: 'Complete rigged White Army candidates from CC0 Human Base with 10 standard animation clips and repaired Bishop.',
+    getModelPath: (code) => {
+      if (code.startsWith('w')) {
+        return `/models/astra-dev-v02/${code}.glb`
+      }
+      return `/models/astra/${code}.glb`
+    },
+  },
 }
 
 export class PieceBuilder3D {

@@ -263,7 +263,8 @@ export function ThreeBoardCanvas({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [handleSkipCombat, isInspectorOpen, handleSetInspectorMode])
 
-  const isDevKit = manifestId === 'astra-dev-v01'
+  const isDevKit = manifestId === 'astra-dev-v01' || manifestId === 'astra-dev-v02'
+  const isV02 = manifestId === 'astra-dev-v02'
 
   return (
     <div className="relative flex flex-col items-center justify-center select-none">
@@ -279,9 +280,19 @@ export function ThreeBoardCanvas({
 
       {/* Experimental Geometry Notice Banner */}
       {isDevKit && (
-        <div className="absolute top-3 left-3 z-30 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-medium backdrop-blur-md shadow-lg animate-pulse">
-          <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-          <span>Experimental Geometry — Development Kit v0.1 (Unapproved Geometry Study)</span>
+        <div
+          className={`absolute top-3 left-3 z-30 flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium backdrop-blur-md shadow-lg ${
+            isV02
+              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+              : 'bg-amber-500/15 border-amber-500/40 text-amber-300 animate-pulse'
+          }`}
+        >
+          <span className={`w-2 h-2 rounded-full ${isV02 ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
+          <span>
+            {isV02
+              ? 'Candidate Geometry — Complete White Army v0.2 (Rigged & Animated Candidates)'
+              : 'Experimental Geometry — Development Kit v0.1 (Unapproved Geometry Study)'}
+          </span>
         </div>
       )}
 
@@ -405,6 +416,17 @@ export function ThreeBoardCanvas({
                   }`}
                 >
                   <span>⚠️ Dev Kit v0.1</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSwitchManifest('astra-dev-v02')}
+                  className={`px-2.5 py-1 rounded-md font-medium transition flex items-center gap-1 ${
+                    manifestId === 'astra-dev-v02'
+                      ? 'bg-emerald-600/30 text-emerald-200 border border-emerald-500/50 shadow'
+                      : 'text-[#84919D] hover:text-emerald-300'
+                  }`}
+                >
+                  <span>✨ v0.2 Candidates</span>
                 </button>
               </div>
             </div>
