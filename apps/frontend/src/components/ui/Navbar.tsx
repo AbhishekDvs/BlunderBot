@@ -11,6 +11,7 @@ import {
   VolumeOffIcon,
   PerspectiveIcon,
   SwordsIcon,
+  ZapIcon,
 } from './Icons'
 
 export function Navbar({ onNewGameClick }: { onNewGameClick?: () => void }) {
@@ -32,73 +33,91 @@ export function Navbar({ onNewGameClick }: { onNewGameClick?: () => void }) {
   }
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-white/[0.08] bg-[#0E1015]/90 backdrop-blur-xl transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-40 w-full border-b border-[#202832] bg-[#0C0F14]/90 backdrop-blur-xl transition-all">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-3">
         {/* Brand & Identity */}
         <Link
           href="/"
-          className="group flex items-center gap-3 text-white transition hover:opacity-90 focus:outline-none"
+          className="group flex items-center gap-2.5 sm:gap-3 text-white transition hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DDAA57] rounded-xl p-1"
         >
-          <div className="relative flex items-center justify-center p-1 rounded-xl bg-gradient-to-b from-yellow-500/20 to-transparent border border-yellow-500/30 group-hover:border-yellow-400/60 transition shadow-lg shadow-yellow-500/5">
-            <LogoMark className="w-8 h-8" />
+          <div className="relative flex items-center justify-center p-1.5 rounded-xl bg-gradient-to-b from-[#202832] to-[#11151B] border border-[#2D3847] group-hover:border-[#DDAA57]/60 transition shadow-lg shadow-black/40">
+            <LogoMark className="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
           <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold tracking-tight text-lg sm:text-xl text-white font-sans">
-                Blunder<span className="text-yellow-400">Bot</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="font-black tracking-tight text-base sm:text-lg text-[#F5F6F8] uppercase font-sans">
+                Blunder<span className="text-[#DDAA57]">Bot</span>
               </span>
-              <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-white/[0.06] text-zinc-400 border border-white/[0.08]">
-                v2.0
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-[#1C232D] text-[#84919D] border border-[#283341] tracking-wider uppercase">
+                Tactical HUD
               </span>
             </div>
-            <span className="text-[11px] text-zinc-400 -mt-0.5 tracking-wider uppercase font-medium hidden sm:block">
-              Play Chess
+            <span className="text-[10px] text-[#84919D] -mt-0.5 tracking-wider uppercase font-semibold hidden sm:block">
+              WASM Chess Intelligence
             </span>
           </div>
         </Link>
 
-        {/* Center / Ambient status (Desktop) */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.06] text-xs text-zinc-300">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-medium text-zinc-300">Active Board:</span>
-          <span className="text-yellow-300 font-semibold">{activePreset.name}</span>
+        {/* Center: Live Board Material & Engine Telemetry (Desktop) */}
+        <div className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-full bg-[#11151B] border border-[#202832] text-xs shadow-inner">
+          {/* Swatch Pill */}
+          <div className="flex items-center gap-2">
+            <div className="w-3.5 h-3.5 rounded-sm grid grid-cols-2 grid-rows-2 overflow-hidden border border-white/20 shadow-sm">
+              <div style={{ backgroundColor: activePreset.lightSquare }} />
+              <div style={{ backgroundColor: activePreset.darkSquare }} />
+              <div style={{ backgroundColor: activePreset.darkSquare }} />
+              <div style={{ backgroundColor: activePreset.lightSquare }} />
+            </div>
+            <span className="text-[#84919D] font-medium text-[11px]">Material:</span>
+            <span className="text-[#F5F6F8] font-bold text-[11px]">{activePreset.name}</span>
+          </div>
+
+          <span className="w-1 h-1 rounded-full bg-[#2D3847]" />
+
+          {/* Engine Status */}
+          <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#84919D]">
+            <span className="w-2 h-2 rounded-full bg-[#438A69] animate-pulse" />
+            <span>Stockfish 16</span>
+          </div>
         </div>
 
         {/* Controls & Tools */}
-        <div className="flex items-center gap-2 sm:gap-2.5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
           {/* Sound Toggle */}
           <button
             type="button"
             onClick={handleSoundClick}
-            className={`p-2 rounded-lg border transition ${
+            className={`p-2 rounded-xl border transition flex items-center justify-center ${
               settings.soundEnabled
-                ? 'bg-white/[0.04] border-white/10 text-zinc-200 hover:bg-white/[0.08]'
-                : 'bg-red-950/20 border-red-900/40 text-red-400 hover:bg-red-950/30'
+                ? 'bg-[#151A22] border-[#252F3C] text-[#F5F6F8] hover:border-[#DDAA57]/50 hover:bg-[#1C232D]'
+                : 'bg-red-950/30 border-red-900/40 text-red-400 hover:bg-red-950/40'
             }`}
-            title={settings.soundEnabled ? 'Mute Sound (Web Audio)' : 'Unmute Sound'}
+            title={settings.soundEnabled ? 'Sound Active (Web Audio)' : 'Sound Muted'}
             aria-label={settings.soundEnabled ? 'Mute Sound' : 'Unmute Sound'}
           >
-            {settings.soundEnabled ? <VolumeOnIcon className="w-4 h-4" /> : <VolumeOffIcon className="w-4 h-4" />}
+            {settings.soundEnabled ? <VolumeOnIcon className="w-4 h-4 text-[#DDAA57]" /> : <VolumeOffIcon className="w-4 h-4" />}
           </button>
 
-          {/* 3D / 2.5D Perspective Toggle */}
+          {/* 3D / 2.5D / 2D Perspective Toggle */}
           <button
             type="button"
             onClick={handlePerspectiveClick}
-            className={`p-2 rounded-lg border transition hidden sm:flex items-center gap-1.5 text-xs font-medium ${
-              settings.perspective === 'true-3d' || settings.perspective === 'elevated-2.5d'
-                ? 'bg-yellow-500/15 border-yellow-500/40 text-yellow-300'
-                : 'bg-white/[0.04] border-white/10 text-zinc-300 hover:bg-white/[0.08]'
+            className={`px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl border transition flex items-center gap-1.5 text-xs font-semibold ${
+              settings.perspective === 'true-3d'
+                ? 'bg-[#DDAA57]/15 border-[#DDAA57]/50 text-[#DDAA57] shadow-sm shadow-[#DDAA57]/10'
+                : settings.perspective === 'elevated-2.5d'
+                ? 'bg-[#438A69]/15 border-[#438A69]/50 text-emerald-400'
+                : 'bg-[#151A22] border-[#252F3C] text-[#84919D] hover:text-[#F5F6F8] hover:border-[#DDAA57]/40'
             }`}
-            title="Toggle between True 3D Battlefield, 2.5D Elevation, and 2D Flat"
+            title="Cycle between True 3D Battlefield, 2.5D Physical Depth, and 2D Classical Flat"
           >
-            <PerspectiveIcon className="w-4 h-4" />
-            <span className="hidden lg:inline">
+            <PerspectiveIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">
               {settings.perspective === 'true-3d'
                 ? '3D War Chess'
                 : settings.perspective === 'elevated-2.5d'
-                ? '2.5D'
-                : '2D'}
+                ? '2.5D Depth'
+                : '2D Flat'}
             </span>
           </button>
 
@@ -106,30 +125,30 @@ export function Navbar({ onNewGameClick }: { onNewGameClick?: () => void }) {
           <button
             type="button"
             onClick={handleCustomizerClick}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.05] border border-white/10 hover:border-yellow-500/40 text-zinc-200 hover:text-white transition shadow-sm text-xs sm:text-sm font-medium"
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-[#151A22] border border-[#252F3C] hover:border-[#DDAA57]/50 hover:bg-[#1C232D] text-[#F5F6F8] transition shadow-sm text-xs sm:text-sm font-semibold"
             title="Board Materials & Piece Styles"
           >
-            <PaletteIcon className="w-4 h-4 text-yellow-400" />
-            <span className="hidden sm:inline">Appearance</span>
+            <PaletteIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#DDAA57]" />
+            <span className="hidden sm:inline">Studio</span>
           </button>
 
-          {/* New Match Action (if provided) */}
+          {/* Quick Play Action */}
           {onNewGameClick ? (
             <button
               type="button"
               onClick={onNewGameClick}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-black font-semibold text-xs sm:text-sm shadow-md shadow-yellow-500/10 transition active:scale-95"
+              className="tactical-button-primary flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm transition active:scale-95"
             >
-              <SwordsIcon className="w-4 h-4" />
-              <span>New Match</span>
+              <SwordsIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span>Rematch</span>
             </button>
           ) : (
             <Link
               href="/game"
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-black font-semibold text-xs sm:text-sm shadow-md shadow-yellow-500/10 transition active:scale-95"
+              className="tactical-button-primary flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm transition active:scale-95"
             >
-              <SwordsIcon className="w-4 h-4" />
-              <span>Play</span>
+              <ZapIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span>Deploy</span>
             </Link>
           )}
         </div>

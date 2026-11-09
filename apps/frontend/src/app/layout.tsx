@@ -53,25 +53,27 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${geistSans.variable} ${geistMono.variable} bg-[#0A0C10] text-white antialiased selection:bg-yellow-500/30 selection:text-yellow-200`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} bg-[#0A0D12] text-[#F5F6F8] antialiased selection:bg-[#DDAA57]/30 selection:text-[#DDAA57]`}>
         <ThemeProvider>
           <div className="min-h-screen flex flex-col justify-between">
             <div className="flex-1 flex flex-col">{children}</div>
 
-            <footer className="w-full border-t border-white/[0.06] bg-[#0E1015] text-center text-xs text-zinc-500 py-4 sm:py-6">
+            <footer className="w-full border-t border-[#202832] bg-[#0C0F14] text-center text-xs text-[#84919D] py-4 sm:py-5">
               <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-white">BlunderBot</span>
-                  <span className="text-zinc-600">•</span>
-                  <span>Pure Client-Side Stockfish 16 Engine</span>
+                  <span className="font-extrabold text-[#F5F6F8]">BlunderBot</span>
+                  <span className="text-[#2D3847]">•</span>
+                  <span>Pure Client-Side Stockfish 16 WASM</span>
+                  <span className="text-[#2D3847]">•</span>
+                  <span className="text-[#438A69] font-mono">0ms Telemetry</span>
                 </div>
                 <div>
-                  Built with 💡 and coffee by&nbsp;
+                  Crafted by&nbsp;
                   <a
                     href="https://abhisdistro.pages.dev/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-yellow-400 font-medium hover:underline transition duration-150"
+                    className="text-[#DDAA57] font-semibold hover:underline transition duration-150"
                   >
                     Abhishek Dvs
                   </a>

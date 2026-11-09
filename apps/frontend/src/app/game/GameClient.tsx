@@ -39,11 +39,11 @@ export default function GameClient() {
   const timeControl = useMemo(() => sanitizeTimeControl(searchParams.get('timeControl')), [searchParams])
 
   return (
-    <div className="min-h-screen bg-[#0C0E12] text-white flex flex-col font-sans selection:bg-yellow-500/30 selection:text-yellow-200">
+    <div className="min-h-screen bg-[#0A0D12] text-[#F5F6F8] flex flex-col font-sans selection:bg-[#DDAA57]/30 selection:text-[#DDAA57]">
       <Navbar />
       <ThemeCustomizerModal />
 
-      <main className="flex-1 flex flex-col items-center justify-start">
+      <main className="flex-1 flex flex-col items-center justify-start py-1 sm:py-2">
         <GameBoard difficulty={difficulty} side={side} timeControl={timeControl} />
       </main>
     </div>

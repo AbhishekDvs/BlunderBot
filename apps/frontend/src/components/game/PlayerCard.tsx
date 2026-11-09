@@ -24,39 +24,39 @@ function formatClockTime(seconds: number): string {
 
 const DIFFICULTY_METADATA: Record<
   Difficulty,
-  { name: string; title: string; depth: string; elo: string; avatar: string; color: string }
+  { name: string; title: string; depth: string; elo: string; avatar: string; colorClass: string }
 > = {
   easy: {
     name: 'WALL·E',
     title: 'Scrap Collector',
     depth: 'Depth 3',
-    elo: '~800 ELO',
+    elo: '~800',
     avatar: '♻️',
-    color: 'from-emerald-500/20 to-emerald-950/40 border-emerald-500/30 text-emerald-300',
+    colorClass: 'bg-[#438A69]/20 border-[#438A69]/40 text-[#438A69]',
   },
   medium: {
     name: 'R2-D2',
     title: 'Tactical Astromech',
     depth: 'Depth 6',
-    elo: '~1350 ELO',
+    elo: '~1350',
     avatar: '🤖',
-    color: 'from-blue-500/20 to-blue-950/40 border-blue-500/30 text-blue-300',
+    colorClass: 'bg-sky-500/20 border-sky-500/40 text-sky-400',
   },
   hard: {
     name: 'Ultron',
     title: 'Autonomous Sentinel',
     depth: 'Depth 10',
-    elo: '~1850 ELO',
+    elo: '~1850',
     avatar: '🧬',
-    color: 'from-indigo-500/20 to-indigo-950/40 border-indigo-500/30 text-indigo-300',
+    colorClass: 'bg-purple-500/20 border-purple-500/40 text-purple-400',
   },
   insane: {
     name: 'T-800',
     title: 'Cyberdyne Assassin',
     depth: 'Depth 20',
-    elo: '~2600+ ELO',
+    elo: '~2600+',
     avatar: '🔥',
-    color: 'from-red-500/20 to-red-950/40 border-red-500/30 text-red-300',
+    colorClass: 'bg-red-500/20 border-red-500/40 text-red-400',
   },
 }
 
@@ -76,105 +76,103 @@ export function PlayerCard({
 
   return (
     <div
-      className={`relative rounded-xl p-3 sm:p-4 border transition-all duration-300 ${
+      className={`w-full rounded-xl px-3 py-2 border transition-all duration-300 flex items-center justify-between gap-3 ${
         isTurn
-          ? 'bg-gradient-to-r from-white/[0.08] to-white/[0.03] border-yellow-500/60 shadow-lg shadow-yellow-500/10'
-          : 'bg-[#14161E]/70 border-white/[0.06] opacity-90'
+          ? 'tactical-panel-active'
+          : 'tactical-panel opacity-95'
       }`}
     >
-      <div className="flex items-center justify-between gap-3">
-        {/* Left: Avatar & Identity */}
-        <div className="flex items-center gap-3">
-          {/* Avatar with Turn Glow */}
-          <div className="relative">
-            <div
-              className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl bg-gradient-to-b border shadow-inner ${
-                isBot
-                  ? meta?.color ?? 'from-yellow-500/20 to-transparent border-yellow-500/30'
-                  : 'from-zinc-700/40 to-zinc-900 border-white/20 text-white'
-              }`}
-            >
-              {isBot ? meta?.avatar : (side === 'white' ? '♔' : '♚')}
-            </div>
-
-            {/* Turn pulse ring */}
-            {isTurn && (
-              <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500" />
-              </span>
-            )}
+      {/* Left: Player Identity & Emblem */}
+      <div className="flex items-center gap-2.5 min-w-0">
+        <div className="relative flex-shrink-0">
+          <div
+            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center text-base sm:text-lg border shadow-inner ${
+              isBot
+                ? meta?.colorClass ?? 'bg-[#1C232D] border-[#283341] text-[#DDAA57]'
+                : 'bg-[#1C232D] border-[#2D3847] text-[#F5F6F8]'
+            }`}
+          >
+            {isBot ? meta?.avatar : (side === 'white' ? '♔' : '♚')}
           </div>
 
-          {/* Name & Title */}
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-sm text-white">
-                {isBot ? meta?.name : 'You'}
-              </span>
-              <span className="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-white/[0.06] text-zinc-400">
-                {side}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 text-xs text-zinc-400 mt-0.5">
-              {isBot ? (
-                <>
-                  <span>{meta?.title}</span>
-                  <span>•</span>
-                  <span className="font-mono text-[11px] text-yellow-400/90">{meta?.elo}</span>
-                </>
-              ) : (
-                <span>Commander</span>
-              )}
-            </div>
-          </div>
+          {/* Active Turn Indicator Ring */}
+          {isTurn && (
+            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#DDAA57] opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#DDAA57]" />
+            </span>
+          )}
         </div>
 
-        {/* Right: Engine Thinking state, Clock or Turn badge */}
-        <div className="flex flex-col items-end gap-1.5">
-          <div className="flex items-center gap-2">
-            {showClock && timeRemaining !== undefined && (
-              <div
-                className={`px-2.5 py-1 rounded-lg font-mono font-bold text-xs tracking-wider flex items-center gap-1.5 transition ${
-                  timeRemaining <= 30
-                    ? 'bg-red-500/20 text-red-300 border border-red-500/40 animate-pulse'
-                    : isTurn
-                    ? 'bg-white/10 text-yellow-300 border border-yellow-500/40 shadow-inner'
-                    : 'bg-white/[0.04] text-zinc-400 border border-white/[0.06]'
-                }`}
-              >
-                <span className="text-[10px] text-zinc-400">⏱</span>
-                <span>{formatClockTime(timeRemaining)}</span>
-              </div>
-            )}
-
-            {isThinking && isBot ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 text-[11px] font-semibold animate-pulse">
-                <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-ping" />
-                Thinking...
+        <div className="min-w-0 flex flex-col">
+          <div className="flex items-center gap-1.5 truncate">
+            <span className="font-bold text-xs sm:text-sm text-[#F5F6F8] truncate">
+              {isBot ? meta?.name : 'Commander'}
+            </span>
+            <span className="text-[9px] uppercase tracking-wider font-mono font-bold px-1 py-0.2 rounded bg-[#11151B] text-[#84919D] border border-[#202832]">
+              {side === 'white' ? 'White' : 'Black'}
+            </span>
+            {isBot && (
+              <span className="text-[10px] font-mono text-[#DDAA57] hidden sm:inline">
+                {meta?.elo}
               </span>
-            ) : isTurn ? (
-              <span className="px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 text-[10px] font-bold tracking-wider uppercase border border-yellow-500/30">
-                To Move
-              </span>
-            ) : (
-              <span className="text-[11px] text-zinc-500 font-mono">Waiting</span>
             )}
           </div>
 
-          {/* Captured Pieces for this player */}
-          <CapturedPieces fen={fen} color={sideColorCode} />
+          {/* Contextual Subtitle or Roast */}
+          <div className="text-[11px] text-[#84919D] truncate">
+            {isThinking ? (
+              <span className="text-[#DDAA57] font-semibold animate-pulse flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#DDAA57] animate-ping" />
+                Calculating line...
+              </span>
+            ) : isBot && dynamicRoast ? (
+              <span className="italic truncate text-[#84919D]">“{dynamicRoast}”</span>
+            ) : (
+              <span>{isBot ? meta?.title : 'Local Player'}</span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Dynamic Roast Box for Bot */}
-      {isBot && dynamicRoast && (
-        <div className="mt-2.5 pt-2 border-t border-white/[0.06] flex items-start gap-2 text-xs text-zinc-300 italic">
-          <span className="text-yellow-400 not-italic select-none">💬</span>
-          <p className="line-clamp-2">“{dynamicRoast}”</p>
+      {/* Right: Captured Pieces & Chess Clock */}
+      <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+        {/* Captured Pieces Inline */}
+        <CapturedPieces fen={fen} color={sideColorCode} />
+
+        {/* Digital Clock */}
+        {showClock && timeRemaining !== undefined && (
+          <div
+            className={`px-2.5 py-1 rounded-lg font-mono font-bold text-xs tracking-wider flex items-center gap-1.5 transition ${
+              timeRemaining <= 30
+                ? 'bg-red-500/20 text-red-300 border border-red-500/50 animate-pulse'
+                : isTurn
+                ? 'bg-[#DDAA57]/15 text-[#DDAA57] border border-[#DDAA57]/40 shadow-inner'
+                : 'bg-[#11151B] text-[#84919D] border border-[#202832]'
+            }`}
+          >
+            <span className="text-[10px]">⏱</span>
+            <span>{formatClockTime(timeRemaining)}</span>
+          </div>
+        )}
+
+        {/* Turn Pill */}
+        <div className="hidden sm:block">
+          {isThinking ? (
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#DDAA57]/20 text-[#DDAA57] border border-[#DDAA57]/30">
+              Thinking
+            </span>
+          ) : isTurn ? (
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#438A69]/20 text-emerald-400 border border-[#438A69]/40">
+              Turn
+            </span>
+          ) : (
+            <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-[#11151B] text-[#84919D] border border-[#202832]">
+              Wait
+            </span>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }

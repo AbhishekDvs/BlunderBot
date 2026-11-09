@@ -1,8 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0A0D12;
+  --foreground: #F5F6F8;
+  
+  /* Brand Theme Tokens: Gaming x Editorial */
+  --color-charcoal-deep: #080A0E;
+  --color-charcoal: #11151B;
+  --color-charcoal-surface: #151A22;
+  --color-slate-base: #1C232D;
+  --color-slate-border: #283341;
+  --color-slate-hover: #222B37;
+  --color-near-white: #F5F6F8;
+  --color-muted-steel: #84919D;
+  --color-warm-amber: #DDAA57;
+  --color-warm-amber-glow: rgba(221, 170, 87, 0.22);
+  --color-jade-green: #438A69;
+  --color-jade-glow: rgba(67, 138, 105, 0.25);
+  --color-crimson-alert: #E04848;
 }
 
 @theme inline {
@@ -12,15 +27,82 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(ellipse at 50% 0%, rgba(221, 170, 87, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(67, 138, 105, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 80%, rgba(32, 40, 50, 0.4) 0%, transparent 70%);
+  background-attachment: fixed;
+}
+
+/* Custom Tactical Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(17, 21, 27, 0.6);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(132, 145, 157, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(221, 170, 87, 0.5);
+}
+
+/* Precision Tactical HUD panels */
+.tactical-panel {
+  background: linear-gradient(180deg, rgba(21, 26, 34, 0.85) 0%, rgba(17, 21, 27, 0.95) 100%);
+  border: 1px solid rgba(132, 145, 157, 0.15);
+  box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+}
+
+.tactical-panel-active {
+  background: linear-gradient(180deg, rgba(28, 35, 45, 0.95) 0%, rgba(21, 26, 34, 0.98) 100%);
+  border: 1px solid rgba(221, 170, 87, 0.35);
+  box-shadow: 0 18px 40px -10px rgba(0, 0, 0, 0.7), 0 0 20px -5px rgba(221, 170, 87, 0.15), inset 0 1px 0 0 rgba(221, 170, 87, 0.2);
+}
+
+.tactical-button-primary {
+  background: linear-gradient(180deg, #E5B463 0%, #DDAA57 50%, #C99641 100%);
+  color: #0A0D12;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 14px rgba(221, 170, 87, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.tactical-button-primary:hover {
+  background: linear-gradient(180deg, #F0C479 0%, #E5B463 50%, #DDAA57 100%);
+  box-shadow: 0 6px 20px rgba(221, 170, 87, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.tactical-button-secondary {
+  background: linear-gradient(180deg, rgba(28, 35, 45, 0.8) 0%, rgba(21, 26, 34, 0.9) 100%);
+  color: #F5F6F8;
+  border: 1px solid rgba(132, 145, 157, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.tactical-button-secondary:hover {
+  background: linear-gradient(180deg, rgba(37, 47, 60, 0.9) 0%, rgba(28, 35, 45, 0.95) 100%);
+  border-color: rgba(221, 170, 87, 0.4);
+  color: #FFFFFF;
+}
+
+/* Reduced Motion respect */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

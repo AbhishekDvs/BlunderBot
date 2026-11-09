@@ -54,15 +54,15 @@ export function ChessboardFrame({
     if (selectedSquare) {
       styles[selectedSquare] = {
         background: activePreset.accentGlow,
-        boxShadow: `inset 0 0 0 2px ${activePreset.innerBorder}`,
+        boxShadow: `inset 0 0 0 2.5px ${activePreset.innerBorder}, 0 0 12px ${activePreset.accentGlow}`,
       }
     }
 
-    // 3. Legal destination squares (dots for empty, rings for capture)
+    // 3. Legal destination squares (dots for quiet, concentric reticles for capture)
     legalMoves.forEach(({ to, captured }) => {
       if (captured) {
         styles[to] = {
-          background: `radial-gradient(circle, transparent 55%, ${activePreset.captureIndicatorColor} 56%, ${activePreset.captureIndicatorColor} 70%, transparent 71%)`,
+          background: `radial-gradient(circle, transparent 52%, ${activePreset.captureIndicatorColor} 53%, ${activePreset.captureIndicatorColor} 70%, transparent 71%)`,
           cursor: 'pointer',
         }
       } else {
@@ -76,8 +76,8 @@ export function ChessboardFrame({
     // 4. King in check crimson aura
     if (inCheckSquare) {
       styles[inCheckSquare] = {
-        background: `radial-gradient(circle, ${activePreset.checkAuraColor} 0%, rgba(220, 38, 38, 0.2) 65%, transparent 75%)`,
-        boxShadow: 'inset 0 0 12px rgba(239, 68, 68, 0.8)',
+        background: 'radial-gradient(circle, rgba(224, 72, 72, 0.7) 0%, rgba(220, 38, 38, 0.25) 65%, transparent 75%)',
+        boxShadow: 'inset 0 0 14px rgba(224, 72, 72, 0.9)',
       }
     }
 
@@ -121,7 +121,7 @@ export function ChessboardFrame({
                     display: 'block',
                     width: `${squareWidth}px`,
                     height: `${squareWidth}px`,
-                    filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.4))',
+                    filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.45))',
                   }}
                 />
               </div>
@@ -139,7 +139,7 @@ export function ChessboardFrame({
 
   if (is3D) {
     return (
-      <div className="relative flex flex-col items-center justify-center p-1">
+      <div className="relative flex flex-col items-center justify-center p-0.5">
         <ThreeBoardCanvas
           fen={fen}
           side={side}
@@ -164,7 +164,7 @@ export function ChessboardFrame({
     >
       {/* Physical Board Outer Enclosure & Bevel Frame */}
       <div
-        className="relative rounded-2xl p-2.5 sm:p-4 transition-all duration-300"
+        className="relative rounded-2xl p-2 sm:p-3.5 transition-all duration-300"
         style={{
           background: activePreset.frameBackground,
           border: `2px solid ${activePreset.frameBorder}`,
@@ -196,11 +196,11 @@ export function ChessboardFrame({
         </div>
 
         {/* Physical Board Material Engraving Accent (Bottom Lip) */}
-        <div className="mt-2 hidden sm:flex items-center justify-between px-1 text-[10px] font-mono tracking-widest uppercase text-zinc-500 select-none">
+        <div className="mt-1.5 hidden sm:flex items-center justify-between px-1 text-[10px] font-mono tracking-widest uppercase text-[#84919D] select-none">
           <span>{activePreset.name}</span>
           <span className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-yellow-500/50" />
-            BlunderBot Engine
+            <span className="w-1.5 h-1.5 rounded-full bg-[#DDAA57]" />
+            BlunderBot Console
           </span>
         </div>
       </div>

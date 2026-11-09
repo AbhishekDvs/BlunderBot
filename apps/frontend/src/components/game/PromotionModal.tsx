@@ -49,16 +49,16 @@ export function PromotionModal({ isOpen, color, onSelect, onCancel }: PromotionM
           className="absolute inset-0 bg-black/75 backdrop-blur-sm"
         />
 
-        {/* Card */}
+        {/* Tactical Promotion Box */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 10 }}
-          className="relative rounded-2xl bg-[#161822] border border-yellow-500/40 p-5 shadow-2xl text-center max-w-xs w-full space-y-4"
+          className="relative rounded-2xl bg-[#151A22] border border-[#DDAA57]/60 p-5 shadow-2xl text-center max-w-xs w-full space-y-4"
         >
           <div>
-            <h3 className="text-base font-extrabold text-white tracking-tight">Pawn Promotion</h3>
-            <p className="text-xs text-zinc-400 mt-0.5">Select a rank advancement or press hotkey</p>
+            <h3 className="text-base font-extrabold text-[#F5F6F8] tracking-tight">Pawn Promotion</h3>
+            <p className="text-xs text-[#84919D] mt-0.5">Select a rank advancement or press hotkey</p>
           </div>
 
           <div className="grid grid-cols-4 gap-2">
@@ -67,13 +67,13 @@ export function PromotionModal({ isOpen, color, onSelect, onCancel }: PromotionM
                 key={p.code}
                 type="button"
                 onClick={() => onSelect(p.code)}
-                className="group flex flex-col items-center justify-center p-3 rounded-xl bg-white/[0.04] hover:bg-yellow-500/20 border border-white/10 hover:border-yellow-500/60 transition active:scale-95"
+                className="group flex flex-col items-center justify-center p-3 rounded-xl bg-[#11151B] hover:bg-[#DDAA57]/15 border border-[#202832] hover:border-[#DDAA57]/60 transition active:scale-95"
               >
-                <span className="text-3xl text-white group-hover:scale-110 transition select-none">
+                <span className="text-3xl text-[#F5F6F8] group-hover:scale-110 transition select-none">
                   {p.symbol[color]}
                 </span>
-                <span className="text-[11px] font-bold text-zinc-300 mt-1">{p.name}</span>
-                <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.06] text-zinc-400 mt-1 font-mono">
+                <span className="text-[11px] font-bold text-[#F5F6F8] mt-1">{p.name}</span>
+                <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-[#1C232D] text-[#84919D] mt-1 font-mono border border-[#283341]">
                   {p.key}
                 </kbd>
               </button>
@@ -83,7 +83,7 @@ export function PromotionModal({ isOpen, color, onSelect, onCancel }: PromotionM
           <button
             type="button"
             onClick={onCancel}
-            className="text-xs text-zinc-500 hover:text-zinc-300 transition"
+            className="text-xs text-[#84919D] hover:text-[#F5F6F8] transition"
           >
             Cancel Move (Esc)
           </button>

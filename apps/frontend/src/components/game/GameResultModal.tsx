@@ -67,25 +67,25 @@ export function GameResultModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-black/80 backdrop-blur-md"
+          className="fixed inset-0 bg-black/85 backdrop-blur-md"
         />
 
         {/* Modal Window */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          initial={{ opacity: 0, scale: 0.92, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          transition={{ duration: 0.25 }}
-          className="relative w-full max-w-lg rounded-2xl bg-[#14161F] border border-white/10 text-white shadow-2xl shadow-black/90 overflow-hidden"
+          exit={{ opacity: 0, scale: 0.92, y: 16 }}
+          transition={{ duration: 0.22 }}
+          className="relative w-full max-w-lg rounded-2xl bg-[#151A22] border border-[#2D3847] text-[#F5F6F8] shadow-2xl shadow-black/95 overflow-hidden"
         >
           {/* Top Decorative Banner */}
           <div
             className={`h-2 w-full ${
               isWin
-                ? 'bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600'
+                ? 'bg-gradient-to-r from-[#DDAA57] via-[#F3CE89] to-[#DDAA57]'
                 : isLoss
                 ? 'bg-gradient-to-r from-red-600 via-rose-500 to-red-700'
-                : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-500'
+                : 'bg-gradient-to-r from-[#438A69] via-emerald-400 to-[#438A69]'
             }`}
           />
 
@@ -95,10 +95,10 @@ export function GameResultModal({
               <div
                 className={`w-20 h-20 rounded-2xl flex items-center justify-center border shadow-xl ${
                   isWin
-                    ? 'bg-yellow-500/10 border-yellow-500/40 text-yellow-400 shadow-yellow-500/10'
+                    ? 'bg-[#DDAA57]/15 border-[#DDAA57]/50 text-[#DDAA57] shadow-[#DDAA57]/20'
                     : isLoss
-                    ? 'bg-red-500/10 border-red-500/40 text-red-400 shadow-red-500/10'
-                    : 'bg-blue-500/10 border-blue-500/40 text-blue-400 shadow-blue-500/10'
+                    ? 'bg-red-500/15 border-red-500/50 text-red-400 shadow-red-500/20'
+                    : 'bg-[#438A69]/15 border-[#438A69]/50 text-emerald-400 shadow-[#438A69]/20'
                 }`}
               >
                 {isWin ? (
@@ -113,22 +113,22 @@ export function GameResultModal({
 
             {/* Title & Subtitle */}
             <div className="space-y-1">
-              <span className="text-xs uppercase tracking-widest font-semibold text-zinc-400">
-                Match Concluded
+              <span className="text-xs uppercase tracking-widest font-mono font-bold text-[#84919D]">
+                Match Engagement Concluded
               </span>
-              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">{resultTitle}</h2>
-              <p className="text-sm text-zinc-300 max-w-md mx-auto">{resultSubtitle}</p>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-[#F5F6F8]">{resultTitle}</h2>
+              <p className="text-xs sm:text-sm text-[#84919D] max-w-md mx-auto leading-relaxed">{resultSubtitle}</p>
             </div>
 
             {/* Match Stats Strip */}
-            <div className="grid grid-cols-2 gap-3 py-3 px-4 rounded-xl bg-white/[0.03] border border-white/[0.06] text-xs">
+            <div className="grid grid-cols-2 gap-3 py-3 px-4 rounded-xl bg-[#11151B] border border-[#202832] text-xs">
               <div>
-                <span className="text-zinc-500 block">Total Moves</span>
-                <span className="font-mono font-bold text-sm text-white">{moveCount} moves</span>
+                <span className="text-[#84919D] block text-[11px]">Total Moves</span>
+                <span className="font-mono font-bold text-sm text-[#F5F6F8]">{moveCount} moves</span>
               </div>
               <div>
-                <span className="text-zinc-500 block">Engine Result</span>
-                <span className="font-mono font-bold text-sm text-yellow-400 capitalize">
+                <span className="text-[#84919D] block text-[11px]">Outcome</span>
+                <span className="font-mono font-bold text-sm text-[#DDAA57] uppercase">
                   {resultType}
                 </span>
               </div>
@@ -136,17 +136,17 @@ export function GameResultModal({
 
             {/* PGN mini preview */}
             {pgn && (
-              <div className="text-left bg-black/40 rounded-xl p-3 border border-white/[0.06] max-h-24 overflow-y-auto text-[11px] font-mono text-zinc-400 select-all">
+              <div className="text-left bg-[#0A0D12] rounded-xl p-3 border border-[#202832] max-h-24 overflow-y-auto text-[11px] font-mono text-[#84919D] select-all">
                 {pgn}
               </div>
             )}
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
               <button
                 type="button"
                 onClick={onPlayAgain}
-                className="col-span-full py-3 px-5 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-black font-extrabold text-sm shadow-lg shadow-yellow-500/20 transition active:scale-95 flex items-center justify-center gap-2"
+                className="col-span-full tactical-button-primary py-3 px-5 rounded-xl text-sm flex items-center justify-center gap-2 active:scale-95"
               >
                 <RestartIcon className="w-4 h-4" />
                 <span>Play Again</span>
@@ -155,7 +155,7 @@ export function GameResultModal({
               <button
                 type="button"
                 onClick={onCopyPGN}
-                className="py-2.5 px-4 rounded-xl bg-white/[0.05] hover:bg-white/10 border border-white/10 text-white font-semibold text-xs transition flex items-center justify-center gap-2"
+                className="tactical-button-secondary py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5"
               >
                 {copiedPGN ? <CheckIcon className="w-4 h-4 text-emerald-400" /> : <CopyIcon className="w-4 h-4" />}
                 <span>{copiedPGN ? 'PGN Copied' : 'Copy PGN'}</span>
@@ -164,7 +164,7 @@ export function GameResultModal({
               <button
                 type="button"
                 onClick={onDownloadPGN}
-                className="py-2.5 px-4 rounded-xl bg-white/[0.05] hover:bg-white/10 border border-white/10 text-white font-semibold text-xs transition flex items-center justify-center gap-2"
+                className="tactical-button-secondary py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5"
               >
                 <DownloadIcon className="w-4 h-4" />
                 <span>Download PGN</span>
@@ -173,19 +173,19 @@ export function GameResultModal({
               <button
                 type="button"
                 onClick={onExportPNG}
-                className="py-2.5 px-4 rounded-xl bg-white/[0.05] hover:bg-white/10 border border-white/10 text-white font-semibold text-xs transition flex items-center justify-center gap-2"
+                className="tactical-button-secondary py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5"
               >
                 <ImageIcon className="w-4 h-4" />
-                <span>Export Board Image</span>
+                <span>Export Board</span>
               </button>
 
               <button
                 type="button"
                 onClick={onClose}
-                className="py-2.5 px-4 rounded-xl bg-white/[0.05] hover:bg-white/10 border border-white/10 text-zinc-300 font-semibold text-xs transition flex items-center justify-center gap-2"
+                className="tactical-button-secondary py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5"
               >
                 <EyeIcon className="w-4 h-4" />
-                <span>Review Final Position</span>
+                <span>Review Board</span>
               </button>
             </div>
           </div>

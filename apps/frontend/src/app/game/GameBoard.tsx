@@ -13,7 +13,15 @@ import { PlayerCard } from '@/components/game/PlayerCard'
 import { MoveHistory } from '@/components/game/MoveHistory'
 import { PromotionModal } from '@/components/game/PromotionModal'
 import { GameResultModal } from '@/components/game/GameResultModal'
-import { FlipBoardIcon, FlagIcon, RestartIcon, PaletteIcon, PerspectiveIcon } from '@/components/ui/Icons'
+import {
+  FlipBoardIcon,
+  FlagIcon,
+  RestartIcon,
+  PaletteIcon,
+  PerspectiveIcon,
+  HistoryIcon,
+  CloseIcon,
+} from '@/components/ui/Icons'
 import type { Difficulty, BoardSide, TimeControl } from './GameClient'
 
 const BOT_QUOTES: Record<Difficulty, { normal: string[]; onCheck: string; onBlunder: string; win: string; loss: string }> = {
@@ -68,7 +76,7 @@ const BOT_QUOTES: Record<Difficulty, { normal: string[]; onCheck: string; onBlun
 }
 
 export function GameBoard({
-  difficulty,
+  difficulty: initialDifficulty,
   side: initialSide,
   timeControl = 'casual',
 }: {
@@ -82,9 +90,14 @@ export function GameBoard({
   const [side, setSide] = useState<BoardSide>(initialSide)
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null)
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null)
-  const [boardWidth, setBoardWidth] = useState(480)
+  const [boardWidth, setBoardWidth] = useState(520)
   const [isBotThinking, setIsBotThinking] = useState(false)
   const [copiedPGN, setCopiedPGN] = useState(false)
+  const [difficulty, setDifficulty] = useState<Difficulty>(initialDifficulty)
+
+  // Layout presentation modes
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [mobileTab, setMobileTab] = useState<'board' | 'history' | 'controls'>('board')
 
   // Chess clock state
   const initialSeconds = useMemo(() => {
@@ -157,17 +170,24 @@ export function GameBoard({
     }
   }, [selectedSquare, fen])
 
-  // Responsive board sizing
+  // Responsive board sizing: Height-aware on desktop, Width-aware on mobile
   useEffect(() => {
     const updateSize = () => {
-      if (boardContainerRef.current) {
-        const containerWidth = boardContainerRef.current.clientWidth
-        // Keep square aspect ratio with comfortable padding
-        const optimal = Math.max(280, Math.min(containerWidth - 24, 520))
-        setBoardWidth(optimal)
+      const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1200
+      const windowHeight = typeof window !== 'undefined' ? window.innerHeight : 900
+
+      if (windowWidth < 1024) {
+        // Mobile / Tablet: scale precisely to viewport width with comfortable edge margins
+        const horizontalPadding = windowWidth < 640 ? 20 : 40
+        const maxAvailable = windowWidth - horizontalPadding
+        setBoardWidth(Math.max(280, Math.min(maxAvailable, 540)))
       } else {
-        const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 500
-        setBoardWidth(Math.max(280, Math.min(windowWidth - 32, 520)))
+        // Desktop: Height-conscious to prevent vertical scrolling!
+        // Navbar: 64px, Top/Bottom player banners: ~96px, Margins & toolbar: ~70px -> Total chrome ~230px
+        const availableHeight = windowHeight - 230
+        const maxDesktopWidth = isSidebarCollapsed ? 760 : 600
+        const optimal = Math.max(380, Math.min(maxDesktopWidth, availableHeight))
+        setBoardWidth(optimal)
       }
     }
 
@@ -177,7 +197,7 @@ export function GameBoard({
       window.removeEventListener('resize', updateSize)
       if (resultModalTimeoutRef.current) clearTimeout(resultModalTimeoutRef.current)
     }
-  }, [])
+  }, [isSidebarCollapsed])
 
   // Check Game Over status
   const evaluateGameEnd = useCallback(() => {
@@ -222,13 +242,15 @@ export function GameBoard({
     }
 
     setResultData({ type, title, subtitle })
-    // Delay game result modal to allow 3D victory / surrender cinematics to conclude
+    
+    // For 3D War Chess, delay modal by 3800ms to allow royal salute/bow to finish. For 2D, show in 750ms.
+    const modalDelay = settings.perspective === 'true-3d' ? 3800 : 750
     if (resultModalTimeoutRef.current) clearTimeout(resultModalTimeoutRef.current)
     resultModalTimeoutRef.current = setTimeout(() => {
       setShowResultModal(true)
-    }, 3800)
+    }, modalDelay)
     return true
-  }, [initialSide, difficulty])
+  }, [initialSide, difficulty, settings.perspective])
 
   // Get UCI depth command
   const getSearchCommand = useCallback((diff: Difficulty) => {
@@ -281,7 +303,6 @@ export function GameBoard({
                 soundService.playCheckAlert(settings.soundEnabled)
                 setBotQuote(BOT_QUOTES[difficulty].onCheck)
               } else {
-                // Random personality comment occasionally
                 const quotes = BOT_QUOTES[difficulty].normal
                 setBotQuote(quotes[Math.floor(Math.random() * quotes.length)])
               }
@@ -315,7 +336,7 @@ export function GameBoard({
     [makeBotMove]
   )
 
-  // Bot makes opening move if player chose Black
+  // Bot opening move if player chose Black
   useEffect(() => {
     if (initialSide === 'black' && game.current.history().length === 0) {
       scheduleBotMove(300)
@@ -493,10 +514,11 @@ export function GameBoard({
       title: 'Match Resigned',
       subtitle: `You conceded the game to BlunderBot (${difficulty.toUpperCase()}).`,
     })
+    const modalDelay = settings.perspective === 'true-3d' ? 3800 : 500
     if (resultModalTimeoutRef.current) clearTimeout(resultModalTimeoutRef.current)
     resultModalTimeoutRef.current = setTimeout(() => {
       setShowResultModal(true)
-    }, 3800)
+    }, modalDelay)
   }
 
   // Flip board orientation
@@ -566,7 +588,7 @@ export function GameBoard({
   }, [showClock, botSide, fen])
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 flex flex-col lg:flex-row items-center lg:items-start justify-center gap-6">
+    <div className="w-full max-w-[1600px] mx-auto px-2 sm:px-6 py-2 sm:py-4 flex flex-col lg:flex-row items-center lg:items-start justify-center gap-4 sm:gap-6">
       {/* Promotion Modal */}
       <PromotionModal
         isOpen={!!pendingPromotion}
@@ -591,12 +613,14 @@ export function GameBoard({
         copiedPGN={copiedPGN}
       />
 
-      {/* Main Board Arena (Centerpiece) */}
+      {/* Main Board Arena (Centerpiece Dominance) */}
       <div
         ref={boardContainerRef}
-        className="w-full lg:flex-1 flex flex-col items-center justify-center max-w-[560px] space-y-4"
+        className={`w-full flex flex-col items-center justify-center transition-all duration-300 ${
+          isSidebarCollapsed ? 'max-w-[820px]' : 'max-w-[680px]'
+        } space-y-2 sm:space-y-3`}
       >
-        {/* Top Player Card (Bot when player is White; Player when player is Black) */}
+        {/* Top Player Banner */}
         <div className="w-full">
           <PlayerCard
             isBot={side === 'white'}
@@ -612,7 +636,7 @@ export function GameBoard({
         </div>
 
         {/* The Physical Chessboard */}
-        <div className="w-full flex items-center justify-center py-1">
+        <div className="w-full flex items-center justify-center py-0.5">
           <ChessboardFrame
             fen={fen}
             side={side}
@@ -627,7 +651,7 @@ export function GameBoard({
           />
         </div>
 
-        {/* Bottom Player Card (Player when player is White; Bot when player is Black) */}
+        {/* Bottom Player Banner */}
         <div className="w-full">
           <PlayerCard
             isBot={side === 'black'}
@@ -642,92 +666,255 @@ export function GameBoard({
           />
         </div>
 
-        {/* Compact Quick Actions Toolbar (Under board) */}
-        <div className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-xs">
-          <div className="flex items-center gap-1.5">
+        {/* Tactical Quick Actions Toolbar (Under board) */}
+        <div className="w-full flex items-center justify-between gap-1.5 px-3 py-1.5 rounded-xl bg-[#11151B] border border-[#202832] text-xs shadow-inner">
+          <div className="flex items-center gap-1 sm:gap-2">
             <button
               type="button"
               onClick={handleFlipBoard}
-              className="px-2.5 py-1.5 rounded-lg hover:bg-white/[0.08] text-zinc-300 hover:text-white transition flex items-center gap-1.5 font-medium"
+              className="px-2.5 py-1.5 rounded-lg hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8] transition flex items-center gap-1.5 font-medium"
               title="Flip Board View"
             >
-              <FlipBoardIcon className="w-4 h-4 text-yellow-400" />
-              <span>Flip</span>
+              <FlipBoardIcon className="w-3.5 h-3.5 text-[#DDAA57]" />
+              <span className="hidden sm:inline">Flip View</span>
             </button>
 
             <button
               type="button"
               onClick={togglePerspective}
-              className="px-2.5 py-1.5 rounded-lg hover:bg-white/[0.08] text-zinc-300 hover:text-white transition flex items-center gap-1.5 font-medium"
-              title="Toggle 2.5D Physical Depth"
+              className="px-2.5 py-1.5 rounded-lg hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8] transition flex items-center gap-1.5 font-medium"
+              title="Toggle Perspective: 2D Flat, 2.5D Depth, or 3D War Chess"
             >
-              <PerspectiveIcon className="w-4 h-4 text-yellow-400" />
-              <span>{settings.perspective === 'elevated-2.5d' ? '2.5D' : '2D'}</span>
+              <PerspectiveIcon className="w-3.5 h-3.5 text-[#438A69]" />
+              <span>
+                {settings.perspective === 'true-3d'
+                  ? '3D'
+                  : settings.perspective === 'elevated-2.5d'
+                  ? '2.5D'
+                  : '2D'}
+              </span>
             </button>
-          </div>
 
-          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setIsCustomizerOpen(true)}
-              className="px-2.5 py-1.5 rounded-lg hover:bg-white/[0.08] text-zinc-300 hover:text-white transition flex items-center gap-1.5 font-medium"
+              className="px-2.5 py-1.5 rounded-lg hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8] transition flex items-center gap-1.5 font-medium"
+              title="Customize Board Materials & Pieces"
             >
-              <PaletteIcon className="w-4 h-4 text-yellow-400" />
-              <span>Themes</span>
+              <PaletteIcon className="w-3.5 h-3.5 text-[#DDAA57]" />
+              <span className="hidden sm:inline">Theme</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1 sm:gap-2">
+            {/* Mobile History Sheet Trigger */}
+            <button
+              type="button"
+              onClick={() => setMobileTab((t) => (t === 'history' ? 'board' : 'history'))}
+              className={`lg:hidden px-2.5 py-1.5 rounded-lg border transition flex items-center gap-1 font-medium ${
+                mobileTab === 'history'
+                  ? 'bg-[#DDAA57]/20 border-[#DDAA57]/40 text-[#DDAA57]'
+                  : 'hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8] border-transparent'
+              }`}
+              title="Toggle Move History Drawer"
+            >
+              <HistoryIcon className="w-3.5 h-3.5" />
+              <span>Log</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleResetGame}
+              className="px-2.5 py-1.5 rounded-lg hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8] transition flex items-center gap-1.5 font-medium"
+              title="Restart Match"
+            >
+              <RestartIcon className="w-3.5 h-3.5 text-[#DDAA57]" />
+              <span className="hidden sm:inline">Restart</span>
             </button>
 
             <button
               type="button"
               onClick={handleResign}
               disabled={game.current.isGameOver()}
-              className="px-2.5 py-1.5 rounded-lg hover:bg-red-950/30 text-zinc-400 hover:text-red-400 transition flex items-center gap-1.5 font-medium disabled:opacity-40"
-              title="Resign Current Match"
+              className="px-2.5 py-1.5 rounded-lg hover:bg-red-950/40 text-[#84919D] hover:text-red-400 transition flex items-center gap-1.5 font-medium disabled:opacity-40"
+              title="Concede Match"
             >
               <FlagIcon className="w-3.5 h-3.5" />
               <span>Resign</span>
             </button>
           </div>
         </div>
+
+        {/* Mobile History Slide-up Sheet */}
+        {mobileTab === 'history' && (
+          <div className="lg:hidden w-full tactical-panel p-3 rounded-2xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#202832]">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#F5F6F8]">
+                Match Move Record
+              </span>
+              <button
+                type="button"
+                onClick={() => setMobileTab('board')}
+                className="p-1 rounded text-[#84919D] hover:text-[#F5F6F8]"
+              >
+                <CloseIcon className="w-4 h-4" />
+              </button>
+            </div>
+            <MoveHistory
+              history={game.current.history()}
+              onCopyPGN={handleCopyPGN}
+              onDownloadPGN={handleDownloadPGN}
+              onExportPNG={handleExportPNG}
+              copiedPGN={copiedPGN}
+            />
+          </div>
+        )}
       </div>
 
-      {/* Side Analytical & Control Workspace (Right column on desktop, below on mobile) */}
-      <div className="w-full lg:w-80 xl:w-96 flex flex-col space-y-4">
-        {/* Move History Table */}
-        <MoveHistory
-          history={game.current.history()}
-          onCopyPGN={handleCopyPGN}
-          onDownloadPGN={handleDownloadPGN}
-          onExportPNG={handleExportPNG}
-          copiedPGN={copiedPGN}
-        />
-
-        {/* Game Actions Card */}
-        <div className="rounded-2xl p-4 bg-[#14161E] border border-white/[0.08] space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Match Operations</span>
-            <span className="text-[11px] font-mono text-yellow-400">{difficulty.toUpperCase()}</span>
-          </div>
-
+      {/* Desktop Side Analytical & Operations HUD */}
+      <div
+        className={`hidden lg:flex flex-col transition-all duration-300 ${
+          isSidebarCollapsed ? 'w-16' : 'w-80 xl:w-96'
+        } space-y-3`}
+      >
+        {/* Sidebar Dock Toggle Banner */}
+        <div className="tactical-panel px-3 py-2 rounded-xl flex items-center justify-between text-xs">
+          {!isSidebarCollapsed && (
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#438A69]" />
+              <span className="font-bold uppercase tracking-wider text-[#F5F6F8] text-[11px]">
+                Tactical Terminal
+              </span>
+            </div>
+          )}
           <button
             type="button"
-            onClick={handleResetGame}
-            className="w-full py-2.5 px-4 rounded-xl bg-white/[0.05] hover:bg-white/[0.09] border border-white/10 text-white font-semibold text-xs sm:text-sm transition flex items-center justify-center gap-2 active:scale-98"
+            onClick={() => setIsSidebarCollapsed((prev) => !prev)}
+            className="p-1 rounded-lg hover:bg-[#1C232D] text-[#84919D] hover:text-[#DDAA57] transition mx-auto"
+            title={isSidebarCollapsed ? 'Expand HUD Panel' : 'Collapse HUD for Immersive Board Presentation'}
           >
-            <RestartIcon className="w-4 h-4 text-yellow-400" />
-            <span>Restart Match</span>
+            {isSidebarCollapsed ? (
+              <span className="text-xs font-mono font-bold text-[#DDAA57]">« EXP</span>
+            ) : (
+              <span className="text-xs font-mono text-[#84919D] hover:text-[#F5F6F8]">COLLAPSE »</span>
+            )}
           </button>
         </div>
 
-        {/* Engine Specs Box */}
-        <div className="rounded-xl p-3.5 bg-white/[0.02] border border-white/[0.06] text-xs text-zinc-400 space-y-1.5">
-          <div className="flex items-center justify-between text-zinc-300 font-semibold">
-            <span>Stockfish 16 Engine</span>
-            <span className="text-[11px] font-mono text-emerald-400">WASM WebWorker</span>
+        {!isSidebarCollapsed ? (
+          <>
+            {/* Move History Log */}
+            <MoveHistory
+              history={game.current.history()}
+              onCopyPGN={handleCopyPGN}
+              onDownloadPGN={handleDownloadPGN}
+              onExportPNG={handleExportPNG}
+              copiedPGN={copiedPGN}
+            />
+
+            {/* Tactical Match Operations Card */}
+            <div className="tactical-panel rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between border-b border-[#202832] pb-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#84919D]">
+                  Operational Tier
+                </span>
+                <span className="text-[11px] font-mono text-[#DDAA57] font-bold">
+                  {difficulty.toUpperCase()}
+                </span>
+              </div>
+
+              {/* In-Game Difficulty Switcher */}
+              <div className="grid grid-cols-4 gap-1.5">
+                {(['easy', 'medium', 'hard', 'insane'] as Difficulty[]).map((diff) => (
+                  <button
+                    key={diff}
+                    type="button"
+                    onClick={() => {
+                      soundService.playClick(settings.soundEnabled)
+                      setDifficulty(diff)
+                      setBotQuote(BOT_QUOTES[diff].normal[0])
+                    }}
+                    className={`py-1.5 rounded-lg text-[10px] font-mono uppercase font-bold border transition ${
+                      difficulty === diff
+                        ? 'bg-[#1C232D] border-[#DDAA57] text-[#DDAA57]'
+                        : 'bg-[#11151B] border-[#202832] text-[#84919D] hover:text-[#F5F6F8]'
+                    }`}
+                  >
+                    {diff}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleResetGame}
+                  className="tactical-button-primary py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 active:scale-98"
+                >
+                  <RestartIcon className="w-3.5 h-3.5" />
+                  <span>Restart Match</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResign}
+                  disabled={game.current.isGameOver()}
+                  className="tactical-button-secondary py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 active:scale-98 disabled:opacity-40"
+                >
+                  <FlagIcon className="w-3.5 h-3.5" />
+                  <span>Concede</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Engine Technical Specifications */}
+            <div className="tactical-panel rounded-xl p-3 text-xs text-[#84919D] space-y-1">
+              <div className="flex items-center justify-between text-[#F5F6F8] font-bold text-[11px]">
+                <span>Stockfish 16 Engine</span>
+                <span className="font-mono text-emerald-400">Pure Local WASM</span>
+              </div>
+              <p className="text-[10px] text-[#84919D] leading-relaxed">
+                Zero telemetry. Evaluation is calculated in a dedicated client WebWorker.
+              </p>
+            </div>
+          </>
+        ) : (
+          /* Collapsed Icon Dock */
+          <div className="tactical-panel rounded-2xl py-3 flex flex-col items-center space-y-3">
+            <button
+              type="button"
+              onClick={handleFlipBoard}
+              className="p-2 rounded-xl hover:bg-[#1C232D] text-[#84919D] hover:text-[#DDAA57] transition"
+              title="Flip Board"
+            >
+              <FlipBoardIcon className="w-5 h-5" />
+            </button>
+            <button
+              type="button"
+              onClick={togglePerspective}
+              className="p-2 rounded-xl hover:bg-[#1C232D] text-[#84919D] hover:text-[#438A69] transition"
+              title="Toggle Perspective"
+            >
+              <PerspectiveIcon className="w-5 h-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsCustomizerOpen(true)}
+              className="p-2 rounded-xl hover:bg-[#1C232D] text-[#84919D] hover:text-[#DDAA57] transition"
+              title="Themes Studio"
+            >
+              <PaletteIcon className="w-5 h-5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleResetGame}
+              className="p-2 rounded-xl hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8] transition"
+              title="Restart Match"
+            >
+              <RestartIcon className="w-5 h-5" />
+            </button>
           </div>
-          <p className="text-[11px] text-zinc-500 leading-relaxed">
-            Running 100% locally in your browser with zero latency. No remote server requests or data telemetry.
-          </p>
-        </div>
+        )}
       </div>
     </div>
   )

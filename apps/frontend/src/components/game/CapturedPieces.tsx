@@ -87,21 +87,25 @@ export function CapturedPieces({ fen, color, className = '' }: CapturedPiecesPro
 
   const opponentSide = color === 'w' ? 'b' : 'w'
 
+  if (capturedPieces.length === 0 && materialDiff <= 0) {
+    return null
+  }
+
   return (
-    <div className={`flex items-center gap-1.5 min-h-[22px] flex-wrap ${className}`}>
+    <div className={`flex items-center gap-1 min-h-[20px] flex-nowrap ${className}`}>
       {capturedPieces.map(({ piece, count }) => (
         <span
           key={piece}
-          className="inline-flex items-center text-sm font-serif select-none px-1 rounded bg-white/[0.04] border border-white/[0.06] text-zinc-300"
+          className="inline-flex items-center text-xs font-serif select-none px-1 py-0.5 rounded bg-[#11151B] border border-[#202832] text-[#F5F6F8]"
           title={`${count}x ${piece.toUpperCase()}`}
         >
           {PIECE_UNICODE[opponentSide][piece]}
-          {count > 1 && <span className="text-[10px] font-sans font-bold text-zinc-400 ml-0.5">{count}</span>}
+          {count > 1 && <span className="text-[9px] font-sans font-bold text-[#84919D] ml-0.5">{count}</span>}
         </span>
       ))}
 
       {materialDiff > 0 && (
-        <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+        <span className="text-[10px] font-bold font-mono px-1.5 py-0.2 rounded bg-[#438A69]/20 text-emerald-400 border border-[#438A69]/40">
           +{materialDiff}
         </span>
       )}

@@ -207,7 +207,7 @@ export function ThreeBoardCanvas({
       {/* 3D Viewport Container */}
       <div
         ref={containerRef}
-        className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10"
+        className="relative rounded-2xl overflow-hidden shadow-2xl border border-[#283341] bg-[#0A0D12]"
         style={{
           width: `${boardWidth}px`,
           height: `${boardWidth}px`,
@@ -215,15 +215,15 @@ export function ThreeBoardCanvas({
       />
 
       {/* Floating 3D Tactical Controls Overlay */}
-      <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 p-1 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 shadow-lg text-xs">
+      <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 p-1 rounded-xl bg-[#0C0F14]/85 backdrop-blur-md border border-[#202832] shadow-xl text-xs">
         <button
           type="button"
           onClick={handleToggleCamera}
-          className="px-2.5 py-1 rounded-lg hover:bg-white/15 text-zinc-300 hover:text-white transition font-medium flex items-center gap-1.5"
+          className="px-2.5 py-1 rounded-lg hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8] transition font-medium flex items-center gap-1.5"
           title="Toggle between Tactical Top-Down and Cinematic Low Angle"
         >
           <span>📷</span>
-          <span>{cameraMode === 'tactical' ? 'Tactical' : 'Cinematic'}</span>
+          <span className="font-semibold text-[#F5F6F8]">{cameraMode === 'tactical' ? 'Tactical' : 'Cinematic'}</span>
         </button>
 
         <button
@@ -233,17 +233,17 @@ export function ThreeBoardCanvas({
             const nextPacing = pacings[(pacings.indexOf(pacing) + 1) % pacings.length]
             setPacing(nextPacing)
           }}
-          className="px-2.5 py-1 rounded-lg hover:bg-white/15 text-zinc-300 hover:text-white transition font-medium flex items-center gap-1.5"
+          className="px-2.5 py-1 rounded-lg hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8] transition font-medium flex items-center gap-1.5"
           title="Pacing: Cinematic (Full), Fast, or Reduced"
         >
           <span>⚡</span>
-          <span className="capitalize">{pacing}</span>
+          <span className="capitalize font-semibold text-[#DDAA57]">{pacing}</span>
         </button>
 
         <button
           type="button"
           onClick={handleSkipCombat}
-          className="px-2 py-1 rounded-lg hover:bg-red-500/20 text-zinc-400 hover:text-red-300 transition text-[11px]"
+          className="px-2 py-1 rounded-lg hover:bg-red-500/20 text-[#84919D] hover:text-red-300 transition text-[11px] font-mono"
           title="Skip active combat sequence (Esc)"
         >
           Skip
