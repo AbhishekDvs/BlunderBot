@@ -9,6 +9,8 @@ interface MoveHistoryProps {
   onDownloadPGN: () => void
   onExportPNG: () => void
   copiedPGN: boolean
+  activePly?: number | null
+  onSelectPly?: (ply: number | null) => void
 }
 
 export function MoveHistory({
@@ -17,25 +19,36 @@ export function MoveHistory({
   onDownloadPGN,
   onExportPNG,
   copiedPGN,
+  activePly = null,
+  onSelectPly,
 }: MoveHistoryProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll to bottom on move
+  // Auto-scroll to bottom on live move if not in review
   useEffect(() => {
-    if (scrollRef.current) {
+    if (activePly === null && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [history.length])
+  }, [history.length, activePly])
 
   // Group into pairs: [White, Black]
-  const pairs: { number: number; white: string; black?: string }[] = []
+  const pairs: { number: number; white: string; black?: string; whitePly: number; blackPly?: number }[] = []
   for (let i = 0; i < history.length; i += 2) {
     pairs.push({
       number: Math.floor(i / 2) + 1,
       white: history[i],
       black: history[i + 1],
+      whitePly: i + 1,
+      blackPly: history[i + 1] ? i + 2 : undefined,
     })
   }
+
+  const currentPly = activePly ?? history.length
+
+  const handleStepFirst = () => onSelectPly?.(0)
+  const handleStepPrev = () => onSelectPly?.(Math.max(0, currentPly - 1))
+  const handleStepNext = () => onSelectPly?.(Math.min(history.length, currentPly + 1))
+  const handleStepLive = () => onSelectPly?.(null)
 
   return (
     <div className="tactical-panel flex flex-col h-full rounded-2xl overflow-hidden shadow-xl">
@@ -46,6 +59,11 @@ export function MoveHistory({
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#1C232D] text-[#84919D] font-mono border border-[#283341]">
             {history.length} ply
           </span>
+          {activePly !== null && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#DDAA57]/20 text-[#DDAA57] font-mono font-bold border border-[#DDAA57]/40">
+              Reviewing
+            </span>
+          )}
         </div>
 
         {/* Quick action icons */}
@@ -84,7 +102,7 @@ export function MoveHistory({
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-2 space-y-0.5 text-xs font-mono select-text"
-        style={{ minHeight: '130px', maxHeight: '240px' }}
+        style={{ minHeight: '130px', maxHeight: '220px' }}
       >
         {pairs.length === 0 ? (
           <div className="h-full min-h-[130px] flex flex-col items-center justify-center text-center p-4 text-[#84919D]">
@@ -93,31 +111,105 @@ export function MoveHistory({
             <p className="text-[11px] text-[#84919D] mt-0.5">White makes the opening move.</p>
           </div>
         ) : (
-          pairs.map((p, idx) => {
-            const isLatest = idx === pairs.length - 1
+          pairs.map((p) => {
+            const isWhiteActive = (activePly === null && p.whitePly === history.length && !p.black) || activePly === p.whitePly
+            const isBlackActive = (activePly === null && p.blackPly === history.length) || (p.blackPly && activePly === p.blackPly)
+
             return (
               <div
                 key={p.number}
-                className={`grid grid-cols-12 py-1 px-2.5 rounded transition ${
-                  isLatest ? 'bg-[#DDAA57]/15 text-[#DDAA57]' : 'hover:bg-[#1C232D]/50 text-[#F5F6F8]'
-                }`}
+                className="grid grid-cols-12 py-0.5 px-2 rounded transition hover:bg-[#1C232D]/30"
               >
-                <span className="col-span-2 text-[#84919D] font-semibold">{p.number}.</span>
-                <span className={`col-span-5 font-semibold ${isLatest && !p.black ? 'text-[#DDAA57]' : ''}`}>
+                <span className="col-span-2 text-[#84919D] font-semibold flex items-center">
+                  {p.number}.
+                </span>
+                
+                {/* White Move */}
+                <button
+                  type="button"
+                  onClick={() => onSelectPly?.(p.whitePly)}
+                  className={`col-span-5 text-left px-1.5 py-0.5 rounded font-semibold transition ${
+                    isWhiteActive
+                      ? 'bg-[#DDAA57]/20 text-[#DDAA57] ring-1 ring-[#DDAA57]/50'
+                      : 'text-[#F5F6F8] hover:text-[#DDAA57] hover:bg-white/[0.04]'
+                  }`}
+                >
                   {p.white}
-                </span>
-                <span className={`col-span-5 font-semibold ${isLatest && p.black ? 'text-[#DDAA57]' : ''}`}>
-                  {p.black ?? ''}
-                </span>
+                </button>
+
+                {/* Black Move */}
+                {p.black ? (
+                  <button
+                    type="button"
+                    onClick={() => p.blackPly && onSelectPly?.(p.blackPly)}
+                    className={`col-span-5 text-left px-1.5 py-0.5 rounded font-semibold transition ${
+                      isBlackActive
+                        ? 'bg-[#DDAA57]/20 text-[#DDAA57] ring-1 ring-[#DDAA57]/50'
+                        : 'text-[#F5F6F8] hover:text-[#DDAA57] hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    {p.black}
+                  </button>
+                ) : (
+                  <span className="col-span-5" />
+                )}
               </div>
             )
           })
         )}
       </div>
 
+      {/* Replay / Review Step Controls Bar */}
+      {history.length > 0 && (
+        <div className="px-3 py-1.5 border-t border-[#202832] bg-[#0E1217] flex items-center justify-between text-xs font-mono">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={handleStepFirst}
+              disabled={currentPly === 0}
+              className="px-2 py-0.5 rounded hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8] disabled:opacity-30 transition"
+              title="First Move (|«)"
+            >
+              |«
+            </button>
+            <button
+              type="button"
+              onClick={handleStepPrev}
+              disabled={currentPly === 0}
+              className="px-2 py-0.5 rounded hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8] disabled:opacity-30 transition"
+              title="Previous Move (‹)"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              onClick={handleStepNext}
+              disabled={currentPly >= history.length}
+              className="px-2 py-0.5 rounded hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8] disabled:opacity-30 transition"
+              title="Next Move (›)"
+            >
+              ›
+            </button>
+            <button
+              type="button"
+              onClick={handleStepLive}
+              disabled={activePly === null}
+              className="px-2 py-0.5 rounded hover:bg-[#1C232D] text-[#DDAA57] disabled:opacity-40 font-bold transition"
+              title="Live Position (»|)"
+            >
+              »|
+            </button>
+          </div>
+
+          <span className="text-[10px] text-[#84919D]">
+            {activePly !== null ? `Ply ${activePly}/${history.length}` : 'Live Game'}
+          </span>
+        </div>
+      )}
+
       {/* Footer Info */}
       <div className="px-3.5 py-1.5 border-t border-[#202832] bg-[#11151B] flex items-center justify-between text-[10px] text-[#84919D]">
-        <span>Standard SAN Notation</span>
+        <span>Click move or use ‹ › keys</span>
         <span className="font-mono">Stockfish 16</span>
       </div>
     </div>
