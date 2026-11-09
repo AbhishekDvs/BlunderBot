@@ -115,6 +115,7 @@ export function GameBoard({
     to: string
     color: 'w' | 'b'
   } | null>(null)
+  const resultModalTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Dynamic Bot dialogue
   const [botQuote, setBotQuote] = useState<string>(BOT_QUOTES[difficulty].normal[0])
@@ -172,7 +173,10 @@ export function GameBoard({
 
     updateSize()
     window.addEventListener('resize', updateSize)
-    return () => window.removeEventListener('resize', updateSize)
+    return () => {
+      window.removeEventListener('resize', updateSize)
+      if (resultModalTimeoutRef.current) clearTimeout(resultModalTimeoutRef.current)
+    }
   }, [])
 
   // Check Game Over status
@@ -218,7 +222,11 @@ export function GameBoard({
     }
 
     setResultData({ type, title, subtitle })
-    setShowResultModal(true)
+    // Delay game result modal to allow 3D victory / surrender cinematics to conclude
+    if (resultModalTimeoutRef.current) clearTimeout(resultModalTimeoutRef.current)
+    resultModalTimeoutRef.current = setTimeout(() => {
+      setShowResultModal(true)
+    }, 3800)
     return true
   }, [initialSide, difficulty])
 
@@ -458,6 +466,7 @@ export function GameBoard({
   // Restart / Play Again
   const handleResetGame = () => {
     if (botTimeoutRef.current) clearTimeout(botTimeoutRef.current)
+    if (resultModalTimeoutRef.current) clearTimeout(resultModalTimeoutRef.current)
     game.current.reset()
     astraHub.notifyGameReset()
     setFen(game.current.fen())
@@ -477,12 +486,17 @@ export function GameBoard({
   // Resign match
   const handleResign = () => {
     if (game.current.isGameOver()) return
+    const resignWinner = initialSide === 'white' ? 'black_wins' : 'white_wins'
+    astraHub.notifyGameEnd(resignWinner)
     setResultData({
       type: 'loss',
       title: 'Match Resigned',
       subtitle: `You conceded the game to BlunderBot (${difficulty.toUpperCase()}).`,
     })
-    setShowResultModal(true)
+    if (resultModalTimeoutRef.current) clearTimeout(resultModalTimeoutRef.current)
+    resultModalTimeoutRef.current = setTimeout(() => {
+      setShowResultModal(true)
+    }, 3800)
   }
 
   // Flip board orientation

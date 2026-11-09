@@ -46,7 +46,8 @@ export function ThreeBoardCanvas({
           event.attackerPiece,
           event.victimPiece,
           () => {
-            soundService.playPieceCapture(activePreset.defaultSoundPack, settings.soundEnabled)
+            const attackerClass = event.attackerPiece.slice(1)
+            soundService.playCombatImpact(attackerClass, settings.soundEnabled)
           }
         )
       }
@@ -85,8 +86,7 @@ export function ThreeBoardCanvas({
   useEffect(() => {
     if (!containerRef.current) return
 
-    // Preload GLB assets in background
-    PieceBuilder3D.preloadArmyModels()
+    let isMounted = true
 
     const renderer = new ThreeChessRenderer({
       container: containerRef.current,
@@ -97,8 +97,23 @@ export function ThreeBoardCanvas({
 
     rendererRef.current = renderer
     renderer.setFen(fenRef.current)
+    if (typeof window !== 'undefined') {
+      (window as unknown as { __THREE_RENDERER__: unknown }).__THREE_RENDERER__ = renderer
+    }
+
+    // Preload GLB assets and upgrade pieces from fallback when loaded
+    PieceBuilder3D.preloadArmyModels().then(() => {
+      if (isMounted && rendererRef.current) {
+        rendererRef.current.clearPieces()
+        rendererRef.current.setFen(fenRef.current)
+      }
+    })
 
     return () => {
+      isMounted = false
+      if (typeof window !== 'undefined') {
+        (window as unknown as { __THREE_RENDERER__: unknown }).__THREE_RENDERER__ = null
+      }
       renderer.dispose()
       rendererRef.current = null
     }

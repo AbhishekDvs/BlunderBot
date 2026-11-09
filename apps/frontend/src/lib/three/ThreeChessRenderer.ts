@@ -69,7 +69,7 @@ export class ThreeChessRenderer {
     this.renderer.shadowMap.enabled = true
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
-    this.renderer.toneMappingExposure = 1.15
+    this.renderer.toneMappingExposure = 1.22
     options.container.appendChild(this.renderer.domElement)
 
     // 4. Lighting & Shadows
@@ -96,8 +96,8 @@ export class ThreeChessRenderer {
    * Cinematic lighting setup: Key directional sun, ambient bounce, and rim light
    */
   private setupLighting() {
-    // Ambient / Hemisphere fill
-    const hemiLight = new THREE.HemisphereLight(0xfff5eb, 0x1a1e24, 0.75)
+    // Ambient / Hemisphere fill (lifted floor bounce for dark basalt pieces)
+    const hemiLight = new THREE.HemisphereLight(0xfffaed, 0x2c2620, 1.15)
     this.scene.add(hemiLight)
 
     // Directional Key Sun (Upper-left screen space as per Astra spec)
@@ -113,7 +113,14 @@ export class ThreeChessRenderer {
     dirLight.shadow.camera.top = 6
     dirLight.shadow.camera.bottom = -6
     dirLight.shadow.bias = -0.0005
+    dirLight.shadow.radius = 2.5
+    dirLight.shadow.blurSamples = 16
     this.scene.add(dirLight)
+
+    // Neutral frontal fill to lift dark basalt shadows and reveal armor plate engravings
+    const frontalFill = new THREE.DirectionalLight(0xffffff, 0.85)
+    frontalFill.position.set(0, 8, 10)
+    this.scene.add(frontalFill)
 
     // Warm Rim light for piece silhouette definition
     const rimLight = new THREE.DirectionalLight(0xb68a3e, 0.8)
@@ -172,6 +179,16 @@ export class ThreeChessRenderer {
         this.pieceNodes.set(sq, node)
       }
     })
+  }
+
+  /**
+   * Clears all piece nodes to allow rebuild with cached GLB models
+   */
+  public clearPieces() {
+    this.pieceNodes.forEach((node) => {
+      this.scene.remove(node.group)
+    })
+    this.pieceNodes.clear()
   }
 
   /**

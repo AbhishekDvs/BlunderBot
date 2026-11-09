@@ -25,12 +25,11 @@ import { CameraController3D } from './cameraController.ts'
 
 export type EncounterPhase =
   | 'idle'
-  | 'anticipation'     // 0 - 20%
-  | 'approach'         // 20% - 50%
-  | 'defense_reaction' // 35% - 55%
-  | 'impact'           // 55%
-  | 'stagger_break'    // 55% - 80%
-  | 'settling'         // 80% - 100%
+  | 'anticipation'     // 0 - 22%
+  | 'approach'         // 22% - 54%
+  | 'impact'           // 54%
+  | 'stagger_break'    // 54% - 78%
+  | 'settling'         // 78% - 100%
 
 export class EncounterDirector3D {
   public currentPhase: EncounterPhase = 'idle'
@@ -41,6 +40,10 @@ export class EncounterDirector3D {
   private attackerStartPos = new THREE.Vector3()
   private defenderPos = new THREE.Vector3()
   private destinationPos = new THREE.Vector3()
+  private contactPos = new THREE.Vector3()
+  private attackDir = new THREE.Vector3()
+  private attackerTargetYaw = 0
+  private defenderTargetYaw = 0
 
   private startTime = 0
   private durationMs = 1800
@@ -57,6 +60,22 @@ export class EncounterDirector3D {
   ) {
     this.debris = debris
     this.cameraCtrl = cameraCtrl
+  }
+
+  /**
+   * Weapon contact reaches based on Astra physical model specifications
+   */
+  private getWeaponReach(pieceCode: string): number {
+    const pieceClass = pieceCode.slice(1).toUpperCase()
+    switch (pieceClass) {
+      case 'N': return 0.46 // Cavalry lance reach
+      case 'P': return 0.40 // Infantry spear reach
+      case 'B': return 0.38 // Acharya staff reach
+      case 'R': return 0.36 // Siege ram reach
+      case 'Q': return 0.32 // Imperial talwar reach
+      case 'K': return 0.30 // Royal broadsword reach
+      default: return 0.35
+    }
   }
 
   /**
@@ -108,15 +127,28 @@ export class EncounterDirector3D {
       return
     }
 
+    // Compute attack direction vector
+    const attackVec = new THREE.Vector3().subVectors(this.destinationPos, this.attackerStartPos)
+    const dist = attackVec.length()
+    if (dist > 0.001) {
+      this.attackDir.copy(attackVec).normalize()
+    } else {
+      this.attackDir.set(0, 0, 1)
+    }
+
+    // Exact contact alignment based on attacker weapon reach
+    const reach = this.getWeaponReach(attacker.pieceCode)
+    const stopDist = Math.min(reach, dist * 0.75)
+    this.contactPos.subVectors(this.destinationPos, this.attackDir.clone().multiplyScalar(stopDist))
+
     // Orient combatants towards each other
-    const attackDir = new THREE.Vector3().subVectors(this.defenderPos, this.attackerStartPos).normalize()
-    const attackerTargetYaw = Math.atan2(attackDir.x, attackDir.z)
-    const defenderTargetYaw = Math.atan2(-attackDir.x, -attackDir.z)
+    this.attackerTargetYaw = Math.atan2(this.attackDir.x, this.attackDir.z)
+    this.defenderTargetYaw = Math.atan2(-this.attackDir.x, -this.attackDir.z)
 
-    attacker.group.rotation.y = attackerTargetYaw
-    defender.group.rotation.y = defenderTargetYaw
+    attacker.group.rotation.y = this.attackerTargetYaw
+    defender.group.rotation.y = this.defenderTargetYaw
 
-    // Frame camera on combatants (if not reduced)
+    // Frame camera on combat encounter
     if (this.pacing === 'cinematic') {
       this.cameraCtrl.frameCombatEncounter(this.attackerStartPos, this.defenderPos)
     }
@@ -152,11 +184,12 @@ export class EncounterDirector3D {
         this.attackerNode.torsoNode.position.y = Math.sin(t * Math.PI) * 0.05
       }
 
-      // Defender spots threat and assumes defensive posture
-      if (this.defenderNode.shieldNode) {
+      // Defender spots incoming threat and assumes defensive posture
+      if (defenderClass === 'P' && this.defenderNode.shieldNode) {
         this.defenderNode.shieldNode.rotation.z = Math.PI / 2 + Math.sin(t * Math.PI) * 0.3
-      }
-      if (this.defenderNode.weaponNode) {
+      } else if (defenderClass === 'B' && this.defenderNode.weaponNode) {
+        this.defenderNode.weaponNode.rotation.z = Math.sin(t * Math.PI) * 0.35
+      } else if (this.defenderNode.weaponNode) {
         this.defenderNode.weaponNode.rotation.x = Math.sin(t * Math.PI) * 0.25
       }
     }
@@ -165,31 +198,74 @@ export class EncounterDirector3D {
       this.currentPhase = 'approach'
       const t = (progress - 0.22) / 0.32
 
-      // Attacker translates forward towards combat engagement point
-      const stopDistance = 0.42 // Stop just outside defender
-      const targetPos = new THREE.Vector3().lerpVectors(this.attackerStartPos, this.destinationPos, 1.0 - stopDistance)
-      this.attackerNode.group.position.lerpVectors(this.attackerStartPos, targetPos, t)
+      // Attacker translates forward towards exact contact position (weapon reach alignment)
+      this.attackerNode.group.position.lerpVectors(this.attackerStartPos, this.contactPos, t)
 
-      // Class-specific attack prep
-      if (attackerClass === 'N') { // Knight horse rears before charge
-        this.attackerNode.group.rotation.x = -Math.sin(t * Math.PI) * 0.35
-      } else if (attackerClass === 'P') { // Pawn thrusts spear forward
+      // Class-specific attacker locomotion & weapon articulation
+      if (attackerClass === 'N') {
+        // Articulated canter/trot gait across approach
+        const trotCycle = t * Math.PI * 6
+        const legSwing = Math.sin(trotCycle) * 0.38
+        const forelegSwing = Math.sin(trotCycle + Math.PI * 0.3) * 0.35
+
+        const flUpper = this.attackerNode.group.getObjectByName('Horse_FL_Upper')
+        const frUpper = this.attackerNode.group.getObjectByName('Horse_FR_Upper')
+        const blUpper = this.attackerNode.group.getObjectByName('Horse_BL_Upper')
+        const brUpper = this.attackerNode.group.getObjectByName('Horse_BR_Upper')
+
+        if (flUpper) flUpper.rotation.x = forelegSwing
+        if (frUpper) frUpper.rotation.x = -forelegSwing
+        if (blUpper) blUpper.rotation.x = -legSwing
+        if (brUpper) brUpper.rotation.x = legSwing
+
+        // Dynamic vertical gallop bob and pitch
+        this.attackerNode.group.position.y = Math.abs(Math.sin(trotCycle)) * 0.04
+        this.attackerNode.group.rotation.x = Math.sin(trotCycle * 0.5) * 0.12 - (t > 0.7 ? (t - 0.7) * 0.4 : 0)
+
+        // Couch cavalry lance forward as approaching victim
         if (this.attackerNode.weaponNode) {
-          this.attackerNode.weaponNode.rotation.x = t * 0.8
+          this.attackerNode.weaponNode.rotation.x = t * 0.45
+        }
+      } else if (attackerClass === 'P') {
+        // Pawn thrusts spear forward into target
+        if (this.attackerNode.weaponNode) {
+          this.attackerNode.weaponNode.rotation.x = t * 0.85
+        }
+        this.attackerNode.group.position.y = Math.sin(t * Math.PI * 4) * 0.02
+      } else if (attackerClass === 'R') {
+        // Rook battering ram charges forward
+        if (this.attackerNode.weaponNode) {
+          this.attackerNode.weaponNode.position.z = Math.sin(t * Math.PI) * 0.15
+        }
+      } else {
+        // Queen / King sword strike arc
+        if (this.attackerNode.weaponNode) {
+          this.attackerNode.weaponNode.rotation.x = t * 0.7
         }
       }
 
-      // Class-specific defender reaction
-      if (defenderClass === 'P') { // Pawn braces shield forward
-        if (this.defenderNode.shieldNode) {
-          this.defenderNode.shieldNode.position.z = Math.sin(t * Math.PI) * 0.08
-        }
-      } else if (defenderClass === 'B') { // Bishop plants warding staff
+      // Defender anticipatory reaction & warding
+      if (defenderClass === 'B') {
+        // Bishop raises and angles warding lotus staff to block incoming attack
         if (this.defenderNode.weaponNode) {
-          this.defenderNode.weaponNode.rotation.z = Math.sin(t * Math.PI) * 0.4
+          this.defenderNode.weaponNode.rotation.z = Math.sin(t * Math.PI * 0.5) * 0.55
+          this.defenderNode.weaponNode.rotation.x = Math.sin(t * Math.PI * 0.5) * 0.35
         }
-      } else if (defenderClass === 'N') { // Knight turns horse defensively
-        this.defenderNode.group.rotation.z = Math.sin(t * Math.PI) * 0.2
+        if (this.defenderNode.torsoNode) {
+          this.defenderNode.torsoNode.rotation.y = Math.sin(t * Math.PI * 0.5) * 0.2
+        }
+      } else if (defenderClass === 'P') {
+        // Pawn braces dhal shield forward into incoming attack
+        if (this.defenderNode.shieldNode) {
+          this.defenderNode.shieldNode.position.z = Math.sin(t * Math.PI * 0.5) * 0.14
+          this.defenderNode.shieldNode.rotation.y = -Math.sin(t * Math.PI * 0.5) * 0.25
+        }
+      } else if (defenderClass === 'N') {
+        // Knight horse turns flank defensively
+        this.defenderNode.group.rotation.y = this.defenderTargetYaw + Math.sin(t * Math.PI * 0.5) * 0.35
+      } else if (this.defenderNode.weaponNode) {
+        // Queen/King/Rook defensive stance
+        this.defenderNode.weaponNode.rotation.z = Math.sin(t * Math.PI * 0.5) * 0.45
       }
     }
     // 3. Phase: Synchronized Weapon Impact & Spark (0.54)
@@ -214,30 +290,51 @@ export class EncounterDirector3D {
 
       // Attacker follows through with strike
       if (this.attackerNode.weaponNode) {
-        this.attackerNode.weaponNode.rotation.x = (1.0 - t) * 0.6
+        this.attackerNode.weaponNode.rotation.x = (1.0 - t) * 0.5
+      }
+      this.attackerNode.group.position.y = 0
+      this.attackerNode.group.rotation.x = 0
+
+      // Reset knight legs after impact
+      if (attackerClass === 'N') {
+        const flUpper = this.attackerNode.group.getObjectByName('Horse_FL_Upper')
+        const frUpper = this.attackerNode.group.getObjectByName('Horse_FR_Upper')
+        const blUpper = this.attackerNode.group.getObjectByName('Horse_BL_Upper')
+        const brUpper = this.attackerNode.group.getObjectByName('Horse_BR_Upper')
+        if (flUpper) flUpper.rotation.x = 0
+        if (frUpper) frUpper.rotation.x = 0
+        if (blUpper) blUpper.rotation.x = 0
+        if (brUpper) brUpper.rotation.x = 0
       }
 
-      // Defender physically staggers backwards, tilts, and collapses
-      this.defenderNode.group.position.y = Math.max(0, (1.0 - t * t) * 0.06)
-      this.defenderNode.group.rotation.x = t * 0.9 // Falling back
-      this.defenderNode.group.scale.setScalar(Math.max(0.01, 1.0 - t * 0.85)) // Collapsing shell
+      // Defender physically staggers backwards away from strike vector before shell fracture
+      const recoilDist = Math.sin(t * Math.PI * 0.5) * 0.28
+      const recoilPos = new THREE.Vector3().addVectors(
+        this.defenderPos,
+        this.attackDir.clone().multiplyScalar(recoilDist)
+      )
+      this.defenderNode.group.position.copy(recoilPos)
+      this.defenderNode.group.position.y = Math.sin(t * Math.PI) * 0.08 // lifted by force of strike
+      this.defenderNode.group.rotation.x = -t * 1.1 // collapsing backwards
+      this.defenderNode.group.scale.setScalar(Math.max(0.01, 1.0 - t * 0.9)) // collapsing shell
     }
     // 5. Phase: Settling & Occupation (0.78 -> 1.0)
     else {
       this.currentPhase = 'settling'
       const t = (progress - 0.78) / 0.22
 
-      // Defender is now dismantled
+      // Defender is dismantled
       this.defenderNode.group.visible = false
 
-      // Attacker takes final step into destination square
-      const currentPos = this.attackerNode.group.position.clone()
-      this.attackerNode.group.position.lerpVectors(currentPos, this.destinationPos, t)
+      // Attacker takes final step into destination square from contact position
+      this.attackerNode.group.position.lerpVectors(this.contactPos, this.destinationPos, t)
 
-      // Restore attacker upright posture
+      // Restore upright posture & clean weapon
+      this.attackerNode.group.position.y = 0
       this.attackerNode.group.rotation.x = 0
       if (this.attackerNode.weaponNode) {
         this.attackerNode.weaponNode.rotation.set(0, 0, 0)
+        this.attackerNode.weaponNode.position.set(0, 0, 0)
       }
     }
 
@@ -253,12 +350,27 @@ export class EncounterDirector3D {
   public finish() {
     if (this.attackerNode) {
       this.attackerNode.group.position.copy(this.destinationPos)
+      this.attackerNode.group.position.y = 0
       this.attackerNode.group.rotation.x = 0
+      this.attackerNode.group.scale.set(1, 1, 1)
+      if (this.attackerNode.weaponNode) {
+        this.attackerNode.weaponNode.rotation.set(0, 0, 0)
+        this.attackerNode.weaponNode.position.set(0, 0, 0)
+      }
+      const flUpper = this.attackerNode.group.getObjectByName('Horse_FL_Upper')
+      const frUpper = this.attackerNode.group.getObjectByName('Horse_FR_Upper')
+      const blUpper = this.attackerNode.group.getObjectByName('Horse_BL_Upper')
+      const brUpper = this.attackerNode.group.getObjectByName('Horse_BR_Upper')
+      if (flUpper) flUpper.rotation.x = 0
+      if (frUpper) frUpper.rotation.x = 0
+      if (blUpper) blUpper.rotation.x = 0
+      if (brUpper) brUpper.rotation.x = 0
       this.attackerNode.isAnimating = false
     }
 
     if (this.defenderNode) {
       this.defenderNode.group.visible = false
+      this.defenderNode.group.scale.set(1, 1, 1)
       this.defenderNode.isAnimating = false
     }
 

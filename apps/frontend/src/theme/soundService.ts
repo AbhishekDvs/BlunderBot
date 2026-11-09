@@ -184,6 +184,84 @@ export const soundService = {
   },
 
   /**
+   * Procedural 3D Combat Impact with distinct weapon acoustic resonance
+   */
+  playCombatImpact(attackerClass = 'P', enabled = true) {
+    if (!enabled) return
+    const ctx = getAudioContext()
+    if (!ctx) return
+
+    try {
+      const now = ctx.currentTime
+      const char = attackerClass.toUpperCase()
+
+      // Primary metallic/wooden strike oscillator
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      const filter = ctx.createBiquadFilter()
+
+      if (char === 'N' || char === 'P') {
+        // Lance / Spear strike
+        osc.type = 'sawtooth'
+        osc.frequency.setValueAtTime(680, now)
+        osc.frequency.exponentialRampToValueAtTime(110, now + 0.14)
+        filter.type = 'bandpass'
+        filter.frequency.setValueAtTime(1400, now)
+      } else if (char === 'R') {
+        // Battering Ram heavy impact
+        osc.type = 'triangle'
+        osc.frequency.setValueAtTime(160, now)
+        osc.frequency.exponentialRampToValueAtTime(45, now + 0.28)
+        filter.type = 'lowpass'
+        filter.frequency.setValueAtTime(400, now)
+      } else {
+        // Sword / Staff slash (Queen, King, Bishop)
+        osc.type = 'triangle'
+        osc.frequency.setValueAtTime(1250, now)
+        osc.frequency.exponentialRampToValueAtTime(320, now + 0.18)
+        filter.type = 'bandpass'
+        filter.frequency.setValueAtTime(2200, now)
+      }
+
+      gain.gain.setValueAtTime(0.28, now)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22)
+
+      osc.connect(filter)
+      filter.connect(gain)
+      gain.connect(ctx.destination)
+
+      osc.start(now)
+      osc.stop(now + 0.22)
+
+      // Secondary stone fracture crunch (noise buffer)
+      const bufferSize = Math.floor(ctx.sampleRate * 0.12)
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
+      const data = buffer.getChannelData(0)
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.04))
+      }
+
+      const noise = ctx.createBufferSource()
+      noise.buffer = buffer
+      const noiseGain = ctx.createGain()
+      noiseGain.gain.setValueAtTime(0.18, now + 0.02)
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14)
+
+      const noiseFilter = ctx.createBiquadFilter()
+      noiseFilter.type = 'lowpass'
+      noiseFilter.frequency.setValueAtTime(1800, now)
+
+      noise.connect(noiseFilter)
+      noiseFilter.connect(noiseGain)
+      noiseGain.connect(ctx.destination)
+
+      noise.start(now + 0.02)
+    } catch {
+      // Silent catch
+    }
+  },
+
+  /**
    * Tactile subtle UI click.
    */
   playClick(enabled = true) {

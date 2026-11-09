@@ -16,10 +16,11 @@ export class CameraController3D {
   private targetLookAt = new THREE.Vector3(0, 0, 0)
   private currentLookAt = new THREE.Vector3(0, 0, 0)
 
-  // Camera presets
-  private readonly TACTICAL_POS = new THREE.Vector3(0, 10.5, 8.5)
-  private readonly CINEMATIC_POS = new THREE.Vector3(0, 4.8, 6.2)
-  private readonly TACTICAL_LOOK = new THREE.Vector3(0, 0, 0)
+  // Camera presets tuned for complete 8x8 battlefield coverage with generous margins
+  private readonly TACTICAL_POS = new THREE.Vector3(0, 11.8, 9.6)
+  private readonly CINEMATIC_POS = new THREE.Vector3(0, 6.8, 8.6)
+  private readonly TACTICAL_LOOK = new THREE.Vector3(0, 0.1, 0)
+  private readonly CINEMATIC_LOOK = new THREE.Vector3(0, 0.35, 0.3)
 
   // Orbit angle for ending cinematics
   private orbitAngle = 0
@@ -61,7 +62,7 @@ export class CameraController3D {
 
       case 'cinematic':
         this.targetPosition.set(0, this.CINEMATIC_POS.y, this.CINEMATIC_POS.z * flipFactor)
-        this.targetLookAt.set(0, 0.2, 0)
+        this.targetLookAt.set(0, this.CINEMATIC_LOOK.y, this.CINEMATIC_LOOK.z * flipFactor)
         break
 
       case 'ending':
@@ -80,26 +81,22 @@ export class CameraController3D {
   }
 
   /**
-   * Frames the 2 combatants during a capture sequence
+   * Frames the actual clash / contact area during a capture sequence
+   * (Focuses directly on the defender's destination square rather than a faraway midpoint)
    */
   public frameCombatEncounter(attackerPos: THREE.Vector3, defenderPos: THREE.Vector3) {
-    const midPoint = new THREE.Vector3()
-      .addVectors(attackerPos, defenderPos)
-      .multiplyScalar(0.5)
-
-    // Compute attack direction vector
     const dir = new THREE.Vector3().subVectors(defenderPos, attackerPos).normalize()
     const sideVector = new THREE.Vector3(-dir.z, 0, dir.x).normalize()
-
-    // Position camera slightly offset to the side of the clash
     const flipFactor = this.isFlipped ? -1 : 1
+
+    // Camera offset angled towards the strike zone
     const cameraOffset = new THREE.Vector3()
       .copy(sideVector)
-      .multiplyScalar(2.6 * flipFactor)
-      .add(new THREE.Vector3(0, 2.2, 2.0 * flipFactor))
+      .multiplyScalar(2.8 * (sideVector.x >= 0 ? 1 : -1))
+      .add(new THREE.Vector3(0, 2.4, 2.2 * flipFactor))
 
-    this.targetPosition.copy(midPoint).add(cameraOffset)
-    this.targetLookAt.copy(midPoint).add(new THREE.Vector3(0, 0.3, 0))
+    this.targetPosition.copy(defenderPos).add(cameraOffset)
+    this.targetLookAt.copy(defenderPos).add(new THREE.Vector3(0, 0.45, 0))
     this.currentMode = 'encounter'
   }
 

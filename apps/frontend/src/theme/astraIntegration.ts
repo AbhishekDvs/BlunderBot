@@ -117,3 +117,6 @@ class AstraIntegrationHub {
 }
 
 export const astraHub = new AstraIntegrationHub()
+if (typeof window !== 'undefined') {
+  (window as unknown as { __ASTRA_HUB__: AstraIntegrationHub }).__ASTRA_HUB__ = astraHub
+}

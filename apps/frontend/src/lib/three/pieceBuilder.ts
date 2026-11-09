@@ -13,6 +13,9 @@ import type { Piece3DNode } from './types.ts'
 
 // Cache for loaded GLB templates
 const glbCache = new Map<string, THREE.Group>()
+if (typeof window !== 'undefined') {
+  (window as unknown as { __GLB_CACHE__: Map<string, THREE.Group> }).__GLB_CACHE__ = glbCache
+}
 const loader = new GLTFLoader()
 
 // Faction PBR material palettes
@@ -104,8 +107,9 @@ export class PieceBuilder3D {
         try {
           const gltf = await loader.loadAsync(`/models/astra/${code}.glb`)
           glbCache.set(code, gltf.scene)
-        } catch {
+        } catch (err) {
           // Graceful fallback to procedural mesh
+          console.error(`[Astra3D] Failed to load GLB for ${code}:`, err)
         }
       })
     )
@@ -140,10 +144,29 @@ export class PieceBuilder3D {
       group.add(cloned)
 
       // Find articulation sockets
-      torsoNode = cloned.getObjectByName('Pawn_Torso') || cloned.getObjectByName('Samrajni_Torso') || cloned.getObjectByName('Raja_Cuirass')
-      weaponNode = cloned.getObjectByName('Pawn_SpearShaft') || cloned.getObjectByName('Cavalry_Lance') || cloned.getObjectByName('Samrajni_Sword') || cloned.getObjectByName('Raja_Sword') || cloned.getObjectByName('Acharya_Staff')
-      shieldNode = cloned.getObjectByName('Pawn_Shield')
-      plinthNode = cloned.getObjectByName('Plinth_Lower')
+      torsoNode =
+        cloned.getObjectByName('Pawn_Torso') ||
+        cloned.getObjectByName('Samrajni_Torso') ||
+        cloned.getObjectByName('Raja_Cuirass') ||
+        cloned.getObjectByName('Rider_Torso') ||
+        cloned.getObjectByName('Horse_Torso') ||
+        cloned.getObjectByName('Acharya_Torso') ||
+        cloned.getObjectByName('Durg_Bastion')
+      weaponNode =
+        cloned.getObjectByName('Pawn_SpearShaft') ||
+        cloned.getObjectByName('Cavalry_Lance') ||
+        cloned.getObjectByName('Samrajni_TalwarBlade') ||
+        cloned.getObjectByName('Samrajni_Sword') ||
+        cloned.getObjectByName('Raja_Broadsword') ||
+        cloned.getObjectByName('Raja_Sword') ||
+        cloned.getObjectByName('Acharya_Staff') ||
+        cloned.getObjectByName('Durg_Ram')
+      shieldNode =
+        cloned.getObjectByName('Pawn_DhalShield') ||
+        cloned.getObjectByName('Pawn_Shield')
+      plinthNode =
+        cloned.getObjectByName('Plinth_Stone') ||
+        cloned.getObjectByName('Plinth_Lower')
     } else {
       // Procedural model generation matching exact Astra dimensions & materials
       const model = this.buildProceduralModel(classChar, pal)
