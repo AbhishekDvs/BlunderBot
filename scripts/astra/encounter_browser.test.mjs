@@ -61,6 +61,7 @@ before(async()=>{
   page.on('pageerror',error=>{errors.push(error.message);console.error('pageerror:',error.message)})
   page.on('console',message=>{if(message.type()==='error'&&message.text().includes('[Astra2.5D:IndianArmies]'))errors.push(message.text())})
   await page.goto((process.env.BLUNDERBOT_TEST_URL||'http://localhost:3100')+'/game?side=white&difficulty=easy&timeControl=casual',{waitUntil:'domcontentloaded',timeout:300000})
+  await page.getByTestId('animated-board').and(page.locator('[aria-busy="false"]')).waitFor({timeout:60000})
   await page.waitForFunction(()=>window.__THREE_RENDERER__?.getPresentationSnapshot().units.length===32,null,{timeout:180000})
   await page.waitForFunction(()=>[...window.__THREE_RENDERER__.pieceNodes.values()].every(n=>n.cardMesh?.material.map?.image?.width),null,{timeout:180000})
   if(process.env.RECOVERY_SCREENSHOTS){mkdirSync('.cache/recovery',{recursive:true});await page.locator('canvas').first().screenshot({path:'.cache/recovery/tactical.png'})}
@@ -197,23 +198,21 @@ test('G2: skipping a final mating capture does not also skip its newly started e
   const fen=game.fen().split(' ')[0].split('/').reverse().map(rank=>[...rank].map(c=>/[a-z]/.test(c)?c.toUpperCase():c.toLowerCase()).join('')).join('/')+' b - - 0 4'
   const chess=new Chess(fen),move=chess.move('Qxf2#');assert.equal(chess.isCheckmate(),true)
   await reset(fen,'black','cinematic')
-  await fire(moves(fen,['Qxf2#']))
-  await page.evaluate(()=>{
+  const result=await page.evaluate(e=>{
+    const hub=window.__ASTRA_HUB__,r=window.__THREE_RENDERER__
     window.__ENDING_COMPLETIONS__=0
-    window.__ASTRA_HUB__.notifyGameEnd('black_wins',()=>window.__ENDING_COMPLETIONS__++)
-  })
-  const handle=await page.waitForFunction(()=>{
-    const r=window.__THREE_RENDERER__,s=r.getPresentationSnapshot()
-    const button=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Skip')
-    if(!s.active?.defender||s.stage.owner!==s.active.id||!button)return false
-    button.click()
-    const result={s:r.getPresentationSnapshot(),completions:window.__ENDING_COMPLETIONS__,clips:[...r.pieceNodes.values()].map(n=>({code:n.pieceCode,clip:n.animator.currentClip}))}
-    // A second, distinct input skips the ending. Keep it in the browser task
-    // so software rendering cannot consume its entire 4.5s actionability window.
-    button.click()
+    hub.notifyCapture({attackerSquare:e.from,victimSquare:e.to,attackerPiece:e.piece,victimPiece:e.victim,beforeFen:e.beforeFen,afterFen:e.afterFen,timestamp:Date.now()})
+    hub.notifyGameEnd('black_wins',()=>window.__ENDING_COMPLETIONS__++)
+    // Escape uses the same mounted UI handler as Skip. Dispatch while this
+    // exact capture owns the stage, before any slow GPU task can finish it.
+    const before=r.getPresentationSnapshot()
+    window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}))
+    const result={before,s:r.getPresentationSnapshot(),completions:window.__ENDING_COMPLETIONS__,clips:[...r.pieceNodes.values()].map(n=>({code:n.pieceCode,clip:n.animator.currentClip}))}
+    window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}))
     return {...result,afterSecond:r.getPresentationSnapshot(),finalCompletions:window.__ENDING_COMPLETIONS__}
-  },null,{timeout:30000})
-  const result=await handle.jsonValue()
+  },moves(fen,['Qxf2#'])[0])
+  assert.equal(result.before.stage.owner,result.before.active.id)
+  assert.equal(result.before.ending,false)
   assert.equal(result.s.history.at(-1).skipped,true)
   assert.equal(result.s.ending,true,'the ending begins and remains available after one Skip')
   assert.equal(result.completions,0,'result completion waits for the ending')
@@ -240,7 +239,52 @@ test('G3: a legal draw disengages both Kings, keeps them visible and completes o
   assert.equal(await page.evaluate(()=>window.__ENDING_COMPLETIONS__),1)
 })
 
+test('I: repeated captures and resets release scene instances and GPU resources', {timeout:180000}, async()=>{
+  const memory=[]
+  for(let i=0;i<3;i++) {
+    await reset();await fire(moves(initial,line));await idle();await reset()
+    const sample=await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>{
+      const r=window.__THREE_RENDERER__,s=r.getPresentationSnapshot()
+      resolve({memory:{...r.renderer.info.memory},nodes:r.nodesById.size,pieces:r.pieceNodes.size,s,canvases:r.renderer.domElement.parentElement.querySelectorAll('canvas').length})
+    })))
+    assert.equal(sample.nodes,32);assert.equal(sample.pieces,32);assert.equal(sample.canvases,2)
+    assert.equal(sample.s.stage.owner,undefined);assert.equal(sample.s.active,null);assert.equal(sample.s.queued.length,0)
+    memory.push(sample.memory)
+  }
+  assert.deepEqual(memory[2],memory[1],'GPU geometry/texture counts plateau after warm-up')
+  console.log('Repeated encounter/reset GPU allocations:',memory)
+})
+
+test('J: a missing Pawn atlas remains visible in every idle and walking frame', {timeout:90000}, async()=>{
+  await page.close()
+  const fallbackPage=await browser.newPage({viewport:{width:1000,height:800}})
+  try {
+    await fallbackPage.route('**/pieces/indian-armies-v1/wP/wP_atlas.webp',route=>route.fulfill({status:404,body:'missing test asset'}))
+    await fallbackPage.goto((process.env.BLUNDERBOT_TEST_URL||'http://localhost:3100')+'/game?side=white&difficulty=easy&timeControl=casual',{waitUntil:'domcontentloaded'})
+    await fallbackPage.getByTestId('animated-board').and(fallbackPage.locator('[aria-busy="false"]')).waitFor({timeout:60000})
+    const result=await fallbackPage.evaluate(()=>{
+      const r=window.__THREE_RENDERER__,node=r.pieceNodes.get('e2'),image=node.cardMesh.material.map.image
+      const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256
+      const ctx=canvas.getContext('2d',{willReadFrequently:true}),visible=[]
+      for(let i=0;i<64;i++){
+        ctx.clearRect(0,0,256,256)
+        ctx.drawImage(image,i%8*image.width/8,Math.floor(i/8)*image.height/8,image.width/8,image.height/8,0,0,256,256)
+        visible.push(ctx.getImageData(128,170,1,1).data[3]>200)
+      }
+      const pawns=[...r.pieceNodes.values()].filter(n=>n.pieceCode==='wP').map(n=>n.cardMesh.material.map)
+      return {visible,units:r.pieceNodes.size,width:image.width,height:image.height,sources:new Set(pawns.map(t=>t.source)).size,textures:new Set(pawns).size}
+    })
+    assert.equal(result.units,32);assert.equal(result.width,2048);assert.equal(result.height,2048)
+    assert.equal(result.sources,1,'Pawns share the decoded/GPU atlas source')
+    assert.equal(result.textures,8,'each Pawn retains independent animation UVs')
+    assert.ok(result.visible.every(Boolean),'fallback token is present in all 64 frame cells')
+  } finally {await fallbackPage.close()}
+})
+
 test('H: real board clicks, visible Pawn gait and multiple Stockfish replies stay synchronized in both modes', {timeout:180000}, async()=>{
+  // Retire the fixture renderer before testing a real game; two simultaneous
+  // WebGL loops distort software-renderer timing and are not a normal UI flow.
+  await page.close()
   // Fresh game state in React and the renderer; renderer.resetGame() alone does
   // not reset GameBoard's chess.js instance after the injected fixture tests.
   for(const perspective of ['true-3d','flat-2d']) {
@@ -252,6 +296,12 @@ test('H: real board clicks, visible Pawn gait and multiple Stockfish replies sta
       // Observe the real worker's replies without replacing or injecting moves.
       await gamePage.addInitScript(()=>{
         const NativeWorker=window.Worker
+        const getContext=HTMLCanvasElement.prototype.getContext
+        window.__WEBGL_CONTEXTS__=0
+        HTMLCanvasElement.prototype.getContext=function(type,...args){
+          if(type==='webgl'||type==='webgl2')window.__WEBGL_CONTEXTS__++
+          return getContext.call(this,type,...args)
+        }
         window.__ENGINE_LINES__=[]
         window.Worker=class extends NativeWorker {
           constructor(...args){super(...args);this.addEventListener('message',e=>{
@@ -263,10 +313,13 @@ test('H: real board clicks, visible Pawn gait and multiple Stockfish replies sta
       const board=gamePage.getByTestId('chessboard-frame')
       await gamePage.waitForFunction(p=>document.querySelector('[data-testid="chessboard-frame"]')?.dataset.perspective===p,perspective)
       if(perspective==='true-3d') {
+        await gamePage.getByTestId('animated-board').and(gamePage.locator('[aria-busy="false"]')).waitFor({timeout:60000})
         await gamePage.waitForFunction(()=>window.__THREE_RENDERER__?.pieceNodes.size===32&&[...window.__THREE_RENDERER__.pieceNodes.values()].every(n=>n.cardMesh?.material.map?.image?.width),null,{timeout:60000})
         await gamePage.evaluate(()=>{
-          window.__WALK_SAMPLES__=[]
-          function observe(){const r=window.__THREE_RENDERER__,s=r?.getPresentationSnapshot()
+          window.__WALK_SAMPLES__=[];window.__FRAME_INTERVALS__=[];window.__INITIAL_RENDERER__=window.__THREE_RENDERER__
+          let last=performance.now()
+          function observe(now){const r=window.__THREE_RENDERER__,s=r?.getPresentationSnapshot()
+            if(window.__WALK_SAMPLES__){window.__FRAME_INTERVALS__.push(now-last);last=now}
             if(s?.active?.from==='e2'&&s.active.to==='e4'){
               const n=r.nodesById.get(s.active.attacker.id)
               window.__WALK_SAMPLES__.push({position:n.group.position.toArray(),frame:n.animator.currentFrame,clip:n.animator.currentClip})
@@ -319,11 +372,22 @@ test('H: real board clicks, visible Pawn gait and multiple Stockfish replies sta
       }
       assert.ok(captures>0,`${perspective}: actual UI play included a capture`)
       if(perspective==='true-3d') {
-        const samples=await gamePage.evaluate(()=>{const samples=window.__WALK_SAMPLES__;window.__WALK_SAMPLES__=null;return samples})
+        const {samples,performance:timing}=await gamePage.evaluate(()=>{
+          const r=window.__THREE_RENDERER__,gl=r.renderer.getContext(),ext=gl.getExtension('WEBGL_debug_renderer_info')
+          const intervals=window.__FRAME_INTERVALS__.slice(1).sort((a,b)=>a-b),samples=window.__WALK_SAMPLES__
+          window.__WALK_SAMPLES__=null
+          return {samples,performance:{renderer:ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER),frames:intervals.length,medianMs:intervals[Math.floor(intervals.length*.5)],p95Ms:intervals[Math.floor(intervals.length*.95)],memory:{...r.renderer.info.memory},sameRenderer:r===window.__INITIAL_RENDERER__}}
+        })
+        assert.equal(timing.sameRenderer,true,'moves and React updates retain one renderer')
+        console.log('Gameplay frame timing (includes encounters):',timing)
         const walking=samples.filter(s=>s.clip==='move')
+        console.log('Pawn gait samples:',walking.length,'frames:',[...new Set(walking.map(s=>s.frame))])
         assert.ok(new Set(walking.map(s=>s.frame)).size>1,'Pawn shows different authored walking poses')
         assert.ok(new Set(walking.map(s=>s.position.join(','))).size>1,'Pawn visibly travels across the board')
-      } else assert.equal(await gamePage.locator('canvas').count(),0,'classic mode creates no Three.js renderer')
+      } else {
+        assert.equal(await gamePage.locator('canvas').count(),0,'classic mode retains no Three.js canvas')
+        assert.equal(await gamePage.evaluate(()=>window.__WEBGL_CONTEXTS__),0,'classic mode never creates a WebGL renderer, including during hydration')
+      }
       engineLines.push(...await gamePage.evaluate(()=>window.__ENGINE_LINES__.filter(l=>l.startsWith('bestmove '))))
       assert.equal(engineLines.length,4)
       console.log(`${perspective}: 4 real player moves, 4 Stockfish replies, ${captures} captures`)

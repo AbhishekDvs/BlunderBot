@@ -34,7 +34,7 @@ export function ChessboardFrame({
   onPieceDrop,
   boardOnlyRef,
 }: ChessboardFrameProps) {
-  const { settings, activePreset } = useTheme()
+  const { settings, activePreset, isHydrated } = useTheme()
 
   // Generate custom square styling map (selection, legal moves, last move, check)
   const customSquareStyles = useMemo(() => {
@@ -136,6 +136,12 @@ export function ChessboardFrame({
   const is3D = settings.perspective === 'true-3d'
   const systemReducedMotion = useReducedMotion()
   const animDuration = boardAnimationDuration('system', systemReducedMotion, side)
+
+  // Read the saved perspective before mounting a renderer. Otherwise a saved
+  // classic game briefly creates WebGL and starts loading the entire army.
+  if (!isHydrated) {
+    return <div aria-busy="true" style={{ width: boardWidth, height: boardWidth * .82 }} />
+  }
 
   if (is3D) {
     return (

@@ -140,3 +140,22 @@ yarn --cwd apps/frontend build
   `node_modules/playwright` and `PLAYWRIGHT_EXECUTABLE_PATH` to installed Chromium.
   `BLUNDERBOT_BROWSER_GPU=hardware` omits forced SwiftShader flags; report the
   actual WebGL renderer before attributing measurements to hardware GPU rendering.
+
+### Additional stabilization checkpoint
+
+- Initial animated-viewport readiness is now exposed with `aria-busy`, so injected
+  fixtures begin only after startup reconciliation has completed.
+- Real-input H passes four player moves, four actual Stockfish replies and three
+  captures in each mode. Closing the unused fixture renderer removes artificial
+  simultaneous-WebGL contention; visible Pawn movement and multiple gait frames
+  were observed. An expanded final run is in progress.
+- Missing atlas fallback now repeats its token in all atlas frame cells and is
+  cached, rather than disappearing as idle/walk frames advance or retrying loads.
+- Initial Pawn textures now share their master `THREE.Source`, retaining separate
+  UV transforms. Previously assigning the image alone duplicated GPU sources.
+- Saved classic mode waits for theme hydration before mounting any board renderer;
+  it no longer briefly creates WebGL and loads the army before switching to 2D.
+- Added Black mating-capture/ending Skip, draw, repeated GPU-allocation plateau,
+  missing-atlas frame visibility/source-sharing and classic startup checks.
+- Latest production build and all 30 unit/asset tests pass. Final complete browser
+  run and standalone checks are pending in this intermediate save.

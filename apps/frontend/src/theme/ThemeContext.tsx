@@ -18,6 +18,7 @@ import {
 } from './themePresets'
 
 interface ThemeContextValue {
+  isHydrated: boolean
   settings: ThemeSettings
   activePreset: BoardPreset
   activePieceSet: PieceSet
@@ -157,6 +158,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(
     () => ({
+      isHydrated,
       settings,
       activePreset,
       activePieceSet,
@@ -173,6 +175,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setIsCustomizerOpen,
     }),
     [
+      isHydrated,
       settings,
       activePreset,
       activePieceSet,

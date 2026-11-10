@@ -217,8 +217,9 @@ export class PieceBuilder3D {
         (err) => {
           const msg = `Failed to load 2.5D atlas ${url} for ${pieceCode}`
           IndianArmiesRuntime.recordError(`${msg}: ${err instanceof Error ? err.message : String(err)}`)
-          this.texturePromises.delete(key)
-          resolve(this.createFallbackAtlasTexture(pieceCode))
+          const fallback = this.createFallbackAtlasTexture(pieceCode, key.startsWith('atlas_endings_') ? 2 : 8)
+          this.textureCache.set(key, fallback)
+          resolve(fallback)
         }
       )
     })
@@ -277,7 +278,7 @@ export class PieceBuilder3D {
     )
   }
 
-  private static createFallbackAtlasTexture(pieceCode: string): THREE.Texture {
+  private static createFallbackAtlasTexture(pieceCode: string, rows = 8): THREE.Texture {
     if (typeof document === 'undefined') {
       return new THREE.Texture()
     }
@@ -300,7 +301,20 @@ export class PieceBuilder3D {
       ctx.textBaseline = 'middle'
       ctx.fillText(pieceCode.slice(1).toUpperCase(), 128, 140)
     }
-    const tex = new THREE.CanvasTexture(canvas)
+    // Animators sample an atlas, including during idle. A single-cell fallback
+    // gets cropped into 1/64th and disappears on most frames. Repeat the token
+    // at every authored frame position so missing artwork stays playable.
+    const atlas = document.createElement('canvas')
+    const isEffect = pieceCode.endsWith('Effect')
+    atlas.width = isEffect ? 1 : 256 * 8
+    atlas.height = isEffect ? 1 : 256 * rows
+    const atlasCtx = atlas.getContext('2d')
+    if (!isEffect) {
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < 8; col++) atlasCtx?.drawImage(canvas, col * 256, row * 256)
+      }
+    }
+    const tex = new THREE.CanvasTexture(atlas)
     tex.colorSpace = THREE.SRGBColorSpace
     return tex
   }
@@ -339,7 +353,9 @@ export class PieceBuilder3D {
     tex.offset.set(0, (rows - 1) / rows)
 
     this.loadCachedTexture(cacheKey, url, pieceCode).then((loadedMaster) => {
-      tex.image = loadedMaster.image
+      // Share the decoded atlas/GPU source, preserving each node's UV transform.
+      // Assigning only image gives every initial Pawn a separate GPU allocation.
+      tex.source = loadedMaster.source
       tex.needsUpdate = true
     })
 
@@ -369,7 +385,7 @@ export class PieceBuilder3D {
     tex.offset.set(0, (effectDef.rows - 1) / effectDef.rows)
 
     this.loadCachedTexture(cacheKey, effectDef.url, `${faction}Effect`).then((loadedMaster) => {
-      tex.image = loadedMaster.image
+      tex.source = loadedMaster.source
       tex.needsUpdate = true
     })
     return tex

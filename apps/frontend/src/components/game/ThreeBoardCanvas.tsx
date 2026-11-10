@@ -49,6 +49,7 @@ export function ThreeBoardCanvas({
   const [showDevTools, setShowDevTools] = useState(false)
   const [isCombatOrEndingActive, setIsCombatOrEndingActive] = useState(false)
   const [assetErrors, setAssetErrors] = useState<string[]>([])
+  const [isViewportReady, setIsViewportReady] = useState(false)
 
   const isInspectorOpenRef = useRef(isInspectorOpen)
   isInspectorOpenRef.current = isInspectorOpen
@@ -175,6 +176,7 @@ export function ThreeBoardCanvas({
     PieceBuilder3D.preloadArmyModels('2p5d-stylized', sideRef.current).then(() => {
       if (isMounted && rendererRef.current) {
         rendererRef.current.setFen(fenRef.current)
+        setIsViewportReady(true)
       }
     })
 
@@ -348,6 +350,8 @@ export function ThreeBoardCanvas({
     <div className="relative flex flex-col items-center justify-center select-none">
       {/* 2.5D/3D Viewport Container */}
       <div
+        data-testid="animated-board"
+        aria-busy={!isViewportReady}
         ref={(el) => {
           containerRef.current = el
           if (boardOnlyRef) {
