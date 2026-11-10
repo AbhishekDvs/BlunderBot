@@ -11,6 +11,7 @@
 
 import type { Piece3DNode } from './types.ts'
 import { CameraController3D } from './cameraController.ts'
+import { IndianArmiesRuntime } from './indianArmiesRuntime.ts'
 
 export type EndingOutcome = 'white_wins' | 'black_wins' | 'draw'
 
@@ -26,7 +27,8 @@ export class GameEndingDirector3D {
   }
 
   /**
-   * Starts game-ending cinematic presentation
+   * Starts game-ending cinematic presentation using Sol's `endings.json` clips
+   * (`victory`, `defeat_acknowledgement`, `draw_disengagement`).
    */
   public triggerEnding(
     outcome: EndingOutcome,
@@ -39,62 +41,46 @@ export class GameEndingDirector3D {
     // Trigger slow camera orbit
     this.cameraCtrl.setMode('ending')
 
-    // Find kings
-    let whiteKing: Piece3DNode | undefined
-    let blackKing: Piece3DNode | undefined
+    const endingsMeta = IndianArmiesRuntime.getEndingsManifest()
 
-    pieceNodes.forEach((node) => {
-      if (node.pieceCode === 'wK') whiteKing = node
-      if (node.pieceCode === 'bK') blackKing = node
-    })
+    if (outcome === 'white_wins' || outcome === 'black_wins') {
+      const sideMeta = outcome === 'white_wins' ? endingsMeta?.whiteVictory : endingsMeta?.blackVictory
+      const winnerPrefix = outcome === 'white_wins' ? 'w' : 'b'
+      const loserKingCode = sideMeta?.losingKing?.piece || (outcome === 'white_wins' ? 'bK' : 'wK')
+      const losingKingClip = sideMeta?.losingKing?.clip || 'defeat_acknowledgement'
 
-    if (outcome === 'white_wins') {
-      // White victory salute
       pieceNodes.forEach((node) => {
-        if (node.pieceCode.startsWith('w')) {
-          node.animator?.playClip('victory', true)
-          if (node.weaponNode) {
-            node.weaponNode.rotation.x = -0.5 // Raise weapon in salute
+        const is2p5d = !!node.cardMesh || node.group.name.includes('2p5D')
+        if (node.pieceCode.startsWith(winnerPrefix)) {
+          const entry = sideMeta?.winners?.find((w) => w.piece === node.pieceCode)
+          node.animator?.playClip(entry?.clip || 'victory', false)
+          if (!is2p5d && node.weaponNode) {
+            node.weaponNode.rotation.x = -0.5 // Raise weapon in salute for GLB
           }
-        } else if (node.pieceCode !== 'bK') {
-          node.animator?.playClip('defend', false)
+        } else if (node.pieceCode === loserKingCode) {
+          // Losing King NEVER captured or removed; performs blade-lowering acknowledgement
+          node.group.visible = true
+          if (is2p5d) {
+            // Slight dignified posture bow without sinking plinth edge into board
+            node.group.rotation.x = winnerPrefix === 'w' ? 0.04 : -0.04
+          } else {
+            node.group.rotation.x = winnerPrefix === 'w' ? 0.35 : -0.35
+            if (node.weaponNode) {
+              node.weaponNode.rotation.x = 0.7
+            }
+          }
+          node.animator?.playClip(is2p5d ? losingKingClip : 'defeat', false)
+        } else {
+          node.animator?.playClip('idle', true)
         }
       })
-      // Black King bows in submission (never captured or removed)
-      if (blackKing) {
-        blackKing.group.visible = true
-        blackKing.group.rotation.x = 0.35 // Lower posture
-        blackKing.animator?.playClip('defeat', false)
-        if (blackKing.weaponNode) {
-          blackKing.weaponNode.rotation.x = 0.7 // Lower sword to ground
-        }
-      }
-    } else if (outcome === 'black_wins') {
-      // Black victory salute
-      pieceNodes.forEach((node) => {
-        if (node.pieceCode.startsWith('b')) {
-          node.animator?.playClip('victory', true)
-          if (node.weaponNode) {
-            node.weaponNode.rotation.x = -0.5
-          }
-        } else if (node.pieceCode !== 'wK') {
-          node.animator?.playClip('defend', false)
-        }
-      })
-      // White King bows in submission (never captured or removed)
-      if (whiteKing) {
-        whiteKing.group.visible = true
-        whiteKing.group.rotation.x = -0.35
-        whiteKing.animator?.playClip('defeat', false)
-        if (whiteKing.weaponNode) {
-          whiteKing.weaponNode.rotation.x = 0.7
-        }
-      }
     } else {
-      // Draw: mutual respect, lower weapons and disengage
+      // Draw: both armies perform mutual disengagement
       pieceNodes.forEach((node) => {
-        node.animator?.playClip('draw', false)
-        if (node.weaponNode) {
+        const is2p5d = !!node.cardMesh || node.group.name.includes('2p5D')
+        const unitMeta = endingsMeta?.draw?.units?.find((u) => u.piece === node.pieceCode)
+        node.animator?.playClip(is2p5d ? unitMeta?.clip || 'draw_disengagement' : 'draw', false)
+        if (!is2p5d && node.weaponNode) {
           node.weaponNode.rotation.x = 0.2
         }
       })

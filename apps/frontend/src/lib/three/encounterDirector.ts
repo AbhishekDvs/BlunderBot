@@ -12,16 +12,17 @@
 
 import * as THREE from 'three'
 import type { Piece3DNode, AnimationPacing, CombatEncounterParams } from './types.ts'
-import { CARD_REST_TILT_X } from './pieceBuilder.ts'
+import { CARD_REST_TILT_X, PieceBuilder3D } from './pieceBuilder.ts'
 import { DebrisSystem3D } from './debris3D.ts'
 import { CameraController3D } from './cameraController.ts'
+import { IndianArmiesRuntime } from './indianArmiesRuntime.ts'
 
 export type EncounterPhase =
   | 'idle'
-  | 'anticipation'     // 0% - 22%
-  | 'approach'         // 22% - 54%
-  | 'impact'           // 54%
-  | 'stagger_fracture' // 54% - 80%
+  | 'anticipation'     // 0% - 18%
+  | 'approach'         // 18% - 54%
+  | 'impact'           // 54% - 57.5%
+  | 'stagger_fracture' // 57.5% - 80%
   | 'settling'         // 80% - 100%
 
 export class EncounterDirector3D {
@@ -41,7 +42,9 @@ export class EncounterDirector3D {
   private startTime = 0
   private durationMs = 1900
   private pacing: AnimationPacing = 'cinematic'
+  private hasTriggeredStrike = false
   private hasTriggeredImpact = false
+  private hasTriggeredStagger = false
   private hasTriggeredDefeat = false
   private onAnticipationCallback?: () => void
   private onCompleteCallback?: () => void
@@ -186,8 +189,11 @@ export class EncounterDirector3D {
       anchorOffset = new THREE.Vector3().subVectors(vAnchor, vDefRoot).dot(this.attackDir)
     }
 
-    // Exact contact root position: stops where weapon tip aligns with defender anchor
-    const effectiveReach = Math.max(0.20, forwardReach - anchorOffset)
+    // Exact contact root position: stops where weapon tip aligns with defender contact point
+    const is2p5dPair = !!(attacker.cardMesh || defender.cardMesh || attacker.group.name.includes('2p5D') || defender.group.name.includes('2p5D'))
+    const effectiveReach = is2p5dPair
+      ? IndianArmiesRuntime.resolveContactSeparation(attacker.pieceCode, defender.pieceCode)
+      : Math.max(0.20, forwardReach - anchorOffset)
     const travelDist = Math.max(0.15, dist - effectiveReach)
     this.contactPos.addVectors(this.attackerStartPos, this.attackDir.clone().multiplyScalar(travelDist))
 
@@ -197,12 +203,14 @@ export class EncounterDirector3D {
     }
 
     this.startTime = performance.now()
+    this.hasTriggeredStrike = false
     this.hasTriggeredImpact = false
+    this.hasTriggeredStagger = false
     this.hasTriggeredDefeat = false
     this.isActive = true
     this.currentPhase = 'anticipation'
 
-    // Trigger authentic character anticipation animations
+    // Trigger authentic character anticipation animations (attack_anticipation 4f@12fps; defend 6f@12fps holding block pose)
     attacker.animator?.playClip('attack_anticipation', false)
     defender.animator?.playClip('defend', false)
     this.onAnticipationCallback?.()
@@ -220,22 +228,21 @@ export class EncounterDirector3D {
     const attackerClass = this.attackerNode.pieceCode.slice(1).toUpperCase()
     const defenderClass = this.defenderNode.pieceCode.slice(1).toUpperCase()
 
-    // 1. Phase: Anticipation (0.0 -> 0.22)
-    if (progress < 0.22) {
+    // 1. Phase: Anticipation (0.0 -> 0.18)
+    if (progress < 0.18) {
       this.currentPhase = 'anticipation'
-      const t = progress / 0.22
+      const t = progress / 0.18
 
       // 2.5D Stylized Miniature Anticipation
       if (this.attackerNode.group.name.includes('2p5D')) {
         const card = this.attackerNode.group.getObjectByName(`Card_${this.attackerNode.pieceCode}`)
         if (card) {
           if (attackerClass === 'N') {
-            // Knight warhorse rears up in dramatic combat anticipation!
-            this.attackerNode.group.position.y = this.attackerStartPos.y + Math.sin(t * Math.PI) * 0.14
-            card.rotation.x = CARD_REST_TILT_X - Math.sin(t * Math.PI) * 0.14
+            this.attackerNode.group.position.y = this.attackerStartPos.y + Math.sin(t * Math.PI) * 0.10
+            card.rotation.x = CARD_REST_TILT_X - Math.sin(t * Math.PI) * 0.08
           } else {
-            card.rotation.x = CARD_REST_TILT_X - Math.sin(t * Math.PI) * 0.10
-            this.attackerNode.group.position.y = this.attackerStartPos.y + Math.sin(t * Math.PI) * 0.05
+            card.rotation.x = CARD_REST_TILT_X - Math.sin(t * Math.PI) * 0.06
+            this.attackerNode.group.position.y = this.attackerStartPos.y + Math.sin(t * Math.PI) * 0.04
           }
         }
       } else {
@@ -248,20 +255,11 @@ export class EncounterDirector3D {
         }
       }
 
-      // Defender spots threat and assumes defensive posture
+      // Defender spots threat and raises defensive staff/shield
       if (this.defenderNode.group.name.includes('2p5D')) {
         const defCard = this.defenderNode.group.getObjectByName(`Card_${this.defenderNode.pieceCode}`)
         if (defCard) {
-          if (defenderClass === 'B') {
-            // Bishop raises warding staff diagonally
-            defCard.rotation.z = Math.sin(t * Math.PI) * 0.18
-            defCard.rotation.x = CARD_REST_TILT_X - Math.sin(t * Math.PI) * 0.08
-          } else if (defenderClass === 'P') {
-            defCard.rotation.z = -Math.sin(t * Math.PI) * 0.14
-            defCard.rotation.x = CARD_REST_TILT_X - Math.sin(t * Math.PI) * 0.06
-          } else {
-            defCard.rotation.x = CARD_REST_TILT_X - Math.sin(t * Math.PI) * 0.08
-          }
+          defCard.rotation.x = CARD_REST_TILT_X - Math.sin(t * Math.PI) * 0.04
         }
       } else {
         if (defenderClass === 'B' && this.defenderNode.weaponNode) {
@@ -273,27 +271,32 @@ export class EncounterDirector3D {
         }
       }
     }
-    // 2. Phase: Approach & Defensive Reaction (0.22 -> 0.54)
+    // 2. Phase: Approach & Pre-Impact Strike Windup (0.18 -> 0.54)
     else if (progress < 0.54) {
       if (this.currentPhase !== 'approach') {
         this.currentPhase = 'approach'
         this.attackerNode.animator?.playClip('move', true)
       }
-      const t = (progress - 0.22) / 0.32
+      const is2p5dAtk = this.attackerNode.group.name.includes('2p5D')
+      // Start 2.5D attack clip ~250ms before impact so local contactFrame=4 lands cleanly at progress=0.54
+      if (is2p5dAtk && progress >= 0.41 && !this.hasTriggeredStrike) {
+        this.hasTriggeredStrike = true
+        this.attackerNode.animator?.playClip('attack', false)
+      }
+      const t = (progress - 0.18) / 0.36
 
       // Attacker translates forward towards exact contact position
       this.attackerNode.group.position.lerpVectors(this.attackerStartPos, this.contactPos, t)
 
       // 2.5D Stylized Locomotion
-      if (this.attackerNode.group.name.includes('2p5D')) {
+      if (is2p5dAtk) {
         const card = this.attackerNode.group.getObjectByName(`Card_${this.attackerNode.pieceCode}`)
         if (attackerClass === 'N') {
-          // Cavalry leap arc into couched lance strike
-          this.attackerNode.group.position.y = this.attackerStartPos.y + Math.sin(t * Math.PI) * 0.36
-          if (card) card.rotation.x = CARD_REST_TILT_X + Math.sin(t * Math.PI) * 0.10
+          this.attackerNode.group.position.y = this.attackerStartPos.y + Math.sin(t * Math.PI) * 0.34
+          if (card) card.rotation.x = CARD_REST_TILT_X + Math.sin(t * Math.PI) * 0.08
         } else {
-          this.attackerNode.group.position.y = this.attackerStartPos.y + Math.abs(Math.sin(t * Math.PI * 6)) * 0.03
-          if (card) card.rotation.x = CARD_REST_TILT_X + Math.sin(t * Math.PI) * 0.06
+          this.attackerNode.group.position.y = this.attackerStartPos.y + Math.abs(Math.sin(t * Math.PI * 5)) * 0.025
+          if (card) card.rotation.x = CARD_REST_TILT_X + Math.sin(t * Math.PI) * 0.04
         }
       } else {
         // 3D Model Locomotion
@@ -382,8 +385,13 @@ export class EncounterDirector3D {
       // Snap attacker right to contactPos on impact
       this.attackerNode.group.position.copy(this.contactPos)
 
-      // Trigger character attack and hit reaction clips
-      this.attackerNode.animator?.playClip('attack', false)
+      if (!this.hasTriggeredStrike) {
+        this.hasTriggeredStrike = true
+        this.attackerNode.animator?.playClip('attack', false)
+      } else if (this.attackerNode.animator?.currentClip === 'attack') {
+        // Lock frame 4 at contact moment for visual crispness
+        this.attackerNode.animator.setFrame(4)
+      }
       this.defenderNode.animator?.playClip('hit', false)
 
       // White hit flash on defender card (Warcraft III RTS Impact)
@@ -404,11 +412,28 @@ export class EncounterDirector3D {
       // Trigger Web Audio impact sound & callback
       this.onContactCallback?.()
 
-      // Spawn physical fracture debris
+      // Spawn physical fracture shards + Sol's faction impact debris burst
+      const defenderFaction = this.defenderNode.pieceCode.startsWith('b') ? 'b' : 'w'
+      const effectMeta = IndianArmiesRuntime.getEffectSpriteDef(defenderFaction)
+      const effectTex = this.defenderNode.group.name.includes('2p5D')
+        ? PieceBuilder3D.getEffectSpriteTexture(defenderFaction)
+        : undefined
+      const contactWorld = new THREE.Vector3().lerpVectors(this.contactPos, this.defenderPos, 0.5)
+
       this.debris.spawnCaptureFracture(
-        this.defenderPos,
+        contactWorld,
         this.defenderNode.pieceCode,
-        this.pacing === 'reduced'
+        this.pacing === 'reduced',
+        effectTex
+          ? {
+              texture: effectTex,
+              cols: effectMeta.cols,
+              rows: effectMeta.rows,
+              count: effectMeta.count,
+              fps: effectMeta.fps,
+              tiltRad: CARD_REST_TILT_X,
+            }
+          : undefined
       )
     }
     // Brief impact freeze hold (0.54 -> 0.575) for weighty weapon contact readability
@@ -419,17 +444,32 @@ export class EncounterDirector3D {
     else if (progress < 0.80) {
       if (this.currentPhase !== 'stagger_fracture') {
         this.currentPhase = 'stagger_fracture'
-        this.defenderNode.animator?.playClip('stagger', false, () => {
-          this.defenderNode?.animator?.playClip('defeat', false)
-        })
+        if (!this.hasTriggeredStagger) {
+          this.hasTriggeredStagger = true
+          this.defenderNode.animator?.playClip('stagger', false)
+        }
         if (!this.hasTriggeredDefeat) {
           this.hasTriggeredDefeat = true
           this.onDefeatCallback?.()
         }
       }
+      const is2p5dDef = this.defenderNode.group.name.includes('2p5D')
+      // Enter defeat sculpted-shell fracture clip cleanly at 0.64 and sweep all 8 frames before settling
+      if (progress >= 0.64) {
+        if (this.defenderNode.animator && this.defenderNode.animator.currentClip !== 'defeat') {
+          this.defenderNode.animator.playClip('defeat', false)
+        }
+        if (is2p5dDef && this.defenderNode.animator) {
+          const defeatT = Math.min(0.999, (progress - 0.64) / 0.16)
+          this.defenderNode.animator.setFrame(Math.floor(defeatT * 8))
+        }
+      }
       const t = (progress - 0.575) / 0.225
 
       if (this.attackerNode.group.name.includes('2p5D')) {
+        if (progress >= 0.64 && this.attackerNode.animator?.currentClip !== 'idle') {
+          this.attackerNode.animator?.playClip('idle', true)
+        }
         const card = this.attackerNode.group.getObjectByName(`Card_${this.attackerNode.pieceCode}`)
         if (card) card.rotation.x = CARD_REST_TILT_X
         this.attackerNode.group.position.y = this.attackerStartPos.y
@@ -464,18 +504,18 @@ export class EncounterDirector3D {
       this.defenderNode.group.scale.set(1, 1, 1)
 
       // Physical Stagger Recoil backwards along strike vector with grounded contact
-      const staggerDist = Math.sin(t * Math.PI * 0.5) * 0.32
+      const staggerDist = Math.sin(Math.min(1, t * 1.3) * Math.PI * 0.5) * 0.28
       this.defenderNode.group.position.addVectors(
         this.defenderPos,
         this.attackDir.clone().multiplyScalar(staggerDist)
       )
 
-      if (this.defenderNode.group.name.includes('2p5D')) {
+      if (is2p5dDef) {
         const defCard = this.defenderNode.group.getObjectByName(`Card_${this.defenderNode.pieceCode}`) as THREE.Mesh
         if (defCard) {
-          defCard.rotation.x = CARD_REST_TILT_X - t * 0.45
+          defCard.rotation.x = CARD_REST_TILT_X - Math.min(1, t * 1.4) * 0.14
           if (defCard.material && 'opacity' in defCard.material) {
-            (defCard.material as THREE.Material).opacity = Math.max(0, 1.0 - Math.max(0, t - 0.25) * 1.4)
+            (defCard.material as THREE.Material).opacity = progress > 0.77 ? Math.max(0, 1 - (progress - 0.77) / 0.03) : 1.0
           }
         }
       } else {

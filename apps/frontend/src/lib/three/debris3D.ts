@@ -14,10 +14,23 @@
 import * as THREE from 'three'
 import type { DebrisParticle3D } from './types.ts'
 
+interface ImpactBurstSprite {
+  mesh: THREE.Mesh
+  texture: THREE.Texture
+  cols: number
+  rows: number
+  count: number
+  fps: number
+  birthTime: number
+  lifespanMs: number
+}
+
 export class DebrisSystem3D {
   public group: THREE.Group
   private fragments: DebrisParticle3D[] = []
+  private effectBursts: ImpactBurstSprite[] = []
   private maxGlobalFragments = 12
+  private maxEffectBursts = 8
 
   // Shared shard geometries
   private shardGeos = [
@@ -58,14 +71,56 @@ export class DebrisSystem3D {
   }
 
   /**
-   * Spawns physical fracture shards and dust burst at capture impact location
+   * Spawns physical fracture shards and optional 2.5D dust/chip burst at capture impact location
    */
   public spawnCaptureFracture(
     origin: THREE.Vector3,
     pieceCode: string,
-    isReducedMotion = false
+    isReducedMotion = false,
+    effectOptions?: { texture?: THREE.Texture; cols?: number; rows?: number; count?: number; fps?: number; tiltRad?: number }
   ) {
     if (isReducedMotion) return
+
+    if (effectOptions?.texture && typeof document !== 'undefined') {
+      while (this.effectBursts.length >= this.maxEffectBursts) {
+        const oldest = this.effectBursts.shift()
+        if (oldest) {
+          this.group.remove(oldest.mesh)
+          oldest.mesh.geometry.dispose()
+          ;(oldest.mesh.material as THREE.Material).dispose()
+          oldest.texture.dispose()
+        }
+      }
+      const cols = effectOptions.cols ?? 8
+      const rows = effectOptions.rows ?? 2
+      const count = effectOptions.count ?? 16
+      const fps = effectOptions.fps ?? 24
+      const tex = effectOptions.texture
+      tex.repeat.set(1 / cols, 1 / rows)
+      tex.offset.set(0, (rows - 1) / rows)
+      const geo = new THREE.PlaneGeometry(0.95, 0.95)
+      const mat = new THREE.MeshBasicMaterial({
+        map: tex,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      })
+      const burstMesh = new THREE.Mesh(geo, mat)
+      burstMesh.name = `ImpactBurst_${pieceCode}`
+      burstMesh.position.set(origin.x, origin.y + 0.42, origin.z + 0.12)
+      burstMesh.rotation.x = effectOptions.tiltRad ?? -0.58
+      this.group.add(burstMesh)
+      this.effectBursts.push({
+        mesh: burstMesh,
+        texture: tex,
+        cols,
+        rows,
+        count,
+        fps,
+        birthTime: performance.now(),
+        lifespanMs: (count / fps) * 1000 + 180,
+      })
+    }
 
     const isWhite = pieceCode.startsWith('w')
     const primaryMat = isWhite ? this.whiteMat : this.blackMat
@@ -177,6 +232,30 @@ export class DebrisSystem3D {
         }
       }
     }
+
+    // Update 2.5D animated impact dust/material bursts
+    for (let i = this.effectBursts.length - 1; i >= 0; i--) {
+      const burst = this.effectBursts[i]
+      const age = now - burst.birthTime
+      if (age >= burst.lifespanMs) {
+        this.group.remove(burst.mesh)
+        burst.mesh.geometry.dispose()
+        ;(burst.mesh.material as THREE.Material).dispose()
+        burst.texture.dispose()
+        this.effectBursts.splice(i, 1)
+        continue
+      }
+      const frame = Math.min(burst.count - 1, Math.floor((age / 1000) * burst.fps))
+      const col = frame % burst.cols
+      const row = Math.floor(frame / burst.cols)
+      burst.texture.offset.x = col / burst.cols
+      burst.texture.offset.y = (burst.rows - 1 - row) / burst.rows
+      const mat = burst.mesh.material as THREE.MeshBasicMaterial
+      const activeDuration = (burst.count / burst.fps) * 1000
+      if (age > activeDuration) {
+        mat.opacity = Math.max(0, 1 - (age - activeDuration) / 180)
+      }
+    }
   }
 
   /**
@@ -187,5 +266,12 @@ export class DebrisSystem3D {
       this.group.remove(frag.mesh)
     }
     this.fragments = []
+    for (const burst of this.effectBursts) {
+      this.group.remove(burst.mesh)
+      burst.mesh.geometry.dispose()
+      ;(burst.mesh.material as THREE.Material).dispose()
+      burst.texture.dispose()
+    }
+    this.effectBursts = []
   }
 }

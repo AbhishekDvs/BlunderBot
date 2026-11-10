@@ -1,0 +1,1572 @@
+{
+  "pieceCode": "bR",
+  "cols": 8,
+  "rows": 8,
+  "cell": 256,
+  "image": "./bR_atlas.webp",
+  "clips": {
+    "idle": {
+      "start": 0,
+      "count": 8,
+      "fps": 10,
+      "loop": true,
+      "frameDurationsMs": [
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0
+      ],
+      "socketsPx": [
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        }
+      ]
+    },
+    "move": {
+      "start": 8,
+      "count": 12,
+      "fps": 14,
+      "loop": true,
+      "frameDurationsMs": [
+        71.42857142857143,
+        71.42857142857143,
+        71.42857142857143,
+        71.42857142857143,
+        71.42857142857143,
+        71.42857142857143,
+        71.42857142857143,
+        71.42857142857143,
+        71.42857142857143,
+        71.42857142857143,
+        71.42857142857143,
+        71.42857142857143
+      ],
+      "socketsPx": [
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0.0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0.5235987755982988
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 1.0471975511965976
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 1.5707963267948966
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 2.0943951023931953
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 2.6179938779914944
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 3.141592653589793
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 3.665191429188092
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 4.1887902047863905
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 4.71238898038469
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 5.235987755982989
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 5.759586531581287
+        }
+      ]
+    },
+    "attack_anticipation": {
+      "start": 20,
+      "count": 4,
+      "fps": 12,
+      "loop": false,
+      "frameDurationsMs": [
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333
+      ],
+      "socketsPx": [
+        {
+          "weaponTip": [
+            184.0,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            182.33333333333334,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            180.66666666666666,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            179.0,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        }
+      ]
+    },
+    "attack": {
+      "start": 24,
+      "count": 8,
+      "fps": 16,
+      "loop": false,
+      "frameDurationsMs": [
+        62.5,
+        62.5,
+        62.5,
+        62.5,
+        62.5,
+        62.5,
+        62.5,
+        62.5
+      ],
+      "socketsPx": [
+        {
+          "weaponTip": [
+            182,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            180,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            194,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            206,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            198,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            189,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        }
+      ],
+      "contactFrame": 4
+    },
+    "defend": {
+      "start": 32,
+      "count": 6,
+      "fps": 12,
+      "loop": false,
+      "frameDurationsMs": [
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333
+      ],
+      "socketsPx": [
+        {
+          "weaponTip": [
+            184.0,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            179.88550323395268,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            177.34260438593392,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            177.34260438593392,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            179.88550323395268,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184.0,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        }
+      ]
+    },
+    "hit": {
+      "start": 38,
+      "count": 4,
+      "fps": 16,
+      "loop": false,
+      "frameDurationsMs": [
+        62.5,
+        62.5,
+        62.5,
+        62.5
+      ],
+      "socketsPx": [
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        }
+      ]
+    },
+    "stagger": {
+      "start": 42,
+      "count": 6,
+      "fps": 12,
+      "loop": false,
+      "frameDurationsMs": [
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333
+      ],
+      "socketsPx": [
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        }
+      ]
+    },
+    "defeat": {
+      "start": 48,
+      "count": 8,
+      "fps": 12,
+      "loop": false,
+      "frameDurationsMs": [
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333
+      ],
+      "socketsPx": [
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        }
+      ]
+    },
+    "victory": {
+      "start": 56,
+      "count": 8,
+      "fps": 12,
+      "loop": false,
+      "frameDurationsMs": [
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333,
+        83.33333333333333
+      ],
+      "socketsPx": [
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        },
+        {
+          "weaponTip": [
+            184,
+            177
+          ],
+          "feet": [
+            [
+              99,
+              220
+            ],
+            [
+              160,
+              220
+            ]
+          ],
+          "wheelAngleRad": 0
+        }
+      ]
+    }
+  },
+  "anchor": [
+    0.5,
+    0.859375
+  ],
+  "baselinePx": 220,
+  "faction": "black",
+  "direction": "screen-right-three-quarter",
+  "cameraAngleDeg": 48,
+  "cameraValidation": "art direction requested; board verification pending",
+  "technique": "illustrated hierarchical cutout rig; independent thigh/calf and arm hinges; IK foot plants",
+  "authoredFrameCount": 80,
+  "runtimeFrameCount": 64,
+  "endingFrameCount": 16,
+  "sourceImage": "../../source/bR_parts.png",
+  "sourceSha256": "a21200bb477d9f8b8a7f74c5c9fe6795cf4f35ad7588d289f7ea0f28240d5179",
+  "sourceWeaponSha256": null,
+  "sourceTorsoSha256": null,
+  "traversal": {
+    "nominalStridePx": 113.09733552923255,
+    "sync": "advance root linearly by nominalStridePx per move cycle at 256px card size; use class card width/256 for world units",
+    "stance": "grounded leg trajectory is linear; swing lifts and bends separate joints"
+  },
+  "endings": {
+    "image": "./bR_endings.webp",
+    "cols": 8,
+    "rows": 2,
+    "cell": 256,
+    "clips": {
+      "defeat_acknowledgement": {
+        "start": 0,
+        "count": 8,
+        "fps": 12,
+        "loop": false,
+        "socketsPx": [
+          {
+            "weaponTip": [
+              184,
+              177
+            ],
+            "feet": [
+              [
+                99,
+                220
+              ],
+              [
+                160,
+                220
+              ]
+            ],
+            "wheelAngleRad": 0
+          },
+          {
+            "weaponTip": [
+              184,
+              177
+            ],
+            "feet": [
+              [
+                99,
+                220
+              ],
+              [
+                160,
+                220
+              ]
+            ],
+            "wheelAngleRad": 0
+          },
+          {
+            "weaponTip": [
+              184,
+              177
+            ],
+            "feet": [
+              [
+                99,
+                220
+              ],
+              [
+                160,
+                220
+              ]
+            ],
+            "wheelAngleRad": 0
+          },
+          {
+            "weaponTip": [
+              184,
+              177
+            ],
+            "feet": [
+              [
+                99,
+                220
+              ],
+              [
+                160,
+                220
+              ]
+            ],
+            "wheelAngleRad": 0
+          },
+          {
+            "weaponTip": [
+              184,
+              177
+            ],
+            "feet": [
+              [
+                99,
+                220
+              ],
+              [
+                160,
+                220
+              ]
+            ],
+            "wheelAngleRad": 0
+          },
+          {
+            "weaponTip": [
+              184,
+              177
+            ],
+            "feet": [
+              [
+                99,
+                220
+              ],
+              [
+                160,
+                220
+              ]
+            ],
+            "wheelAngleRad": 0
+          },
+          {
+            "weaponTip": [
+              184,
+              177
+            ],
+            "feet": [
+              [
+                99,
+                220
+              ],
+              [
+                160,
+                220
+              ]
+            ],
+            "wheelAngleRad": 0
+          },
+          {
+            "weaponTip": [
+              184,
+              177
+            ],
+            "feet": [
+              [
+                99,
+                220
+              ],
+              [
+                160,
+                220
+              ]
+            ],
+            "wheelAngleRad": 0
+          }
+        ]
+      },
+      "draw_disengagement": {
+        "start": 8,
+        "count": 8,
+        "fps": 12,
+        "loop": false,
+        "socketsPx": [
+          {
+            "weaponTip": [
+              184,
+              177
+            ],
+            "feet": [
+              [
+                99,
+                220
+              ],
+              [
+                160,
+                220
+              ]
+            ],
+            "wheelAngleRad": 0
+          },
+          {
+            "weaponTip": [
+              184,
+              177
+            ],
+            "feet": [
+              [
+                99,
+                220
+              ],
+              [
+                160,
+                220
+              ]
+            ],
+            "wheelAngleRad": 0
+          },
+          {
+            "weaponTip": [
+              184,
+              177
+            ],
+            "feet": [
+              [
+                99,
+                220
+              ],
+              [
+                160,
+                220
+              ]
+            ],
+            "wheelAngleRad": 0
+          },
+          {
+            "weaponTip": [
+              184,
+              177
+            ],
+            "feet": [
+              [
+                99,
+                220
+              ],
+              [
+                160,
+                220
+              ]
+            ],
+            "wheelAngleRad": 0
+          },
+          {
+            "weaponTip": [
+              184,
+              177
+            ],
+            "feet": [
+              [
+                99,
+                220
+              ],
+              [
+                160,
+                220
+              ]
+            ],
+            "wheelAngleRad": 0
+          },
+          {
+            "weaponTip": [
+              184,
+              177
+            ],
+            "feet": [
+              [
+                99,
+                220
+              ],
+              [
+                160,
+                220
+              ]
+            ],
+            "wheelAngleRad": 0
+          },
+          {
+            "weaponTip": [
+              184,
+              177
+            ],
+            "feet": [
+              [
+                99,
+                220
+              ],
+              [
+                160,
+                220
+              ]
+            ],
+            "wheelAngleRad": 0
+          },
+          {
+            "weaponTip": [
+              184,
+              177
+            ],
+            "feet": [
+              [
+                99,
+                220
+              ],
+              [
+                160,
+                220
+              ]
+            ],
+            "wheelAngleRad": 0
+          }
+        ]
+      }
+    }
+  },
+  "status": "art review candidate; integration not approved",
+  "checkmatePolicy": "play defeat_acknowledgement, NEVER defeat, for a checked king"
+}

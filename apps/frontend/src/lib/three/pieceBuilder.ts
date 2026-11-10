@@ -10,20 +10,25 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { Piece3DNode, PieceAnimator } from './types.ts'
+import { IndianArmiesRuntime } from './indianArmiesRuntime.ts'
 
 export const CARD_REST_TILT_X = -0.58
 
-export const CLIPS_DEF: Record<string, { start: number; count: number; fps: number; loop: boolean; contactFrame?: number }> = {
-  idle: { start: 0, count: 8, fps: 10, loop: true },
-  move: { start: 8, count: 12, fps: 14, loop: true },
-  attack_anticipation: { start: 20, count: 4, fps: 12, loop: false },
-  attack: { start: 24, count: 8, fps: 16, loop: false, contactFrame: 4 },
-  defend: { start: 32, count: 6, fps: 12, loop: false },
-  hit: { start: 38, count: 4, fps: 16, loop: false },
-  stagger: { start: 42, count: 6, fps: 12, loop: false },
-  defeat: { start: 48, count: 6, fps: 10, loop: false },
-  victory: { start: 54, count: 6, fps: 10, loop: true },
-  draw: { start: 60, count: 4, fps: 6, loop: false },
+export const CLIPS_DEF: Record<
+  string,
+  { start: number; count: number; fps: number; loop: boolean; contactFrame?: number; texture?: 'main' | 'endings' }
+> = {
+  idle: { start: 0, count: 8, fps: 10, loop: true, texture: 'main' },
+  move: { start: 8, count: 12, fps: 14, loop: true, texture: 'main' },
+  attack_anticipation: { start: 20, count: 4, fps: 12, loop: false, texture: 'main' },
+  attack: { start: 24, count: 8, fps: 16, loop: false, contactFrame: 4, texture: 'main' },
+  defend: { start: 32, count: 6, fps: 12, loop: false, texture: 'main' },
+  hit: { start: 38, count: 4, fps: 16, loop: false, texture: 'main' },
+  stagger: { start: 42, count: 6, fps: 12, loop: false, texture: 'main' },
+  defeat: { start: 48, count: 8, fps: 12, loop: false, texture: 'main' },
+  victory: { start: 56, count: 8, fps: 12, loop: false, texture: 'main' },
+  defeat_acknowledgement: { start: 0, count: 8, fps: 12, loop: false, texture: 'endings' },
+  draw_disengagement: { start: 8, count: 8, fps: 12, loop: false, texture: 'endings' },
 }
 
 // Cache for loaded GLB templates
@@ -126,7 +131,7 @@ export const ASSET_MANIFESTS: Record<string, AssetManifest> = {
     label: '✨ 2.5D Stylized (Recommended)',
     isExperimental: false,
     description: 'Living 2.5D ancient Indian war chess units with frame-by-frame animation, Warcraft RTS combat, and sub-second readability.',
-    getModelPath: (code) => `/pieces/2p5d-animated/${code}_atlas.webp`,
+    getModelPath: (code) => IndianArmiesRuntime.getMainAtlasUrl(code),
   },
   'astra-dev-v02': {
     id: 'astra-dev-v02',
@@ -210,10 +215,10 @@ export class PieceBuilder3D {
         },
         undefined,
         (err) => {
-          console.warn(`[Astra2.5D] Failed to load atlas ${url} for ${pieceCode}, using 256px fallback:`, err)
-          const fallback = this.createFallbackAtlasTexture(pieceCode)
-          this.textureCache.set(key, fallback)
-          resolve(fallback)
+          const msg = `Failed to load 2.5D atlas ${url} for ${pieceCode}`
+          IndianArmiesRuntime.recordError(`${msg}: ${err instanceof Error ? err.message : String(err)}`)
+          this.texturePromises.delete(key)
+          resolve(this.createFallbackAtlasTexture(pieceCode))
         }
       )
     })
@@ -225,37 +230,30 @@ export class PieceBuilder3D {
   /**
    * Preloads army models or 2.5D textures for the specified or active manifest
    */
-  public static async preloadArmyModels(manifestId?: string, side: 'white' | 'black' = 'white'): Promise<void> {
+  public static async preloadArmyModels(manifestId?: string, _side: 'white' | 'black' = 'white'): Promise<void> {
     const manifest = manifestId ? ASSET_MANIFESTS[manifestId] || this.getManifest() : this.getManifest()
     const codes = ['wP', 'wR', 'wN', 'wB', 'wQ', 'wK', 'bP', 'bR', 'bN', 'bB', 'bQ', 'bK']
 
     if (manifest.id === '2p5d-stylized') {
-      // Prioritize active orientation atlases first so the board appears immediately,
-      // then warm the reverse-facing atlases in the background for instant board flips.
-      const primaryUrls: { key: string; url: string; code: string }[] = []
-      const secondaryUrls: { key: string; url: string; code: string }[] = []
+      await IndianArmiesRuntime.loadRuntimeMetadata()
 
-      for (const code of codes) {
-        const isWhite = code.startsWith('w')
-        const primaryIsBack = side === 'white' ? isWhite : !isWhite
-        const frontEntry = { key: `atlas_${code}`, url: `/pieces/2p5d-animated/${code}_atlas.webp`, code }
-        const backEntry = { key: `atlas_back_${code}`, url: `/pieces/2p5d-animated/${code}_back_atlas.webp`, code }
-        if (primaryIsBack) {
-          primaryUrls.push(backEntry)
-          secondaryUrls.push(frontEntry)
-        } else {
-          primaryUrls.push(frontEntry)
-          secondaryUrls.push(backEntry)
-        }
-      }
-
+      // Load all 12 main character atlases immediately so every board piece renders crisply,
+      // then warm supplementary ending atlases & impact debris sprites asynchronously.
       await Promise.allSettled(
-        primaryUrls.map(({ key, url, code }) => this.loadCachedTexture(key, url, code))
+        codes.map((code) =>
+          this.loadCachedTexture(`atlas_${code}`, IndianArmiesRuntime.getMainAtlasUrl(code), code)
+        )
       )
-      // Warm secondary atlases asynchronously without blocking initial render
-      void Promise.allSettled(
-        secondaryUrls.map(({ key, url, code }) => this.loadCachedTexture(key, url, code))
-      )
+
+      const effectW = IndianArmiesRuntime.getEffectSpriteDef('w')
+      const effectB = IndianArmiesRuntime.getEffectSpriteDef('b')
+      void Promise.allSettled([
+        ...codes.map((code) =>
+          this.loadCachedTexture(`atlas_endings_${code}`, IndianArmiesRuntime.getEndingsAtlasUrl(code), code)
+        ),
+        this.loadCachedTexture('effect_w', effectW.url, 'wEffect'),
+        this.loadCachedTexture('effect_b', effectB.url, 'bEffect'),
+      ])
       return
     }
 
@@ -306,38 +304,73 @@ export class PieceBuilder3D {
     return tex
   }
 
-  private static get2p5dAnimatedTexture(pieceCode: string, facing: 'front' | 'back' = 'front'): THREE.Texture {
+  private static get2p5dAnimatedTexture(
+    pieceCode: string,
+    kind: 'main' | 'endings' = 'main'
+  ): THREE.Texture {
     if (typeof document === 'undefined') {
       return new THREE.Texture()
     }
-    const cacheKey = facing === 'back' ? `atlas_back_${pieceCode}` : `atlas_${pieceCode}`
-    const url = facing === 'back'
-      ? `/pieces/2p5d-animated/${pieceCode}_back_atlas.webp`
-      : `/pieces/2p5d-animated/${pieceCode}_atlas.webp`
+    const isEndings = kind === 'endings'
+    const cacheKey = isEndings ? `atlas_endings_${pieceCode}` : `atlas_${pieceCode}`
+    const url = isEndings
+      ? IndianArmiesRuntime.getEndingsAtlasUrl(pieceCode)
+      : IndianArmiesRuntime.getMainAtlasUrl(pieceCode)
+    const cols = 8
+    const rows = isEndings ? 2 : 8
 
     const cached = this.textureCache.get(cacheKey)
     if (cached && cached.image) {
       const tex = cached.clone()
-      tex.repeat.set(1 / 8, 1 / 8)
-      tex.offset.set(0, 7 / 8)
+      tex.repeat.set(1 / cols, 1 / rows)
+      tex.offset.set(0, (rows - 1) / rows)
       tex.needsUpdate = true
       return tex
     }
 
-    // Create a shell clone that receives the decoded ImageBitmap/HTMLImageElement as soon as it finishes loading
+    // Create a shell texture that receives the decoded image as soon as it finishes loading
     const tex = new THREE.Texture()
     tex.colorSpace = THREE.SRGBColorSpace
     tex.minFilter = THREE.LinearMipmapLinearFilter
     tex.magFilter = THREE.LinearFilter
     tex.generateMipmaps = true
-    tex.repeat.set(1 / 8, 1 / 8)
-    tex.offset.set(0, 7 / 8)
+    tex.repeat.set(1 / cols, 1 / rows)
+    tex.offset.set(0, (rows - 1) / rows)
 
     this.loadCachedTexture(cacheKey, url, pieceCode).then((loadedMaster) => {
       tex.image = loadedMaster.image
       tex.needsUpdate = true
     })
 
+    return tex
+  }
+
+  public static getEffectSpriteTexture(faction: 'w' | 'b'): THREE.Texture {
+    if (typeof document === 'undefined') {
+      return new THREE.Texture()
+    }
+    const effectDef = IndianArmiesRuntime.getEffectSpriteDef(faction)
+    const cacheKey = `effect_${faction}`
+    const cached = this.textureCache.get(cacheKey)
+    if (cached && cached.image) {
+      const tex = cached.clone()
+      tex.repeat.set(1 / effectDef.cols, 1 / effectDef.rows)
+      tex.offset.set(0, (effectDef.rows - 1) / effectDef.rows)
+      tex.needsUpdate = true
+      return tex
+    }
+    const tex = new THREE.Texture()
+    tex.colorSpace = THREE.SRGBColorSpace
+    tex.minFilter = THREE.LinearMipmapLinearFilter
+    tex.magFilter = THREE.LinearFilter
+    tex.generateMipmaps = true
+    tex.repeat.set(1 / effectDef.cols, 1 / effectDef.rows)
+    tex.offset.set(0, (effectDef.rows - 1) / effectDef.rows)
+
+    this.loadCachedTexture(cacheKey, effectDef.url, `${faction}Effect`).then((loadedMaster) => {
+      tex.image = loadedMaster.image
+      tex.needsUpdate = true
+    })
     return tex
   }
 
@@ -362,10 +395,11 @@ export class PieceBuilder3D {
     const group = new THREE.Group()
     group.name = `Miniature_2p5D_${pieceCode}_${square}`
     const classChar = pieceCode.slice(1).toUpperCase()
+    const placement = IndianArmiesRuntime.getCardPlacement(classChar)
     const dim = this.DIMENSIONS_2P5D[classChar] || this.DIMENSIONS_2P5D.P
 
     // 1. Ground Contact Shadow Disc (Y = 0.005)
-    const shadowGeo = new THREE.CircleGeometry(dim.plinthR * 1.08, 24)
+    const shadowGeo = new THREE.CircleGeometry(placement.plinthR * 1.08, 24)
     const shadowMat = new THREE.MeshBasicMaterial({
       color: 0x0a0806,
       transparent: true,
@@ -377,8 +411,8 @@ export class PieceBuilder3D {
     shadowMesh.position.y = 0.005
     group.add(shadowMesh)
 
-    // 2. Beveled Stone Plinth Base (Y = 0.02)
-    const plinthGeo = new THREE.CylinderGeometry(dim.plinthR, dim.plinthR * 1.05, 0.04, 32)
+    // 2. Beveled Stone Plinth Base (Y = 0.02, top surface Y = 0.04)
+    const plinthGeo = new THREE.CylinderGeometry(placement.plinthR, placement.plinthR * 1.05, 0.04, 32)
     const plinthMesh = new THREE.Mesh(plinthGeo, pal.stone)
     plinthMesh.name = 'Plinth_Stone'
     plinthMesh.position.y = 0.02
@@ -387,17 +421,19 @@ export class PieceBuilder3D {
     group.add(plinthMesh)
 
     // 3. Antique Gold / Brass Inlay Ring on Plinth
-    const rimGeo = new THREE.TorusGeometry(dim.plinthR * 1.01, 0.012, 8, 32)
+    const rimGeo = new THREE.TorusGeometry(placement.plinthR * 1.01, 0.012, 8, 32)
     const rimMesh = new THREE.Mesh(rimGeo, pal.gold)
     rimMesh.rotation.x = Math.PI / 2
     rimMesh.position.y = 0.04
     group.add(rimMesh)
 
-    // 4. Upright 2.5D Animated Character Card Mesh with UV transform animator
-    const frontTexture = this.get2p5dAnimatedTexture(pieceCode, 'front')
-    const backTexture = this.get2p5dAnimatedTexture(pieceCode, 'back')
-    let activeTexture = frontTexture
-    const cardGeo = new THREE.PlaneGeometry(dim.width, dim.height)
+    // 4. Upright 2.5D Animated Character Card Mesh anchored to foot pivot ([128, 220] -> [0.5, 0.859375])
+    const mainTexture = this.get2p5dAnimatedTexture(pieceCode, 'main')
+    let endingsTexture: THREE.Texture | null = null
+    let activeTextureKind: 'main' | 'endings' = 'main'
+    let activeTexture = mainTexture
+
+    const cardGeo = new THREE.PlaneGeometry(placement.width, placement.height)
     const cardMat = new THREE.MeshStandardMaterial({
       map: activeTexture,
       transparent: true,
@@ -411,12 +447,15 @@ export class PieceBuilder3D {
     cardMesh.name = `Card_${pieceCode}`
     cardMesh.castShadow = false
     cardMesh.receiveShadow = false
-    cardMesh.position.set(0, dim.yOffset, 0)
+    cardMesh.userData.cardRestPos = [...placement.cardPosition]
+    cardMesh.userData.cardRestTiltX = placement.tiltRad
+    cardMesh.userData.mainTexture = mainTexture
+    cardMesh.position.set(placement.cardPosition[0], placement.cardPosition[1], placement.cardPosition[2])
     // Tilted backwards (-0.58 rad = ~33 deg) to perpendicularly face 48 deg oblique tactical camera
-    cardMesh.rotation.x = CARD_REST_TILT_X
+    cardMesh.rotation.x = placement.tiltRad
     group.add(cardMesh)
 
-    // Frame-by-Frame Animator Engine
+    // Frame-by-Frame Animator Engine supporting both 8x8 main and 8x2 supplementary endings atlases
     const animator: PieceAnimator = {
       currentClip: 'idle',
       currentFrame: 0,
@@ -425,49 +464,66 @@ export class PieceBuilder3D {
       isFinished: false,
       facing: 'front',
       setFacing(dir: 'front' | 'back') {
-        if (this.facing === dir) return
+        // Sol provides fixed authored 3/4 views only (Bishop left, others right); never mirror weapon hands
         this.facing = dir
-        activeTexture = dir === 'back' ? backTexture : frontTexture
-        cardMat.map = activeTexture
-        cardMat.needsUpdate = true
-        this.updateUV()
       },
-      playClip(clipName: string, loop = true, onComplete?: () => void) {
-        this.currentClip = clipName
+      playClip(clipName: string, loop?: boolean, onComplete?: () => void) {
+        const resolved = IndianArmiesRuntime.resolveClip(pieceCode, clipName)
+        this.currentClip = resolved.clipName
         this.currentFrame = 0
         this.frameTime = 0
-        this.loop = loop
+        this.loop = loop ?? resolved.loop
         this.isFinished = false
         this.onComplete = onComplete
         this.updateUV()
       },
       setFrame(frameIndex: number) {
-        this.currentFrame = frameIndex
+        this.currentFrame = Math.max(0, frameIndex)
         this.updateUV()
       },
       updateUV() {
-        const clipDef = CLIPS_DEF[this.currentClip] || CLIPS_DEF.idle
-        const localFrame = this.currentFrame % clipDef.count
-        const atlasIndex = clipDef.start + localFrame
-        const col = atlasIndex % 8
-        const row = Math.floor(atlasIndex / 8)
-        activeTexture.offset.x = col / 8
-        activeTexture.offset.y = (7 - row) / 8
+        const resolved = IndianArmiesRuntime.resolveClip(pieceCode, this.currentClip)
+        if (resolved.textureKind !== activeTextureKind) {
+          activeTextureKind = resolved.textureKind
+          if (activeTextureKind === 'endings') {
+            if (!endingsTexture) {
+              endingsTexture = PieceBuilder3D.get2p5dAnimatedTexture(pieceCode, 'endings')
+              cardMesh.userData.endingsTexture = endingsTexture
+            }
+            activeTexture = endingsTexture
+          } else {
+            activeTexture = mainTexture
+          }
+          cardMat.map = activeTexture
+          cardMat.needsUpdate = true
+        }
+        const safeCount = Math.max(1, resolved.count)
+        const localFrame = this.currentFrame % safeCount
+        const atlasIndex = resolved.start + localFrame
+        const cols = Math.max(1, resolved.cols)
+        const rows = Math.max(1, resolved.rows)
+        const col = atlasIndex % cols
+        const row = Math.floor(atlasIndex / cols)
+        activeTexture.offset.x = col / cols
+        activeTexture.offset.y = (rows - 1 - row) / rows
       },
       update(deltaSeconds: number) {
         if (this.isFinished) return
-        const clipDef = CLIPS_DEF[this.currentClip] || CLIPS_DEF.idle
+        const resolved = IndianArmiesRuntime.resolveClip(pieceCode, this.currentClip)
         this.frameTime += deltaSeconds
-        const fps = clipDef.fps || 12
-        const frameDuration = 1 / fps
-        while (this.frameTime >= frameDuration) {
+        const fps = resolved.fps || 12
+        let guard = 0
+        while (guard++ < 16) {
+          const ms = resolved.frameDurationsMs?.[this.currentFrame]
+          const frameDuration = ms ? ms / 1000 : 1 / fps
+          if (this.frameTime < frameDuration) break
           this.frameTime -= frameDuration
           this.currentFrame++
-          if (this.currentFrame >= clipDef.count) {
+          if (this.currentFrame >= resolved.count) {
             if (this.loop) {
               this.currentFrame = 0
             } else {
-              this.currentFrame = clipDef.count - 1
+              this.currentFrame = Math.max(0, resolved.count - 1)
               this.isFinished = true
               this.updateUV()
               if (this.onComplete) {
@@ -483,7 +539,7 @@ export class PieceBuilder3D {
       },
     }
 
-    // 5. Authored Socket Anchors for RTS Combat Director
+    // 5. Authored Socket Anchors driven by clip manifest pixels when available
     const weaponSocket = new THREE.Object3D()
     weaponSocket.name = 'weapon_tip_socket'
     const contactAnchor = new THREE.Object3D()
@@ -491,29 +547,37 @@ export class PieceBuilder3D {
     const shieldSocket = new THREE.Object3D()
     shieldSocket.name = 'shield_socket'
 
-    // Class-specific weapon socket offsets
-    switch (classChar) {
-      case 'N': // Cavalry Lance tip
-        weaponSocket.position.set(0.05, dim.yOffset * 1.05, 0.42)
-        break
-      case 'B': // Sacred Staff finial
-        weaponSocket.position.set(0.28, dim.yOffset * 1.35, 0.12)
-        break
-      case 'P': // Infantry Spear tip
-        weaponSocket.position.set(0.22, dim.yOffset * 1.15, 0.25)
-        shieldSocket.position.set(-0.20, dim.yOffset * 0.90, 0.18)
-        break
-      case 'R': // Fortress Siege Ram
-        weaponSocket.position.set(0.0, dim.yOffset * 0.70, 0.35)
-        break
-      case 'Q': // Imperial Talwar
-        weaponSocket.position.set(0.28, dim.yOffset * 0.85, 0.24)
-        break
-      case 'K': // Royal Khanda
-        weaponSocket.position.set(0.0, dim.yOffset * 0.75, 0.28)
-        break
+    const pieceMeta = IndianArmiesRuntime.getPieceClipManifest(pieceCode)
+    const atk4Tip = pieceMeta?.clips?.attack?.socketsPx?.[4]?.weaponTip
+    const def5Contact = pieceMeta?.clips?.defend?.socketsPx?.[5]?.defenseContact
+
+    if (atk4Tip) {
+      const [wx, wy, wz] = IndianArmiesRuntime.spritePixelToCardLocal(classChar, atk4Tip[0], atk4Tip[1], pieceMeta?.cell || 256)
+      weaponSocket.position.set(wx, wy, wz)
+    } else {
+      switch (classChar) {
+        case 'N':
+          weaponSocket.position.set(0.41, dim.yOffset * 0.12, 0.05)
+          break
+        case 'B':
+          weaponSocket.position.set(-0.32, dim.yOffset * 0.1, 0.05)
+          break
+        case 'P':
+          weaponSocket.position.set(0.18, dim.yOffset * 0.1, 0.05)
+          shieldSocket.position.set(-0.18, dim.yOffset * 0.05, 0.05)
+          break
+        default:
+          weaponSocket.position.set(0.2, dim.yOffset * 0.08, 0.05)
+          break
+      }
     }
-    contactAnchor.position.set(0, dim.yOffset * 0.90, 0)
+
+    if (def5Contact) {
+      const [cx, cy, cz] = IndianArmiesRuntime.spritePixelToCardLocal(classChar, def5Contact[0], def5Contact[1], pieceMeta?.cell || 256)
+      contactAnchor.position.set(cx, cy, cz)
+    } else {
+      contactAnchor.position.set(0, 0.02, 0)
+    }
 
     cardMesh.add(weaponSocket)
     cardMesh.add(contactAnchor)
@@ -999,13 +1063,16 @@ export class PieceBuilder3D {
       if ((obj as THREE.Mesh).isMesh) {
         const mesh = obj as THREE.Mesh
         mesh.geometry?.dispose()
+        if (mesh.userData?.mainTexture && ![...this.textureCache.values()].includes(mesh.userData.mainTexture)) {
+          (mesh.userData.mainTexture as THREE.Texture).dispose()
+        }
+        if (mesh.userData?.endingsTexture && ![...this.textureCache.values()].includes(mesh.userData.endingsTexture)) {
+          (mesh.userData.endingsTexture as THREE.Texture).dispose()
+        }
         const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
         for (const m of mats) {
           if (!m) continue
           const std = m as THREE.MeshStandardMaterial
-          if (std.map && !this.textureCache.has(`atlas_${node.pieceCode}`) && std.map !== this.textureCache.get(`atlas_${node.pieceCode}`)) {
-            // Only dispose cloned textures, never master cached ones
-          }
           if (std.map && ![...this.textureCache.values()].includes(std.map)) {
             std.map.dispose()
           }

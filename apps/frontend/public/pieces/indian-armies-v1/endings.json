@@ -1,0 +1,145 @@
+{
+  "kingCapture": false,
+  "whiteVictory": {
+    "winners": [
+      {
+        "piece": "wP",
+        "clip": "victory",
+        "texture": "main"
+      },
+      {
+        "piece": "wN",
+        "clip": "victory",
+        "texture": "main"
+      },
+      {
+        "piece": "wB",
+        "clip": "victory",
+        "texture": "main"
+      },
+      {
+        "piece": "wR",
+        "clip": "victory",
+        "texture": "main"
+      },
+      {
+        "piece": "wQ",
+        "clip": "victory",
+        "texture": "main"
+      },
+      {
+        "piece": "wK",
+        "clip": "victory",
+        "texture": "main"
+      }
+    ],
+    "losingKing": {
+      "piece": "bK",
+      "clip": "defeat_acknowledgement",
+      "texture": "endings"
+    }
+  },
+  "blackVictory": {
+    "winners": [
+      {
+        "piece": "bP",
+        "clip": "victory",
+        "texture": "main"
+      },
+      {
+        "piece": "bN",
+        "clip": "victory",
+        "texture": "main"
+      },
+      {
+        "piece": "bB",
+        "clip": "victory",
+        "texture": "main"
+      },
+      {
+        "piece": "bR",
+        "clip": "victory",
+        "texture": "main"
+      },
+      {
+        "piece": "bQ",
+        "clip": "victory",
+        "texture": "main"
+      },
+      {
+        "piece": "bK",
+        "clip": "victory",
+        "texture": "main"
+      }
+    ],
+    "losingKing": {
+      "piece": "wK",
+      "clip": "defeat_acknowledgement",
+      "texture": "endings"
+    }
+  },
+  "draw": {
+    "units": [
+      {
+        "piece": "wP",
+        "clip": "draw_disengagement",
+        "texture": "endings"
+      },
+      {
+        "piece": "wN",
+        "clip": "draw_disengagement",
+        "texture": "endings"
+      },
+      {
+        "piece": "wB",
+        "clip": "draw_disengagement",
+        "texture": "endings"
+      },
+      {
+        "piece": "wR",
+        "clip": "draw_disengagement",
+        "texture": "endings"
+      },
+      {
+        "piece": "wQ",
+        "clip": "draw_disengagement",
+        "texture": "endings"
+      },
+      {
+        "piece": "wK",
+        "clip": "draw_disengagement",
+        "texture": "endings"
+      },
+      {
+        "piece": "bP",
+        "clip": "draw_disengagement",
+        "texture": "endings"
+      },
+      {
+        "piece": "bN",
+        "clip": "draw_disengagement",
+        "texture": "endings"
+      },
+      {
+        "piece": "bB",
+        "clip": "draw_disengagement",
+        "texture": "endings"
+      },
+      {
+        "piece": "bR",
+        "clip": "draw_disengagement",
+        "texture": "endings"
+      },
+      {
+        "piece": "bQ",
+        "clip": "draw_disengagement",
+        "texture": "endings"
+      },
+      {
+        "piece": "bK",
+        "clip": "draw_disengagement",
+        "texture": "endings"
+      }
+    ]
+  }
+}

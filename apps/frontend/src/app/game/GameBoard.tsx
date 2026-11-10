@@ -708,16 +708,16 @@ export function GameBoard({
             <button
               type="button"
               onClick={togglePerspective}
-              className="px-2.5 py-1.5 rounded-lg hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8] transition flex items-center gap-1.5 font-medium"
+              className="px-2 sm:px-2.5 py-1.5 rounded-lg hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8] transition flex items-center gap-1.5 font-medium whitespace-nowrap shrink-0"
               title="Toggle Perspective: 2D Flat, 2.5D Depth, or 3D War Chess"
             >
-              <PerspectiveIcon className="w-3.5 h-3.5 text-[#438A69]" />
+              <PerspectiveIcon className="w-3.5 h-3.5 text-[#438A69] shrink-0" />
               <span>
                 {settings.perspective === 'true-3d'
-                  ? (settings.experimental3d ? '3D Exp' : '2.5D War')
+                  ? (settings.experimental3d ? '3D Exp' : '2.5D')
                   : settings.perspective === 'elevated-2.5d'
-                  ? '2D Tilted'
-                  : '2D Flat'}
+                  ? 'Tilted'
+                  : '2D'}
               </span>
             </button>
 

@@ -9,6 +9,7 @@ import type { BoardPreset } from '../../theme/themeTypes.ts'
 import type { Piece3DNode, CameraViewMode, AnimationPacing } from './types.ts'
 import { PhysicalBoard3D } from './boardGeometry.ts'
 import { PieceBuilder3D } from './pieceBuilder.ts'
+import { IndianArmiesRuntime } from './indianArmiesRuntime.ts'
 import { DebrisSystem3D } from './debris3D.ts'
 import { CameraController3D } from './cameraController.ts'
 import { EncounterDirector3D } from './encounterDirector.ts'
@@ -80,7 +81,7 @@ export class ThreeChessRenderer {
     this.renderer.setSize(rect.width, rect.height || rect.width)
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     this.renderer.shadowMap.enabled = true
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    this.renderer.shadowMap.type = THREE.PCFShadowMap
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
     this.renderer.toneMappingExposure = 1.22
     options.container.appendChild(this.renderer.domElement)
@@ -383,12 +384,15 @@ export class ThreeChessRenderer {
     piece.isAnimating = true
     piece.animator?.playClip('move', true)
 
-    const duration =
-      this.pacing === 'reduced'
-        ? 160
-        : this.pacing === 'cinematic'
-        ? (isKnight ? 640 : 520)
-        : (isKnight ? 380 : 280)
+    const moveDist = startPos.distanceTo(targetPos)
+    const is2p5d = !!piece.cardMesh || piece.group.name.includes('2p5D')
+    const duration = is2p5d
+      ? IndianArmiesRuntime.resolveMoveDurationMs(pieceCode, moveDist, this.pacing)
+      : this.pacing === 'reduced'
+      ? 160
+      : this.pacing === 'cinematic'
+      ? (isKnight ? 640 : 520)
+      : (isKnight ? 380 : 280)
     const now = performance.now()
 
     this.activeMoves.push({

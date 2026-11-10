@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { ThreeChessRenderer } from '@/lib/three/ThreeChessRenderer'
 import { PieceBuilder3D } from '@/lib/three/pieceBuilder'
+import { IndianArmiesRuntime } from '@/lib/three/indianArmiesRuntime'
 import { useTheme } from '@/theme/ThemeContext'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { astraHub } from '@/theme/astraIntegration'
@@ -46,6 +47,7 @@ export function ThreeBoardCanvas({
   const [isInspectorOpen, setIsInspectorOpen] = useState(false)
   const [showDevTools, setShowDevTools] = useState(false)
   const [isCombatOrEndingActive, setIsCombatOrEndingActive] = useState(false)
+  const [assetErrors, setAssetErrors] = useState<string[]>([])
 
   const isInspectorOpenRef = useRef(isInspectorOpen)
   isInspectorOpenRef.current = isInspectorOpen
@@ -65,12 +67,15 @@ export function ThreeBoardCanvas({
   const [inspectorMode, setInspectorMode] = useState<InspectorViewMode>('match')
   const [selectedClass, setSelectedClass] = useState<'P' | 'N' | 'B' | 'R' | 'Q' | 'K'>('N')
 
-  // Enable dev tools only in development when ?dev=1 is present
+  // Enable dev tools only in development when ?dev=1 is present & subscribe to 2.5D asset errors
   useEffect(() => {
+    setAssetErrors(IndianArmiesRuntime.getAssetLoadErrors())
+    const unsubErrors = IndianArmiesRuntime.onErrorsChange(setAssetErrors)
     if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
       const params = new URLSearchParams(window.location.search)
       setShowDevTools(params.get('dev') === '1')
     }
+    return () => unsubErrors()
   }, [])
 
   // Effective pacing honoring reduced motion (unless user explicitly chooses) & animations-off setting
@@ -534,6 +539,17 @@ export function ThreeBoardCanvas({
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Explicit 2.5D Asset Error Alert (never fail silently in development) */}
+      {assetErrors.length > 0 && (
+        <div
+          role="alert"
+          className="absolute top-3 left-3 right-3 z-50 px-3 py-2 rounded-lg bg-red-950/90 border border-red-500/70 text-red-100 text-xs shadow-xl"
+        >
+          <div className="font-semibold">2.5D Asset Load Failure ({assetErrors.length})</div>
+          <div className="truncate opacity-90">{assetErrors[0]}</div>
         </div>
       )}
     </div>
