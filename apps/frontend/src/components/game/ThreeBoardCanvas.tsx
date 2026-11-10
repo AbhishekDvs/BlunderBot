@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { ThreeChessRenderer } from '@/lib/three/ThreeChessRenderer'
 import { PieceBuilder3D } from '@/lib/three/pieceBuilder'
 import { useTheme } from '@/theme/ThemeContext'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { astraHub } from '@/theme/astraIntegration'
 import { soundService } from '@/theme/soundService'
 import type { CameraViewMode, AnimationPacing } from '@/lib/three/types'
@@ -17,6 +18,7 @@ interface ThreeBoardCanvasProps {
   lastMove: { from: string; to: string } | null
   inCheckSquare: string | null
   onSquareClick: (square: string) => void
+  boardOnlyRef?: React.RefObject<HTMLDivElement | null>
 }
 
 type InspectorViewMode = 'match' | 'army' | 'compare' | 'turnaround'
@@ -30,50 +32,99 @@ export function ThreeBoardCanvas({
   lastMove,
   inCheckSquare,
   onSquareClick,
+  boardOnlyRef,
 }: ThreeBoardCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const rendererRef = useRef<ThreeChessRenderer | null>(null)
   const { activePreset, settings } = useTheme()
+  const systemReducedMotion = useReducedMotion()
 
   const [cameraMode, setCameraMode] = useState<CameraViewMode>('tactical')
   const [pacing, setPacing] = useState<AnimationPacing>('cinematic')
+  const [hasUserSetPacing, setHasUserSetPacing] = useState(false)
   const [manifestId, setManifestId] = useState<string>('2p5d-stylized')
   const [isInspectorOpen, setIsInspectorOpen] = useState(false)
+  const [showDevTools, setShowDevTools] = useState(false)
+  const [isCombatOrEndingActive, setIsCombatOrEndingActive] = useState(false)
+
   const isInspectorOpenRef = useRef(isInspectorOpen)
   isInspectorOpenRef.current = isInspectorOpen
+
+  const onSquareClickRef = useRef(onSquareClick)
+  onSquareClickRef.current = onSquareClick
+
+  const fenRef = useRef(fen)
+  fenRef.current = fen
+
+  const activePresetRef = useRef(activePreset)
+  activePresetRef.current = activePreset
+
+  const sideRef = useRef(side)
+  sideRef.current = side
+
   const [inspectorMode, setInspectorMode] = useState<InspectorViewMode>('match')
   const [selectedClass, setSelectedClass] = useState<'P' | 'N' | 'B' | 'R' | 'Q' | 'K'>('N')
+
+  // Enable dev tools only in development when ?dev=1 is present
+  useEffect(() => {
+    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+      const params = new URLSearchParams(window.location.search)
+      setShowDevTools(params.get('dev') === '1')
+    }
+  }, [])
+
+  // Effective pacing honoring reduced motion (unless user explicitly chooses) & animations-off setting
+  const effectivePacing: AnimationPacing =
+    settings.animationDuration === 0
+      ? 'off'
+      : !hasUserSetPacing && systemReducedMotion
+      ? 'reduced'
+      : pacing
 
   // Astra event subscriptions (Capture, Move, GameEnd, Reset)
   useEffect(() => {
     const unsubCapture = astraHub.onCapture((event) => {
       if (rendererRef.current) {
+        const attackerClass = event.attackerPiece.slice(1)
+        setIsCombatOrEndingActive(true)
         rendererRef.current.triggerCapture(
           event.attackerSquare,
           event.victimSquare,
           event.attackerPiece,
           event.victimPiece,
           () => {
-            const attackerClass = event.attackerPiece.slice(1)
             soundService.playCombatImpact(attackerClass, settings.soundEnabled)
+          },
+          () => {
+            setIsCombatOrEndingActive(false)
+            event.onAnimationComplete?.()
+          },
+          {
+            isEnPassant: event.isEnPassant,
+            capturedSquare: event.capturedSquare,
+            onAnticipation: () => {
+              soundService.playCombatAnticipation(attackerClass, settings.soundEnabled)
+            },
           }
         )
       }
     })
 
-    const unsubMove = astraHub.onMove((from, to, piece) => {
+    const unsubMove = astraHub.onMove((from, to, piece, meta) => {
       if (rendererRef.current) {
-        rendererRef.current.triggerMove(from, to, piece)
+        rendererRef.current.triggerMove(from, to, piece, undefined, { isCastling: meta?.isCastling })
       }
     })
 
     const unsubEnd = astraHub.onGameEnd((outcome) => {
       if (rendererRef.current) {
+        setIsCombatOrEndingActive(true)
         rendererRef.current.triggerGameEnding(outcome)
       }
     })
 
     const unsubReset = astraHub.onGameReset(() => {
+      setIsCombatOrEndingActive(false)
       if (rendererRef.current) {
         rendererRef.current.resetGame()
       }
@@ -85,12 +136,9 @@ export function ThreeBoardCanvas({
       unsubEnd()
       unsubReset()
     }
-  }, [activePreset.defaultSoundPack, settings.soundEnabled])
+  }, [settings.soundEnabled])
 
-  const fenRef = useRef(fen)
-  fenRef.current = fen
-
-  // Initialize ThreeChessRenderer
+  // Initialize ThreeChessRenderer ONCE on mount (never destroy WebGL on clicks, theme, or side flips!)
   useEffect(() => {
     if (!containerRef.current) return
 
@@ -98,11 +146,11 @@ export function ThreeBoardCanvas({
 
     const renderer = new ThreeChessRenderer({
       container: containerRef.current,
-      preset: activePreset,
-      side,
+      preset: activePresetRef.current,
+      side: sideRef.current,
       onSquareClick: (sq) => {
         if (!isInspectorOpenRef.current) {
-          onSquareClick(sq)
+          onSquareClickRef.current(sq)
         }
       },
     })
@@ -113,8 +161,8 @@ export function ThreeBoardCanvas({
       (window as unknown as { __THREE_RENDERER__: unknown }).__THREE_RENDERER__ = renderer
     }
 
-    // Preload models for active manifest and upgrade board pieces
-    PieceBuilder3D.preloadArmyModels(manifestId).then(() => {
+    // Preload 2.5D animated textures and refresh board pieces
+    PieceBuilder3D.preloadArmyModels('2p5d-stylized', sideRef.current).then(() => {
       if (isMounted && rendererRef.current) {
         rendererRef.current.clearPieces()
         rendererRef.current.setFen(fenRef.current)
@@ -129,7 +177,14 @@ export function ThreeBoardCanvas({
       renderer.dispose()
       rendererRef.current = null
     }
-  }, [activePreset, side, onSquareClick, manifestId])
+  }, [])
+
+  // Sync Board Material Preset live without tearing down WebGL
+  useEffect(() => {
+    if (rendererRef.current) {
+      rendererRef.current.setBoardPreset(activePreset)
+    }
+  }, [activePreset])
 
   // Sync FEN changes
   useEffect(() => {
@@ -155,9 +210,9 @@ export function ThreeBoardCanvas({
   // Sync Legal Moves
   useEffect(() => {
     if (rendererRef.current && !isInspectorOpen) {
-      rendererRef.current.board.showLegalMoves(legalMoves)
+      rendererRef.current.board.showLegalMoves(settings.showMoveHints ? legalMoves : [])
     }
-  }, [legalMoves, isInspectorOpen])
+  }, [legalMoves, isInspectorOpen, settings.showMoveHints])
 
   // Sync In-Check Square
   useEffect(() => {
@@ -166,19 +221,30 @@ export function ThreeBoardCanvas({
     }
   }, [inCheckSquare, isInspectorOpen])
 
-  // Sync Orientation (Side)
+  // Sync Orientation (Side) cleanly without WebGL teardown
   useEffect(() => {
     if (rendererRef.current) {
       rendererRef.current.setOrientation(side)
     }
   }, [side])
 
+  // Sync Experimental 3D vs Animated 2.5D setting cleanly (never loads 3D GLBs unless explicitly chosen)
+  useEffect(() => {
+    const desiredManifest = settings.experimental3d ? 'astra-dev-v02' : '2p5d-stylized'
+    if (desiredManifest !== manifestId && !isInspectorOpen) {
+      setManifestId(desiredManifest)
+      if (rendererRef.current) {
+        rendererRef.current.setAssetManifest(desiredManifest)
+      }
+    }
+  }, [settings.experimental3d, manifestId, isInspectorOpen])
+
   // Sync Pacing
   useEffect(() => {
     if (rendererRef.current) {
-      rendererRef.current.setPacing(pacing)
+      rendererRef.current.setPacing(effectivePacing)
     }
-  }, [pacing])
+  }, [effectivePacing])
 
   // Handle Resize
   useEffect(() => {
@@ -187,7 +253,7 @@ export function ThreeBoardCanvas({
     }
   }, [boardWidth])
 
-  // Manifest switcher
+  // Manifest switcher (dev-only)
   const handleSwitchManifest = useCallback(async (newManifestId: string) => {
     setManifestId(newManifestId)
     if (rendererRef.current) {
@@ -212,42 +278,46 @@ export function ThreeBoardCanvas({
     }
   }, [])
 
-  // Skip active combat sequence on Escape or button click
+  // Skip active combat or ending sequence
   const handleSkipCombat = useCallback(() => {
+    setIsCombatOrEndingActive(false)
     if (rendererRef.current) {
-      rendererRef.current.encounterDirector.cancel()
+      rendererRef.current.cancelActiveAnimations()
+      if (rendererRef.current.endingDirector.isActive) {
+        rendererRef.current.skipEnding()
+      }
     }
   }, [])
 
-  // Inspector Mode Setup
-  const handleSetInspectorMode = useCallback((mode: InspectorViewMode, pieceChar: 'P' | 'N' | 'B' | 'R' | 'Q' | 'K' = selectedClass) => {
-    setInspectorMode(mode)
-    setSelectedClass(pieceChar)
-    if (!rendererRef.current) return
+  // Inspector Mode Setup (dev-only)
+  const handleSetInspectorMode = useCallback(
+    (mode: InspectorViewMode, pieceChar: 'P' | 'N' | 'B' | 'R' | 'Q' | 'K' = selectedClass) => {
+      setInspectorMode(mode)
+      setSelectedClass(pieceChar)
+      if (!rendererRef.current) return
 
-    rendererRef.current.board.setSelectedSquare(null)
-    rendererRef.current.board.clearLegalMoves()
+      rendererRef.current.board.setSelectedSquare(null)
+      rendererRef.current.board.clearLegalMoves()
 
-    switch (mode) {
-      case 'match':
-        rendererRef.current.setFen(fen)
-        break
-      case 'army':
-        // Full 16-piece White army deployed against Black
-        rendererRef.current.setFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
-        break
-      case 'compare':
-        // Lineup of all 6 pieces across ranks 4 and 5
-        rendererRef.current.setFen('8/8/8/1prnbqk1/1PRNBQK1/8/8/8 w - - 0 1')
-        break
-      case 'turnaround':
-        // Center piece for 360-degree turnaround inspection
-        rendererRef.current.setFen(`8/8/8/8/3${pieceChar}4/8/8/8 w - - 0 1`)
-        break
-    }
-  }, [fen, selectedClass])
+      switch (mode) {
+        case 'match':
+          rendererRef.current.setFen(fen)
+          break
+        case 'army':
+          rendererRef.current.setFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+          break
+        case 'compare':
+          rendererRef.current.setFen('8/8/8/1prnbqk1/1PRNBQK1/8/8/8 w - - 0 1')
+          break
+        case 'turnaround':
+          rendererRef.current.setFen(`8/8/8/8/3${pieceChar}4/8/8/8 w - - 0 1`)
+          break
+      }
+    },
+    [fen, selectedClass]
+  )
 
-  // Keyboard shortcut: Escape to skip combat or close inspector
+  // Keyboard shortcut: Escape to skip combat/ending or close inspector
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -268,9 +338,14 @@ export function ThreeBoardCanvas({
 
   return (
     <div className="relative flex flex-col items-center justify-center select-none">
-      {/* 3D Viewport Container */}
+      {/* 2.5D/3D Viewport Container */}
       <div
-        ref={containerRef}
+        ref={(el) => {
+          containerRef.current = el
+          if (boardOnlyRef) {
+            boardOnlyRef.current = el
+          }
+        }}
         className="relative rounded-2xl overflow-hidden shadow-2xl border border-[#283341] bg-[#0A0D12]"
         style={{
           width: `${boardWidth}px`,
@@ -278,8 +353,8 @@ export function ThreeBoardCanvas({
         }}
       />
 
-      {/* Experimental Geometry Notice Banner */}
-      {isDevKit && (
+      {/* Experimental Geometry Notice Banner (Dev Only) */}
+      {showDevTools && isDevKit && (
         <div
           className={`absolute top-3 left-3 z-30 flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium backdrop-blur-md shadow-lg ${
             isV02
@@ -290,93 +365,85 @@ export function ThreeBoardCanvas({
           <span className={`w-2 h-2 rounded-full ${isV02 ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
           <span>
             {isV02
-              ? 'Candidate Geometry — Complete White Army v0.2 (Rigged & Animated Candidates)'
-              : 'Experimental Geometry — Development Kit v0.1 (Unapproved Geometry Study)'}
+              ? 'Candidate Geometry — Complete White Army v0.2'
+              : 'Experimental Geometry — Development Kit v0.1'}
           </span>
         </div>
       )}
 
-      {/* Floating 3D Tactical Controls Overlay */}
-      <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 p-1 rounded-xl bg-[#0C0F14]/90 backdrop-blur-md border border-[#202832] shadow-xl text-xs">
-        {/* Camera Elevation Toggle */}
+      {/* Clean Tactical Camera & Pacing Bar */}
+      <div className="absolute top-2.5 right-2.5 z-30 flex items-center gap-1 p-1 rounded-xl bg-[#0C0F14]/85 backdrop-blur-md border border-[#202832] shadow-lg text-[11px]">
         <button
           type="button"
           onClick={handleToggleCamera}
-          className="px-2.5 py-1 rounded-lg hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8] transition font-medium flex items-center gap-1.5"
-          title="Toggle between Tactical High Elevation (67°) and Cinematic Low Angle (34°)"
+          className="px-2 py-1 rounded-lg hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8] transition font-medium flex items-center gap-1"
+          title="Toggle between Tactical Elevation (48°) and Cinematic Angle (34°)"
         >
-          <span>📷</span>
           <span className="font-semibold text-[#F5F6F8]">
-            {cameraMode === 'tactical' ? 'Tactical 67°' : 'Cinematic 34°'}
+            {cameraMode === 'tactical' ? 'Tactical 48°' : 'Cinematic 34°'}
           </span>
         </button>
 
-        {/* Snap / Reset Camera View */}
         <button
           type="button"
           onClick={handleResetCamera}
-          className="px-2 py-1 rounded-lg hover:bg-[#1C232D] text-[#84919D] hover:text-[#DDAA57] transition font-mono text-[11px]"
-          title="Reset Camera to Default Tactical Framing (Double-click board or press here)"
+          className="px-2 py-1 rounded-lg hover:bg-[#1C232D] text-[#84919D] hover:text-[#DDAA57] transition font-mono"
+          title="Reset Camera to Default Tactical Framing (Double-click board)"
         >
-          Reset View
+          Reset
         </button>
 
-        {/* Combat Pacing Selector */}
         <button
           type="button"
           onClick={() => {
             const pacings: AnimationPacing[] = ['cinematic', 'fast', 'reduced']
-            const nextPacing = pacings[(pacings.indexOf(pacing) + 1) % pacings.length]
+            const nextPacing = pacings[(pacings.indexOf(effectivePacing === 'off' ? 'cinematic' : effectivePacing) + 1) % pacings.length]
+            setHasUserSetPacing(true)
             setPacing(nextPacing)
           }}
           className="px-2 py-1 rounded-lg hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8] transition font-medium flex items-center gap-1"
-          title="Combat animation pacing: Cinematic, Fast, or Reduced"
+          title="Animation pacing: Cinematic, Fast, or Reduced"
         >
-          <span>⚡</span>
-          <span className="capitalize font-semibold text-[#DDAA57]">{pacing}</span>
+          <span className="capitalize font-semibold text-[#DDAA57]">{effectivePacing}</span>
         </button>
 
-        {/* Model Inspector / Dev Kit Toggle */}
-        <button
-          type="button"
-          onClick={() => {
-            const next = !isInspectorOpen
-            setIsInspectorOpen(next)
-            if (!next) {
-              handleSetInspectorMode('match')
-            } else {
-              handleSetInspectorMode('compare')
-            }
-          }}
-          className={`px-2.5 py-1 rounded-lg transition font-medium flex items-center gap-1.5 ${
-            isInspectorOpen
-              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-              : 'hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8]'
-          }`}
-          title="Open 3D Model Inspector & Development Kit Comparison"
-        >
-          <span>🧪</span>
-          <span className="font-semibold">Dev Preview</span>
-        </button>
+        {isCombatOrEndingActive && (
+          <button
+            type="button"
+            onClick={handleSkipCombat}
+            className="px-2 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition font-mono font-semibold"
+            title="Skip active combat or ending sequence (Esc)"
+          >
+            Skip
+          </button>
+        )}
 
-        {/* Skip Active Combat Sequence */}
-        <button
-          type="button"
-          onClick={handleSkipCombat}
-          className="px-2 py-1 rounded-lg hover:bg-red-500/20 text-[#84919D] hover:text-red-300 transition text-[11px] font-mono"
-          title="Skip active combat or movement sequence (Esc)"
-        >
-          Skip
-        </button>
+        {showDevTools && (
+          <button
+            type="button"
+            onClick={() => {
+              const next = !isInspectorOpen
+              setIsInspectorOpen(next)
+              handleSetInspectorMode(next ? 'compare' : 'match')
+            }}
+            className={`px-2 py-1 rounded-lg transition font-medium ${
+              isInspectorOpen
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                : 'hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8]'
+            }`}
+            title="Open Model Inspector (Dev Only)"
+          >
+            Inspector
+          </button>
+        )}
       </div>
 
-      {/* Model Inspector Drawer Modal */}
-      {isInspectorOpen && (
+      {/* Model Inspector Drawer Modal (Dev Only) */}
+      {showDevTools && isInspectorOpen && (
         <div className="absolute bottom-3 left-3 right-3 z-40 p-3 rounded-2xl bg-[#0C0F14]/95 backdrop-blur-xl border border-[#2A3442] shadow-2xl flex flex-col gap-3">
           <div className="flex items-center justify-between border-b border-[#202832] pb-2">
             <div className="flex items-center gap-2">
-              <span className="text-amber-400 font-bold text-sm">🧪 3D MODEL INSPECTOR</span>
-              <span className="text-[11px] text-[#84919D]">Drag board to orbit (360°) • Scroll to zoom</span>
+              <span className="text-amber-400 font-bold text-sm">MODEL INSPECTOR (DEV)</span>
             </div>
             <button
               type="button"
@@ -391,31 +458,30 @@ export function ThreeBoardCanvas({
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
-            {/* Asset Manifest Selector */}
             <div className="flex items-center gap-2">
               <span className="text-[#84919D] font-medium">Model Kit:</span>
               <div className="flex gap-1 bg-[#141A22] p-0.5 rounded-lg border border-[#242E3B]">
                 <button
                   type="button"
                   onClick={() => handleSwitchManifest('2p5d-stylized')}
-                  className={`px-2.5 py-1 rounded-md font-medium transition flex items-center gap-1 ${
+                  className={`px-2.5 py-1 rounded-md font-medium transition ${
                     manifestId === '2p5d-stylized'
                       ? 'bg-amber-500/30 text-amber-200 border border-amber-500/50 shadow'
                       : 'text-[#84919D] hover:text-amber-300'
                   }`}
                 >
-                  <span>✨ 2.5D Stylized</span>
+                  2.5D Stylized
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSwitchManifest('astra-dev-v02')}
-                  className={`px-2.5 py-1 rounded-md font-medium transition flex items-center gap-1 ${
+                  className={`px-2.5 py-1 rounded-md font-medium transition ${
                     manifestId === 'astra-dev-v02'
                       ? 'bg-emerald-600/30 text-emerald-200 border border-emerald-500/50 shadow'
                       : 'text-[#84919D] hover:text-emerald-300'
                   }`}
                 >
-                  <span>3D v0.2</span>
+                  3D v0.2
                 </button>
                 <button
                   type="button"
@@ -431,50 +497,24 @@ export function ThreeBoardCanvas({
               </div>
             </div>
 
-            {/* View Mode Selector */}
             <div className="flex items-center gap-2">
               <span className="text-[#84919D] font-medium">View:</span>
               <div className="flex gap-1 bg-[#141A22] p-0.5 rounded-lg border border-[#242E3B]">
-                <button
-                  type="button"
-                  onClick={() => handleSetInspectorMode('compare')}
-                  className={`px-2 py-1 rounded-md ${
-                    inspectorMode === 'compare' ? 'bg-[#2A3748] text-white' : 'text-[#84919D]'
-                  }`}
-                >
-                  6-Class Lineup
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSetInspectorMode('army')}
-                  className={`px-2 py-1 rounded-md ${
-                    inspectorMode === 'army' ? 'bg-[#2A3748] text-white' : 'text-[#84919D]'
-                  }`}
-                >
-                  Full 16 Army
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSetInspectorMode('turnaround')}
-                  className={`px-2 py-1 rounded-md ${
-                    inspectorMode === 'turnaround' ? 'bg-[#2A3748] text-white' : 'text-[#84919D]'
-                  }`}
-                >
-                  Class Solo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSetInspectorMode('match')}
-                  className={`px-2 py-1 rounded-md ${
-                    inspectorMode === 'match' ? 'bg-[#2A3748] text-white' : 'text-[#84919D]'
-                  }`}
-                >
-                  Live Game
-                </button>
+                {(['compare', 'army', 'turnaround', 'match'] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => handleSetInspectorMode(m)}
+                    className={`px-2 py-1 rounded-md capitalize ${
+                      inspectorMode === m ? 'bg-[#2A3748] text-white' : 'text-[#84919D]'
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Class Switcher for Solo Turnaround */}
             {inspectorMode === 'turnaround' && (
               <div className="flex items-center gap-1">
                 {(['P', 'R', 'N', 'B', 'Q', 'K'] as const).map((cls) => (

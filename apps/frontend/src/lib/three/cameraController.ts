@@ -27,16 +27,17 @@ export class CameraController3D {
   private savedTacticalPosition = new THREE.Vector3()
   private savedTacticalLookAt = new THREE.Vector3()
 
-  // Scene bounding box: physical board slab [-4.7, 4.7] + maximum piece height 2.0
+  // Scene bounding box: physical board slab [-4.8, 4.8] + piece height 1.35
   private sceneBox = new THREE.Box3(
     new THREE.Vector3(-4.8, 0, -4.8),
-    new THREE.Vector3(4.8, 2.0, 4.8)
+    new THREE.Vector3(4.8, 1.35, 4.8)
   )
 
   // User interactive orbit & zoom offsets
   private userAzimuth = 0 // Horizontal orbit radians
   private userPitchOffset = 0 // Vertical pitch adjustment radians
-  private userZoom = 1.0 // Zoom factor (0.75x to 1.35x)
+  private userZoom = 1.0 // Zoom factor (0.85x to 1.25x)
+  public restrict2p5d = true // Prevents arbitrary 360 rotation that breaks 2.5D sprites
 
   // Orbit angle for ending cinematics
   private orbitAngle = 0
@@ -60,7 +61,7 @@ export class CameraController3D {
    * Fits camera based on projected bounding geometry, viewport aspect ratio,
    * board dimensions, and occupied piece bounds.
    */
-  public fitToBounds(box: THREE.Box3, margin = 0.08) {
+  public fitToBounds(box: THREE.Box3, margin = 0.07) {
     const center = new THREE.Vector3()
     box.getCenter(center)
     const size = new THREE.Vector3()
@@ -117,7 +118,8 @@ export class CameraController3D {
     const posZ = center.z + horizontalDist * Math.cos(baseAzimuth)
 
     this.targetPosition.set(posX, posY, posZ)
-    this.targetLookAt.set(center.x, center.y + 0.15, center.z + lookAtOffsetZ)
+    // Center lookAt cleanly at board surface + modest piece waist height (0.32) so board fills viewport vertically
+    this.targetLookAt.set(center.x, 0.32, center.z + lookAtOffsetZ)
 
     if (this.currentMode === 'tactical') {
       this.savedTacticalPosition.copy(this.targetPosition)
@@ -209,15 +211,28 @@ export class CameraController3D {
    */
   public orbit(deltaX: number, deltaY: number) {
     if (this.currentMode !== 'tactical') return
-    this.userAzimuth += deltaX * 0.005
-    this.userPitchOffset -= deltaY * 0.004
-    // Clamp pitch offset to stay within 52–82 deg range
-    this.userPitchOffset = THREE.MathUtils.clamp(
-      this.userPitchOffset,
-      THREE.MathUtils.degToRad(-15),
-      THREE.MathUtils.degToRad(15)
-    )
+    this.userAzimuth += deltaX * 0.004
+    this.userPitchOffset -= deltaY * 0.0035
+    if (this.restrict2p5d) {
+      // Keep 2.5D sprite cards strictly aligned to readable tactical perspective
+      this.userAzimuth = THREE.MathUtils.clamp(this.userAzimuth, -0.22, 0.22)
+      this.userPitchOffset = THREE.MathUtils.clamp(
+        this.userPitchOffset,
+        THREE.MathUtils.degToRad(-10),
+        THREE.MathUtils.degToRad(14)
+      )
+    } else {
+      this.userPitchOffset = THREE.MathUtils.clamp(
+        this.userPitchOffset,
+        THREE.MathUtils.degToRad(-15),
+        THREE.MathUtils.degToRad(15)
+      )
+    }
     this.updateCameraFitting()
+  }
+
+  public getAzimuthAngle(): number {
+    return (this.isFlipped ? Math.PI : 0) + this.userAzimuth
   }
 
   /**
@@ -226,7 +241,7 @@ export class CameraController3D {
   public zoom(deltaY: number) {
     if (this.currentMode !== 'tactical') return
     const zoomDelta = deltaY > 0 ? 0.05 : -0.05
-    this.userZoom = THREE.MathUtils.clamp(this.userZoom + zoomDelta, 0.75, 1.35)
+    this.userZoom = THREE.MathUtils.clamp(this.userZoom + zoomDelta, 0.85, 1.25)
     this.updateCameraFitting()
   }
 
@@ -267,11 +282,15 @@ export class CameraController3D {
 
     // Slow cinematic orbit during game ending
     if (this.isOrbiting) {
-      this.orbitAngle += delta * 0.22
+      this.orbitAngle += delta * 0.28
+      const baseYaw = this.isFlipped ? Math.PI : 0
+      const sweepYaw = this.restrict2p5d
+        ? baseYaw + Math.sin(this.orbitAngle) * 0.26 // ±15 deg tactical sweep preserving 2.5D illusion
+        : this.orbitAngle
       this.targetPosition.set(
-        Math.sin(this.orbitAngle) * 7.4,
-        3.8 + Math.sin(this.orbitAngle * 0.5) * 0.4,
-        Math.cos(this.orbitAngle) * 7.4
+        Math.sin(sweepYaw) * 8.2,
+        5.2 + Math.sin(this.orbitAngle * 0.6) * 0.35,
+        Math.cos(sweepYaw) * 8.2
       )
     }
 

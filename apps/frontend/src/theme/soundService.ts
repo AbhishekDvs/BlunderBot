@@ -184,6 +184,78 @@ export const soundService = {
   },
 
   /**
+   * Procedural 2.5D Combat Anticipation cue (gallop, ram creak, blade unsheath, staff ward)
+   */
+  playCombatAnticipation(attackerClass = 'P', enabled = true) {
+    if (!enabled) return
+    const ctx = getAudioContext()
+    if (!ctx) return
+
+    try {
+      const now = ctx.currentTime
+      const char = attackerClass.toUpperCase()
+
+      if (char === 'N') {
+        // Two rapid hoof beats
+        ;[0, 0.14].forEach((offset) => {
+          const osc = ctx.createOscillator()
+          const gain = ctx.createGain()
+          osc.type = 'triangle'
+          osc.frequency.setValueAtTime(125, now + offset)
+          osc.frequency.exponentialRampToValueAtTime(55, now + offset + 0.06)
+          gain.gain.setValueAtTime(0.22, now + offset)
+          gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.07)
+          osc.connect(gain)
+          gain.connect(ctx.destination)
+          osc.start(now + offset)
+          osc.stop(now + offset + 0.07)
+        })
+      } else if (char === 'R') {
+        // Heavy timber & stone rumble
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'sawtooth'
+        osc.frequency.setValueAtTime(85, now)
+        osc.frequency.linearRampToValueAtTime(65, now + 0.25)
+        gain.gain.setValueAtTime(0.14, now)
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.26)
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start(now)
+        osc.stop(now + 0.26)
+      } else if (char === 'B') {
+        // Sacred staff harmonic ward chime
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(528, now)
+        osc.frequency.exponentialRampToValueAtTime(792, now + 0.22)
+        gain.gain.setValueAtTime(0.16, now)
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24)
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start(now)
+        osc.stop(now + 0.24)
+      } else {
+        // Steel unsheath / spear ready whoosh
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'triangle'
+        osc.frequency.setValueAtTime(420, now)
+        osc.frequency.exponentialRampToValueAtTime(980, now + 0.14)
+        gain.gain.setValueAtTime(0.14, now)
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16)
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start(now)
+        osc.stop(now + 0.16)
+      }
+    } catch {
+      // Silent catch
+    }
+  },
+
+  /**
    * Procedural 3D Combat Impact with distinct weapon acoustic resonance
    */
   playCombatImpact(attackerClass = 'P', enabled = true) {

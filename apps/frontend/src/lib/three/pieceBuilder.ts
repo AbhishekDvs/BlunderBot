@@ -11,6 +11,8 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { Piece3DNode, PieceAnimator } from './types.ts'
 
+export const CARD_REST_TILT_X = -0.58
+
 export const CLIPS_DEF: Record<string, { start: number; count: number; fps: number; loop: boolean; contactFrame?: number }> = {
   idle: { start: 0, count: 8, fps: 10, loop: true },
   move: { start: 8, count: 12, fps: 14, loop: true },
@@ -19,8 +21,9 @@ export const CLIPS_DEF: Record<string, { start: number; count: number; fps: numb
   defend: { start: 32, count: 6, fps: 12, loop: false },
   hit: { start: 38, count: 4, fps: 16, loop: false },
   stagger: { start: 42, count: 6, fps: 12, loop: false },
-  defeat: { start: 48, count: 8, fps: 12, loop: false },
-  victory: { start: 56, count: 8, fps: 12, loop: false },
+  defeat: { start: 48, count: 6, fps: 10, loop: false },
+  victory: { start: 54, count: 6, fps: 10, loop: true },
+  draw: { start: 60, count: 4, fps: 6, loop: false },
 }
 
 // Cache for loaded GLB templates
@@ -164,6 +167,7 @@ export class PieceBuilder3D {
   private static activeManifestId = '2p5d-stylized'
   private static textureLoader = new THREE.TextureLoader()
   private static textureCache = new Map<string, THREE.Texture>()
+  private static texturePromises = new Map<string, Promise<THREE.Texture>>()
 
   private static readonly DIMENSIONS_2P5D: Record<string, { width: number; height: number; yOffset: number; plinthR: number }> = {
     P: { width: 0.96, height: 1.05, yOffset: 0.52, plinthR: 0.36 }, // Padati - Infantry Pawn
@@ -188,39 +192,69 @@ export class PieceBuilder3D {
     return Object.values(ASSET_MANIFESTS)
   }
 
+  private static loadCachedTexture(key: string, url: string, pieceCode: string): Promise<THREE.Texture> {
+    const existing = this.texturePromises.get(key)
+    if (existing) return existing
+
+    const promise = new Promise<THREE.Texture>((resolve) => {
+      this.textureLoader.load(
+        url,
+        (tex) => {
+          tex.colorSpace = THREE.SRGBColorSpace
+          tex.minFilter = THREE.LinearMipmapLinearFilter
+          tex.magFilter = THREE.LinearFilter
+          tex.generateMipmaps = true
+          tex.needsUpdate = true
+          this.textureCache.set(key, tex)
+          resolve(tex)
+        },
+        undefined,
+        (err) => {
+          console.warn(`[Astra2.5D] Failed to load atlas ${url} for ${pieceCode}, using 256px fallback:`, err)
+          const fallback = this.createFallbackAtlasTexture(pieceCode)
+          this.textureCache.set(key, fallback)
+          resolve(fallback)
+        }
+      )
+    })
+
+    this.texturePromises.set(key, promise)
+    return promise
+  }
+
   /**
    * Preloads army models or 2.5D textures for the specified or active manifest
    */
-  public static async preloadArmyModels(manifestId?: string): Promise<void> {
+  public static async preloadArmyModels(manifestId?: string, side: 'white' | 'black' = 'white'): Promise<void> {
     const manifest = manifestId ? ASSET_MANIFESTS[manifestId] || this.getManifest() : this.getManifest()
     const codes = ['wP', 'wR', 'wN', 'wB', 'wQ', 'wK', 'bP', 'bR', 'bN', 'bB', 'bQ', 'bK']
 
     if (manifest.id === '2p5d-stylized') {
+      // Prioritize active orientation atlases first so the board appears immediately,
+      // then warm the reverse-facing atlases in the background for instant board flips.
+      const primaryUrls: { key: string; url: string; code: string }[] = []
+      const secondaryUrls: { key: string; url: string; code: string }[] = []
+
+      for (const code of codes) {
+        const isWhite = code.startsWith('w')
+        const primaryIsBack = side === 'white' ? isWhite : !isWhite
+        const frontEntry = { key: `atlas_${code}`, url: `/pieces/2p5d-animated/${code}_atlas.webp`, code }
+        const backEntry = { key: `atlas_back_${code}`, url: `/pieces/2p5d-animated/${code}_back_atlas.webp`, code }
+        if (primaryIsBack) {
+          primaryUrls.push(backEntry)
+          secondaryUrls.push(frontEntry)
+        } else {
+          primaryUrls.push(frontEntry)
+          secondaryUrls.push(backEntry)
+        }
+      }
+
       await Promise.allSettled(
-        codes.map((code) => {
-          return new Promise<void>((resolve) => {
-            if (this.textureCache.has(code)) {
-              resolve()
-              return
-            }
-            this.textureLoader.load(
-              manifest.getModelPath(code),
-              (tex) => {
-                tex.colorSpace = THREE.SRGBColorSpace
-                tex.minFilter = THREE.LinearMipmapLinearFilter
-                tex.magFilter = THREE.LinearFilter
-                tex.generateMipmaps = true
-                this.textureCache.set(`atlas_${code}`, tex)
-                this.textureCache.set(code, tex)
-                resolve()
-              },
-              undefined,
-              () => {
-                resolve()
-              }
-            )
-          })
-        })
+        primaryUrls.map(({ key, url, code }) => this.loadCachedTexture(key, url, code))
+      )
+      // Warm secondary atlases asynchronously without blocking initial render
+      void Promise.allSettled(
+        secondaryUrls.map(({ key, url, code }) => this.loadCachedTexture(key, url, code))
       )
       return
     }
@@ -244,23 +278,66 @@ export class PieceBuilder3D {
     )
   }
 
-  private static get2p5dAnimatedTexture(pieceCode: string): THREE.Texture {
+  private static createFallbackAtlasTexture(pieceCode: string): THREE.Texture {
     if (typeof document === 'undefined') {
       return new THREE.Texture()
     }
-    let masterTex = this.textureCache.get(`atlas_${pieceCode}`)
-    if (!masterTex) {
-      masterTex = this.textureLoader.load(`/pieces/2p5d-animated/${pieceCode}_atlas.webp`)
-      masterTex.colorSpace = THREE.SRGBColorSpace
-      masterTex.minFilter = THREE.LinearMipmapLinearFilter
-      masterTex.magFilter = THREE.LinearFilter
-      masterTex.generateMipmaps = true
-      this.textureCache.set(`atlas_${pieceCode}`, masterTex)
+    const canvas = document.createElement('canvas')
+    canvas.width = 256
+    canvas.height = 256
+    const ctx = canvas.getContext('2d')
+    if (ctx) {
+      const isWhite = pieceCode.startsWith('w')
+      ctx.fillStyle = isWhite ? '#f0e7d6' : '#26242b'
+      ctx.beginPath()
+      ctx.arc(128, 138, 72, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.lineWidth = 8
+      ctx.strokeStyle = isWhite ? '#d49a38' : '#b8252c'
+      ctx.stroke()
+      ctx.fillStyle = isWhite ? '#231f1a' : '#f5e6c8'
+      ctx.font = 'bold 88px serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(pieceCode.slice(1).toUpperCase(), 128, 140)
     }
-    const tex = masterTex.clone()
+    const tex = new THREE.CanvasTexture(canvas)
+    tex.colorSpace = THREE.SRGBColorSpace
+    return tex
+  }
+
+  private static get2p5dAnimatedTexture(pieceCode: string, facing: 'front' | 'back' = 'front'): THREE.Texture {
+    if (typeof document === 'undefined') {
+      return new THREE.Texture()
+    }
+    const cacheKey = facing === 'back' ? `atlas_back_${pieceCode}` : `atlas_${pieceCode}`
+    const url = facing === 'back'
+      ? `/pieces/2p5d-animated/${pieceCode}_back_atlas.webp`
+      : `/pieces/2p5d-animated/${pieceCode}_atlas.webp`
+
+    const cached = this.textureCache.get(cacheKey)
+    if (cached && cached.image) {
+      const tex = cached.clone()
+      tex.repeat.set(1 / 8, 1 / 8)
+      tex.offset.set(0, 7 / 8)
+      tex.needsUpdate = true
+      return tex
+    }
+
+    // Create a shell clone that receives the decoded ImageBitmap/HTMLImageElement as soon as it finishes loading
+    const tex = new THREE.Texture()
+    tex.colorSpace = THREE.SRGBColorSpace
+    tex.minFilter = THREE.LinearMipmapLinearFilter
+    tex.magFilter = THREE.LinearFilter
+    tex.generateMipmaps = true
     tex.repeat.set(1 / 8, 1 / 8)
-    tex.offset.set(0, 7 / 8) // Start at idle frame 0
-    tex.needsUpdate = true
+    tex.offset.set(0, 7 / 8)
+
+    this.loadCachedTexture(cacheKey, url, pieceCode).then((loadedMaster) => {
+      tex.image = loadedMaster.image
+      tex.needsUpdate = true
+    })
+
     return tex
   }
 
@@ -305,6 +382,7 @@ export class PieceBuilder3D {
     const plinthMesh = new THREE.Mesh(plinthGeo, pal.stone)
     plinthMesh.name = 'Plinth_Stone'
     plinthMesh.position.y = 0.02
+    plinthMesh.castShadow = true
     plinthMesh.receiveShadow = true
     group.add(plinthMesh)
 
@@ -316,10 +394,12 @@ export class PieceBuilder3D {
     group.add(rimMesh)
 
     // 4. Upright 2.5D Animated Character Card Mesh with UV transform animator
-    const texture = this.get2p5dAnimatedTexture(pieceCode)
+    const frontTexture = this.get2p5dAnimatedTexture(pieceCode, 'front')
+    const backTexture = this.get2p5dAnimatedTexture(pieceCode, 'back')
+    let activeTexture = frontTexture
     const cardGeo = new THREE.PlaneGeometry(dim.width, dim.height)
     const cardMat = new THREE.MeshStandardMaterial({
-      map: texture,
+      map: activeTexture,
       transparent: true,
       alphaTest: 0.08,
       roughness: 0.35,
@@ -329,11 +409,11 @@ export class PieceBuilder3D {
     })
     const cardMesh = new THREE.Mesh(cardGeo, cardMat)
     cardMesh.name = `Card_${pieceCode}`
-    cardMesh.castShadow = true
+    cardMesh.castShadow = false
     cardMesh.receiveShadow = false
     cardMesh.position.set(0, dim.yOffset, 0)
     // Tilted backwards (-0.58 rad = ~33 deg) to perpendicularly face 48 deg oblique tactical camera
-    cardMesh.rotation.x = -0.58
+    cardMesh.rotation.x = CARD_REST_TILT_X
     group.add(cardMesh)
 
     // Frame-by-Frame Animator Engine
@@ -343,16 +423,23 @@ export class PieceBuilder3D {
       frameTime: 0,
       loop: true,
       isFinished: false,
+      facing: 'front',
+      setFacing(dir: 'front' | 'back') {
+        if (this.facing === dir) return
+        this.facing = dir
+        activeTexture = dir === 'back' ? backTexture : frontTexture
+        cardMat.map = activeTexture
+        cardMat.needsUpdate = true
+        this.updateUV()
+      },
       playClip(clipName: string, loop = true, onComplete?: () => void) {
         this.currentClip = clipName
         this.currentFrame = 0
         this.frameTime = 0
         this.loop = loop
         this.isFinished = false
+        this.onComplete = onComplete
         this.updateUV()
-        if (onComplete) {
-          this.onComplete = onComplete
-        }
       },
       setFrame(frameIndex: number) {
         this.currentFrame = frameIndex
@@ -364,8 +451,8 @@ export class PieceBuilder3D {
         const atlasIndex = clipDef.start + localFrame
         const col = atlasIndex % 8
         const row = Math.floor(atlasIndex / 8)
-        texture.offset.x = col / 8
-        texture.offset.y = (7 - row) / 8
+        activeTexture.offset.x = col / 8
+        activeTexture.offset.y = (7 - row) / 8
       },
       update(deltaSeconds: number) {
         if (this.isFinished) return
@@ -373,7 +460,7 @@ export class PieceBuilder3D {
         this.frameTime += deltaSeconds
         const fps = clipDef.fps || 12
         const frameDuration = 1 / fps
-        if (this.frameTime >= frameDuration) {
+        while (this.frameTime >= frameDuration) {
           this.frameTime -= frameDuration
           this.currentFrame++
           if (this.currentFrame >= clipDef.count) {
@@ -382,10 +469,13 @@ export class PieceBuilder3D {
             } else {
               this.currentFrame = clipDef.count - 1
               this.isFinished = true
+              this.updateUV()
               if (this.onComplete) {
-                this.onComplete()
+                const cb = this.onComplete
                 this.onComplete = undefined
+                cb()
               }
+              return
             }
           }
           this.updateUV()
@@ -444,13 +534,14 @@ export class PieceBuilder3D {
    * Constructs an articulated 3D piece node
    */
   public static createPieceNode(pieceCode: string, square: string, manifestId?: string): Piece3DNode {
+    const activeManifest = manifestId ? (ASSET_MANIFESTS[manifestId] || this.getManifest()) : this.getManifest()
+    const is2p5dManifest = activeManifest.id === '2p5d-stylized'
     const group = new THREE.Group()
-    group.name = `Piece_${pieceCode}_${square}`
+    group.name = is2p5dManifest ? `Piece_2p5D_${pieceCode}_${square}` : `Piece_${pieceCode}_${square}`
 
     const isWhite = pieceCode.startsWith('w')
     const pal = isWhite ? WHITE_PALETTE : BLACK_PALETTE
     const classChar = pieceCode.slice(1).toUpperCase()
-    const activeManifest = manifestId ? (ASSET_MANIFESTS[manifestId] || this.getManifest()) : this.getManifest()
 
     let torsoNode: THREE.Object3D | undefined
     let weaponNode: THREE.Object3D | undefined
@@ -901,5 +992,29 @@ export class PieceBuilder3D {
     }
 
     return { group, torsoNode, weaponNode, shieldNode, plinthNode }
+  }
+
+  public static disposeNodeResources(node: Piece3DNode) {
+    node.group.traverse((obj) => {
+      if ((obj as THREE.Mesh).isMesh) {
+        const mesh = obj as THREE.Mesh
+        mesh.geometry?.dispose()
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+        for (const m of mats) {
+          if (!m) continue
+          const std = m as THREE.MeshStandardMaterial
+          if (std.map && !this.textureCache.has(`atlas_${node.pieceCode}`) && std.map !== this.textureCache.get(`atlas_${node.pieceCode}`)) {
+            // Only dispose cloned textures, never master cached ones
+          }
+          if (std.map && ![...this.textureCache.values()].includes(std.map)) {
+            std.map.dispose()
+          }
+          // Avoid disposing shared palette materials
+          if (!Object.values(WHITE_PALETTE).includes(std) && !Object.values(BLACK_PALETTE).includes(std)) {
+            m.dispose()
+          }
+        }
+      }
+    })
   }
 }

@@ -114,6 +114,7 @@ export function GameBoard({
 
   // Modals & summaries
   const [showResultModal, setShowResultModal] = useState(false)
+  const [isEndingSequencePending, setIsEndingSequencePending] = useState(false)
   const [resultData, setResultData] = useState<{
     type: 'win' | 'loss' | 'draw'
     title: string
@@ -178,14 +179,13 @@ export function GameBoard({
 
       if (windowWidth < 1024) {
         // Mobile / Tablet: scale precisely to viewport width with comfortable edge margins
-        const horizontalPadding = windowWidth < 640 ? 20 : 40
+        const horizontalPadding = windowWidth < 640 ? 28 : 44
         const maxAvailable = windowWidth - horizontalPadding
         setBoardWidth(Math.max(280, Math.min(maxAvailable, 540)))
       } else {
-        // Desktop: Height-conscious to prevent vertical scrolling!
-        // Navbar: 64px, Top/Bottom player banners: ~96px, Margins & toolbar: ~70px -> Total chrome ~230px
-        const availableHeight = windowHeight - 230
-        const maxDesktopWidth = isSidebarCollapsed ? 760 : 600
+        // Desktop: Fit top banner, board, bottom banner, and toolbar cleanly within 768px+ viewports
+        const availableHeight = windowHeight - 250
+        const maxDesktopWidth = isSidebarCollapsed ? 760 : 620
         const optimal = Math.max(380, Math.min(maxDesktopWidth, availableHeight))
         setBoardWidth(optimal)
       }
@@ -242,15 +242,17 @@ export function GameBoard({
     }
 
     setResultData({ type, title, subtitle })
-    
-    // For 3D War Chess, delay modal by 3800ms to allow royal salute/bow to finish. For 2D, show in 750ms.
-    const modalDelay = settings.perspective === 'true-3d' ? 3800 : 750
+
+    // For 2.5D War Chess, delay modal by 3800ms to allow royal salute/bow to finish unobstructed. For 2D, show in 750ms.
+    const modalDelay = settings.perspective === 'true-3d' && settings.animationDuration > 0 ? 3800 : 750
     if (resultModalTimeoutRef.current) clearTimeout(resultModalTimeoutRef.current)
+    setIsEndingSequencePending(settings.perspective === 'true-3d' && settings.animationDuration > 0)
     resultModalTimeoutRef.current = setTimeout(() => {
+      setIsEndingSequencePending(false)
       setShowResultModal(true)
     }, modalDelay)
     return true
-  }, [initialSide, difficulty, settings.perspective])
+  }, [initialSide, difficulty, settings.perspective, settings.animationDuration])
 
   // Get UCI depth command
   const getSearchCommand = useCallback((diff: Difficulty) => {
@@ -268,6 +270,38 @@ export function GameBoard({
     }
   }, [])
 
+  // Helper to dispatch authoritative move / capture animation events cleanly
+  const dispatchMoveAnimation = useCallback(
+    (move: Move) => {
+      const pieceCode = `${move.color}${move.piece.toUpperCase()}`
+      const isCastling = move.flags.includes('k') || move.flags.includes('q')
+      const isEnPassant = move.flags.includes('e')
+
+      if (move.captured) {
+        const victimColor = move.color === 'w' ? 'b' : 'w'
+        const capturedSquare = isEnPassant ? `${move.to[0]}${move.from[1]}` : move.to
+        soundService.playPieceCapture(activePreset.defaultSoundPack, settings.soundEnabled)
+        astraHub.notifyCapture({
+          attackerSquare: move.from,
+          victimSquare: move.to,
+          attackerPiece: pieceCode,
+          victimPiece: `${victimColor}${move.captured.toUpperCase()}`,
+          isEnPassant,
+          capturedSquare,
+          promotion: move.promotion,
+          timestamp: Date.now(),
+        })
+      } else {
+        soundService.playPieceMove(activePreset.defaultSoundPack, settings.soundEnabled)
+        astraHub.notifyMove(move.from, move.to, pieceCode, {
+          isCastling,
+          promotion: move.promotion,
+        })
+      }
+    },
+    [activePreset.defaultSoundPack, settings.soundEnabled]
+  )
+
   // Stockfish hook
   const { postMessage } = useStockfish(
     useCallback(
@@ -283,21 +317,7 @@ export function GameBoard({
             if (move) {
               setFen(game.current.fen())
               setLastMove({ from, to })
-
-              // Astra event notification
-              astraHub.notifyMove(from, to, move.piece)
-              if (move.captured) {
-                soundService.playPieceCapture(activePreset.defaultSoundPack, settings.soundEnabled)
-                astraHub.notifyCapture({
-                  attackerSquare: from,
-                  victimSquare: to,
-                  attackerPiece: `${move.color}${move.piece.toUpperCase()}`,
-                  victimPiece: `${move.color === 'w' ? 'b' : 'w'}${move.captured.toUpperCase()}`,
-                  timestamp: Date.now(),
-                })
-              } else {
-                soundService.playPieceMove(activePreset.defaultSoundPack, settings.soundEnabled)
-              }
+              dispatchMoveAnimation(move)
 
               if (game.current.inCheck()) {
                 soundService.playCheckAlert(settings.soundEnabled)
@@ -314,7 +334,7 @@ export function GameBoard({
           }
         }
       },
-      [activePreset, settings.soundEnabled, difficulty, evaluateGameEnd]
+      [dispatchMoveAnimation, settings.soundEnabled, difficulty, evaluateGameEnd]
     )
   )
 
@@ -348,117 +368,104 @@ export function GameBoard({
   }, [initialSide, scheduleBotMove])
 
   // Handle Square Click
-  const handleSquareClick = (square: string) => {
-    if (isBotThinking || game.current.isGameOver()) return
+  const handleSquareClick = useCallback(
+    (square: string) => {
+      if (isBotThinking || game.current.isGameOver()) return
 
-    const playerColor = initialSide === 'white' ? 'w' : 'b'
-    if (game.current.turn() !== playerColor) return
+      const playerColor = initialSide === 'white' ? 'w' : 'b'
+      if (game.current.turn() !== playerColor) return
 
-    // If already selected and clicking a valid destination
-    if (selectedSquare) {
-      const piece = game.current.get(selectedSquare as Square)
-      // Check promotion
-      if (
-        piece?.type === 'p' &&
-        ((piece.color === 'w' && square[1] === '8') || (piece.color === 'b' && square[1] === '1'))
-      ) {
-        setPendingPromotion({ from: selectedSquare, to: square, color: piece.color })
-        setSelectedSquare(null)
-        return
-      }
-
-      try {
-        const move = game.current.move({
-          from: selectedSquare,
-          to: square,
-          promotion: 'q',
-        })
-
-        if (move) {
-          setFen(game.current.fen())
-          setLastMove({ from: selectedSquare, to: square })
+      // If already selected and clicking a valid destination
+      if (selectedSquare) {
+        const piece = game.current.get(selectedSquare as Square)
+        // Check promotion (only if clicking a legal destination rank 8/1)
+        const legalTargets = game.current.moves({ square: selectedSquare as Square, verbose: true }) as Move[]
+        const isLegalTarget = legalTargets.some((m) => m.to === square)
+        if (
+          isLegalTarget &&
+          piece?.type === 'p' &&
+          ((piece.color === 'w' && square[1] === '8') || (piece.color === 'b' && square[1] === '1'))
+        ) {
+          setPendingPromotion({ from: selectedSquare, to: square, color: piece.color })
           setSelectedSquare(null)
-
-          if (move.captured) {
-            soundService.playPieceCapture(activePreset.defaultSoundPack, settings.soundEnabled)
-            astraHub.notifyCapture({
-              attackerSquare: selectedSquare,
-              victimSquare: square,
-              attackerPiece: `${move.color}${move.piece.toUpperCase()}`,
-              victimPiece: `${move.color === 'w' ? 'b' : 'w'}${move.captured.toUpperCase()}`,
-              timestamp: Date.now(),
-            })
-          } else {
-            soundService.playPieceMove(activePreset.defaultSoundPack, settings.soundEnabled)
-          }
-
-          if (!evaluateGameEnd()) {
-            scheduleBotMove(450)
-          }
           return
         }
-      } catch {
-        // Illegal move click
-      }
-    }
 
-    // Select piece if friendly
-    const clickedPiece = game.current.get(square as Square)
-    if (clickedPiece && clickedPiece.color === playerColor) {
-      soundService.playClick(settings.soundEnabled)
-      setSelectedSquare(square)
-    } else {
-      setSelectedSquare(null)
-    }
-  }
+        try {
+          const move = game.current.move({
+            from: selectedSquare,
+            to: square,
+            promotion: 'q',
+          })
+
+          if (move) {
+            setFen(game.current.fen())
+            setLastMove({ from: selectedSquare, to: square })
+            setSelectedSquare(null)
+            dispatchMoveAnimation(move)
+
+            if (!evaluateGameEnd()) {
+              scheduleBotMove(450)
+            }
+            return
+          }
+        } catch {
+          // Illegal move click
+        }
+      }
+
+      // Select piece if friendly
+      const clickedPiece = game.current.get(square as Square)
+      if (clickedPiece && clickedPiece.color === playerColor) {
+        soundService.playClick(settings.soundEnabled)
+        setSelectedSquare(square)
+      } else {
+        setSelectedSquare(null)
+      }
+    },
+    [isBotThinking, initialSide, selectedSquare, dispatchMoveAnimation, evaluateGameEnd, scheduleBotMove, settings.soundEnabled]
+  )
 
   // Handle Piece Drag & Drop
-  const handlePieceDrop = (source: string, target: string): boolean => {
-    if (isBotThinking || game.current.isGameOver()) return false
-    const playerColor = initialSide === 'white' ? 'w' : 'b'
-    if (game.current.turn() !== playerColor) return false
+  const handlePieceDrop = useCallback(
+    (source: string, target: string): boolean => {
+      if (isBotThinking || game.current.isGameOver()) return false
+      const playerColor = initialSide === 'white' ? 'w' : 'b'
+      if (game.current.turn() !== playerColor) return false
 
-    try {
-      const piece = game.current.get(source as Square)
-      if (!piece || piece.color !== playerColor) return false
+      try {
+        const piece = game.current.get(source as Square)
+        if (!piece || piece.color !== playerColor) return false
 
-      // Check promotion
-      if (
-        piece.type === 'p' &&
-        ((piece.color === 'w' && target[1] === '8') || (piece.color === 'b' && target[1] === '1'))
-      ) {
-        setPendingPromotion({ from: source, to: target, color: piece.color })
+        const legalTargets = game.current.moves({ square: source as Square, verbose: true }) as Move[]
+        const isLegalTarget = legalTargets.some((m) => m.to === target)
+        if (
+          isLegalTarget &&
+          piece.type === 'p' &&
+          ((piece.color === 'w' && target[1] === '8') || (piece.color === 'b' && target[1] === '1'))
+        ) {
+          setPendingPromotion({ from: source, to: target, color: piece.color })
+          return false
+        }
+
+        const move = game.current.move({ from: source, to: target })
+        if (!move) return false
+
+        setFen(game.current.fen())
+        setLastMove({ from: source, to: target })
+        setSelectedSquare(null)
+        dispatchMoveAnimation(move)
+
+        if (!evaluateGameEnd()) {
+          scheduleBotMove(450)
+        }
+        return true
+      } catch {
         return false
       }
-
-      const move = game.current.move({ from: source, to: target })
-      if (!move) return false
-
-      setFen(game.current.fen())
-      setLastMove({ from: source, to: target })
-      setSelectedSquare(null)
-
-      if (move.captured) {
-        soundService.playPieceCapture(activePreset.defaultSoundPack, settings.soundEnabled)
-        astraHub.notifyCapture({
-          attackerSquare: source,
-          victimSquare: target,
-          attackerPiece: `${move.color}${move.piece.toUpperCase()}`,
-          victimPiece: `${move.color === 'w' ? 'b' : 'w'}${move.captured.toUpperCase()}`,
-          timestamp: Date.now(),
-        })
-      } else {
-        soundService.playPieceMove(activePreset.defaultSoundPack, settings.soundEnabled)
-      }
-
-      if (!evaluateGameEnd()) {
-        scheduleBotMove(450)
-      }
-      return true
-    } catch {
-      return false
-    }
-  }
+    },
+    [isBotThinking, initialSide, dispatchMoveAnimation, evaluateGameEnd, scheduleBotMove]
+  )
 
   // Handle Promotion Selection
   const handlePromotionSelect = (promotedPiece: 'q' | 'r' | 'b' | 'n') => {
@@ -473,7 +480,7 @@ export function GameBoard({
       if (move) {
         setFen(game.current.fen())
         setLastMove({ from: pendingPromotion.from, to: pendingPromotion.to })
-        soundService.playPieceMove(activePreset.defaultSoundPack, settings.soundEnabled)
+        dispatchMoveAnimation(move)
         if (!evaluateGameEnd()) {
           scheduleBotMove(450)
         }
@@ -493,6 +500,8 @@ export function GameBoard({
     setFen(game.current.fen())
     setLastMove(null)
     setSelectedSquare(null)
+    setPendingPromotion(null)
+    setIsEndingSequencePending(false)
     setShowResultModal(false)
     setIsBotThinking(false)
     setBotQuote(BOT_QUOTES[difficulty].normal[0])
@@ -514,12 +523,20 @@ export function GameBoard({
       title: 'Match Resigned',
       subtitle: `You conceded the game to BlunderBot (${difficulty.toUpperCase()}).`,
     })
-    const modalDelay = settings.perspective === 'true-3d' ? 3800 : 500
+    const modalDelay = settings.perspective === 'true-3d' && settings.animationDuration > 0 ? 3800 : 500
     if (resultModalTimeoutRef.current) clearTimeout(resultModalTimeoutRef.current)
+    setIsEndingSequencePending(settings.perspective === 'true-3d' && settings.animationDuration > 0)
     resultModalTimeoutRef.current = setTimeout(() => {
+      setIsEndingSequencePending(false)
       setShowResultModal(true)
     }, modalDelay)
   }
+
+  const handleSkipEnding = useCallback(() => {
+    if (resultModalTimeoutRef.current) clearTimeout(resultModalTimeoutRef.current)
+    setIsEndingSequencePending(false)
+    setShowResultModal(true)
+  }, [])
 
   // Flip board orientation
   const handleFlipBoard = () => {
@@ -636,7 +653,7 @@ export function GameBoard({
         </div>
 
         {/* The Physical Chessboard */}
-        <div className="w-full flex items-center justify-center py-0.5">
+        <div className="relative w-full flex items-center justify-center py-0.5">
           <ChessboardFrame
             fen={fen}
             side={side}
@@ -649,6 +666,15 @@ export function GameBoard({
             onPieceDrop={handlePieceDrop}
             boardOnlyRef={boardOnlyRef}
           />
+          {isEndingSequencePending && (
+            <button
+              type="button"
+              onClick={handleSkipEnding}
+              className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 px-4 py-1.5 rounded-full bg-[#0C0F14]/90 hover:bg-[#1C232D] border border-[#DDAA57]/60 text-[#DDAA57] text-xs font-semibold shadow-xl backdrop-blur-md transition"
+            >
+              Skip Ending Sequence →
+            </button>
+          )}
         </div>
 
         {/* Bottom Player Banner */}
@@ -688,10 +714,10 @@ export function GameBoard({
               <PerspectiveIcon className="w-3.5 h-3.5 text-[#438A69]" />
               <span>
                 {settings.perspective === 'true-3d'
-                  ? '3D'
+                  ? (settings.experimental3d ? '3D Exp' : '2.5D War')
                   : settings.perspective === 'elevated-2.5d'
-                  ? '2.5D'
-                  : '2D'}
+                  ? '2D Tilted'
+                  : '2D Flat'}
               </span>
             </button>
 

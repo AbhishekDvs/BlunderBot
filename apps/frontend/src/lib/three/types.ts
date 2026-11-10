@@ -23,10 +23,12 @@ export interface PieceAnimator {
   frameTime: number
   loop: boolean
   isFinished: boolean
+  facing?: 'front' | 'back'
   onComplete?: (() => void) | undefined
   updateUV: () => void
   playClip: (clipName: string, loop?: boolean, onComplete?: () => void) => void
   setFrame: (frameIndex: number) => void
+  setFacing?: (facing: 'front' | 'back') => void
   update: (deltaSeconds: number) => void
 }
 
@@ -52,8 +54,11 @@ export interface CombatEncounterParams {
   defenderCode: string
   defenderSquare: string
   isEnPassant?: boolean
+  capturedSquare?: string
   pacing: AnimationPacing
+  onAnticipation?: () => void
   onContact?: () => void
+  onDefeat?: () => void
   onComplete?: () => void
 }
 

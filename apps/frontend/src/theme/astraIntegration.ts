@@ -11,10 +11,10 @@
  * - Mount points for WebGL / Three.js battlefield canvas overlays
  */
 
-import { AstraCaptureEvent, AstraPieceModelProvider } from './themeTypes'
+import { AstraCaptureEvent, AstraMoveMeta, AstraPieceModelProvider } from './themeTypes'
 
 type CaptureListener = (event: AstraCaptureEvent) => void
-type MoveListener = (from: string, to: string, piece: string) => void
+type MoveListener = (from: string, to: string, piece: string, meta?: AstraMoveMeta) => void
 type GameEndListener = (outcome: 'white_wins' | 'black_wins' | 'draw') => void
 type GameResetListener = () => void
 
@@ -59,16 +59,16 @@ class AstraIntegrationHub {
   /**
    * Dispatches a move event to Astra's movement animation system
    */
-  public notifyMove(from: string, to: string, piece: string) {
+  public notifyMove(from: string, to: string, piece: string, meta?: AstraMoveMeta) {
     this.moveListeners.forEach((listener) => {
       try {
-        listener(from, to, piece)
+        listener(from, to, piece, meta)
       } catch (err) {
         console.error('[AstraIntegration] Move listener error:', err)
       }
     })
     if (this.provider.onMove) {
-      this.provider.onMove(from, to, piece)
+      this.provider.onMove(from, to, piece, meta)
     }
   }
 

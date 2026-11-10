@@ -51,13 +51,20 @@ export class GameEndingDirector3D {
     if (outcome === 'white_wins') {
       // White victory salute
       pieceNodes.forEach((node) => {
-        if (node.pieceCode.startsWith('w') && node.weaponNode) {
-          node.weaponNode.rotation.x = -0.5 // Raise weapon in salute
+        if (node.pieceCode.startsWith('w')) {
+          node.animator?.playClip('victory', true)
+          if (node.weaponNode) {
+            node.weaponNode.rotation.x = -0.5 // Raise weapon in salute
+          }
+        } else if (node.pieceCode !== 'bK') {
+          node.animator?.playClip('defend', false)
         }
       })
-      // Black King bows in submission
+      // Black King bows in submission (never captured or removed)
       if (blackKing) {
+        blackKing.group.visible = true
         blackKing.group.rotation.x = 0.35 // Lower posture
+        blackKing.animator?.playClip('defeat', false)
         if (blackKing.weaponNode) {
           blackKing.weaponNode.rotation.x = 0.7 // Lower sword to ground
         }
@@ -65,20 +72,28 @@ export class GameEndingDirector3D {
     } else if (outcome === 'black_wins') {
       // Black victory salute
       pieceNodes.forEach((node) => {
-        if (node.pieceCode.startsWith('b') && node.weaponNode) {
-          node.weaponNode.rotation.x = -0.5
+        if (node.pieceCode.startsWith('b')) {
+          node.animator?.playClip('victory', true)
+          if (node.weaponNode) {
+            node.weaponNode.rotation.x = -0.5
+          }
+        } else if (node.pieceCode !== 'wK') {
+          node.animator?.playClip('defend', false)
         }
       })
-      // White King bows in submission
+      // White King bows in submission (never captured or removed)
       if (whiteKing) {
+        whiteKing.group.visible = true
         whiteKing.group.rotation.x = -0.35
+        whiteKing.animator?.playClip('defeat', false)
         if (whiteKing.weaponNode) {
           whiteKing.weaponNode.rotation.x = 0.7
         }
       }
     } else {
-      // Draw: mutual respect, lower weapons
+      // Draw: mutual respect, lower weapons and disengage
       pieceNodes.forEach((node) => {
+        node.animator?.playClip('draw', false)
         if (node.weaponNode) {
           node.weaponNode.rotation.x = 0.2
         }
@@ -94,11 +109,20 @@ export class GameEndingDirector3D {
     }
   }
 
+  public skip(pieceNodes: Map<string, Piece3DNode>) {
+    this.reset(pieceNodes)
+  }
+
   public reset(pieceNodes: Map<string, Piece3DNode>) {
     this.isActive = false
     pieceNodes.forEach((node) => {
-      node.group.rotation.set(0, node.pieceCode.startsWith('b') ? Math.PI : 0, 0)
+      const is2p5d = !!node.cardMesh || node.group.name.includes('2p5D')
+      const baseYaw = is2p5d
+        ? (this.cameraCtrl.isFlipped ? Math.PI : 0)
+        : (node.pieceCode.startsWith('b') ? Math.PI : 0)
+      node.group.rotation.set(0, baseYaw, 0)
       if (node.weaponNode) node.weaponNode.rotation.set(0, 0, 0)
+      node.animator?.playClip('idle', true)
     })
     this.cameraCtrl.setMode('tactical')
   }

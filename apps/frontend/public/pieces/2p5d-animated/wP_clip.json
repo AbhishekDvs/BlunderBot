@@ -48,17 +48,28 @@
     },
     "defeat": {
       "start": 48,
-      "count": 8,
-      "fps": 12,
+      "count": 6,
+      "fps": 10,
       "loop": false
     },
     "victory": {
-      "start": 56,
-      "count": 8,
-      "fps": 12,
+      "start": 54,
+      "count": 6,
+      "fps": 10,
+      "loop": true
+    },
+    "draw": {
+      "start": 60,
+      "count": 4,
+      "fps": 6,
       "loop": false
     }
   },
   "pieceCode": "wP",
-  "image": "/pieces/2p5d-animated/wP_atlas.webp"
+  "image": "/pieces/2p5d-animated/wP_atlas.webp",
+  "backImage": "/pieces/2p5d-animated/wP_back_atlas.webp",
+  "directions": [
+    "front",
+    "back"
+  ]
 }

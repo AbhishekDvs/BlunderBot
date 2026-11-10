@@ -102,12 +102,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setPieceSet = useCallback((id: PieceSetId) => {
     if (PIECE_SETS[id]?.isAvailable) {
-      setSettings((prev) => ({ ...prev, pieceSetId: id }))
+      setSettings((prev) => ({
+        ...prev,
+        pieceSetId: id,
+        perspective: id === 'astra-medieval' ? 'true-3d' : (prev.perspective === 'true-3d' ? 'flat-2d' : prev.perspective),
+      }))
     }
   }, [])
 
   const setPerspective = useCallback((perspective: BoardPerspective) => {
-    setSettings((prev) => ({ ...prev, perspective }))
+    setSettings((prev) => ({
+      ...prev,
+      perspective,
+      pieceSetId: perspective === 'true-3d'
+        ? 'astra-medieval'
+        : (prev.pieceSetId === 'astra-medieval' ? 'default' : prev.pieceSetId),
+    }))
   }, [])
 
   const setSoundPack = useCallback((soundPackId: SoundPackId) => {
@@ -126,9 +136,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setSettings((prev) => {
       const order: BoardPerspective[] = ['true-3d', 'elevated-2.5d', 'flat-2d']
       const nextIdx = (order.indexOf(prev.perspective) + 1) % order.length
+      const nextPerspective = order[nextIdx]
       return {
         ...prev,
-        perspective: order[nextIdx],
+        perspective: nextPerspective,
+        pieceSetId: nextPerspective === 'true-3d'
+          ? 'astra-medieval'
+          : (prev.pieceSetId === 'astra-medieval' ? 'default' : prev.pieceSetId),
       }
     })
   }, [])

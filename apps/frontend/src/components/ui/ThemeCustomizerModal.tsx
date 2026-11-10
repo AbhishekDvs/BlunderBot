@@ -24,7 +24,8 @@ export function ThemeCustomizerModal() {
     activePieceSet,
     setBoardPreset,
     setPieceSet,
-    togglePerspective,
+    setPerspective,
+    updateSettings,
     toggleCoordinates,
     toggleSound,
     resetToDefaults,
@@ -121,11 +122,15 @@ export function ThemeCustomizerModal() {
                 </div>
               </div>
 
-              {/* Astra 3D War Chess Banner if active */}
-              {settings.boardPresetId === 'ancient-battlefield' && (
+              {/* Astra 2.5D War Chess Banner if active */}
+              {settings.perspective === 'true-3d' && settings.pieceSetId === 'astra-medieval' && (
                 <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-[#DDAA57]/10 border border-[#DDAA57]/30 text-xs text-[#DDAA57]">
                   <SparklesIcon className="w-4 h-4 text-[#DDAA57] flex-shrink-0" />
-                  <span>Astra Royal War Miniatures (3D) active with two-piece combat choreography and physical destruction.</span>
+                  <span>
+                    {settings.experimental3d
+                      ? 'Experimental 3D GLB mode active — experimental figurine study.'
+                      : 'Animated 2.5D Indian War Chess active with articulated combat and directional board flipping.'}
+                  </span>
                 </div>
               )}
             </div>
@@ -240,35 +245,107 @@ export function ThemeCustomizerModal() {
               </div>
             </div>
 
-            {/* Section 3: Physical & Audio Preferences */}
+            {/* Section 3: Visual Engine Mode (2D / Animated 2.5D / Experimental 3D) */}
             <div>
               <h3 className="text-xs font-bold uppercase tracking-wider text-[#84919D] mb-3">
-                Experience & Preferences
+                Rendering Engine Mode
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* 2.5D Physical Elevation */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
                 <button
                   type="button"
-                  onClick={togglePerspective}
+                  onClick={() => {
+                    soundService.playClick(settings.soundEnabled)
+                    updateSettings({ perspective: 'true-3d', pieceSetId: 'astra-medieval', experimental3d: false })
+                  }}
                   className={`p-3.5 rounded-xl border text-left transition ${
-                    settings.perspective === 'elevated-2.5d'
+                    settings.perspective === 'true-3d' && !settings.experimental3d
                       ? 'bg-[#DDAA57]/15 border-[#DDAA57] text-[#F5F6F8]'
                       : 'bg-[#11151B] border-[#202832] text-[#84919D] hover:bg-[#151A22]'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <PerspectiveIcon className="w-5 h-5 text-[#DDAA57]" />
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#1C232D] text-[#F5F6F8] border border-[#283341]">
-                      {settings.perspective === 'true-3d'
-                        ? 'True 3D War Chess'
-                        : settings.perspective === 'elevated-2.5d'
-                        ? '2.5D Depth'
-                        : '2D Flat'}
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#1C232D] text-[#DDAA57] border border-[#DDAA57]/40">
+                      Recommended
                     </span>
                   </div>
-                  <div className="font-semibold text-sm text-[#F5F6F8] mt-2">Board Perspective</div>
-                  <div className="text-xs text-[#84919D] mt-0.5">Toggle between 3D War Chess, 2.5D tactile tilt, and 2D flat</div>
+                  <div className="font-semibold text-sm text-[#F5F6F8] mt-2">Animated 2.5D</div>
+                  <div className="text-xs text-[#84919D] mt-0.5">48° tactical Indian war chess with character animations & combat</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundService.playClick(settings.soundEnabled)
+                    setPerspective('flat-2d')
+                    updateSettings({ experimental3d: false })
+                  }}
+                  className={`p-3.5 rounded-xl border text-left transition ${
+                    settings.perspective !== 'true-3d'
+                      ? 'bg-[#DDAA57]/15 border-[#DDAA57] text-[#F5F6F8]'
+                      : 'bg-[#11151B] border-[#202832] text-[#84919D] hover:bg-[#151A22]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-base">♟️</span>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#1C232D] text-[#F5F6F8] border border-[#283341]">
+                      Lightweight
+                    </span>
+                  </div>
+                  <div className="font-semibold text-sm text-[#F5F6F8] mt-2">2D Vector Board</div>
+                  <div className="text-xs text-[#84919D] mt-0.5">Fast, classical tournament SVG pieces with optional subtle tilt</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundService.playClick(settings.soundEnabled)
+                    updateSettings({ perspective: 'true-3d', pieceSetId: 'astra-medieval', experimental3d: true })
+                  }}
+                  className={`p-3.5 rounded-xl border text-left transition ${
+                    settings.perspective === 'true-3d' && settings.experimental3d
+                      ? 'bg-emerald-500/15 border-emerald-500 text-[#F5F6F8]'
+                      : 'bg-[#11151B] border-[#202832] text-[#84919D] hover:bg-[#151A22]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-base">🗿</span>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#1C232D] text-emerald-300 border border-emerald-500/40">
+                      Experimental
+                    </span>
+                  </div>
+                  <div className="font-semibold text-sm text-[#F5F6F8] mt-2">Experimental 3D</div>
+                  <div className="text-xs text-[#84919D] mt-0.5">Direct GLB miniature geometry study with full orbit</div>
+                </button>
+              </div>
+
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#84919D] mb-3">
+                Experience & Preferences
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Combat & Move Animations Toggle */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundService.playClick(settings.soundEnabled)
+                    updateSettings({ animationDuration: settings.animationDuration === 0 ? 250 : 0 })
+                  }}
+                  className={`p-3.5 rounded-xl border text-left transition ${
+                    settings.animationDuration > 0
+                      ? 'bg-[#DDAA57]/15 border-[#DDAA57] text-[#F5F6F8]'
+                      : 'bg-[#11151B] border-[#202832] text-[#84919D] hover:bg-[#151A22]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <SparklesIcon className="w-5 h-5 text-[#DDAA57]" />
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#1C232D] text-[#F5F6F8] border border-[#283341]">
+                      {settings.animationDuration > 0 ? 'Enabled' : 'Disabled'}
+                    </span>
+                  </div>
+                  <div className="font-semibold text-sm text-[#F5F6F8] mt-2">Piece Animations</div>
+                  <div className="text-xs text-[#84919D] mt-0.5">Toggle character walking, leaps, and combat sequences</div>
                 </button>
 
                 {/* Sound Effects */}

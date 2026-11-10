@@ -73,6 +73,7 @@ export interface ThemeSettings {
   soundEnabled: boolean
   animationDuration: number
   showMoveHints: boolean
+  experimental3d?: boolean
 }
 
 /**
@@ -84,8 +85,16 @@ export interface AstraCaptureEvent {
   attackerSquare: string
   victimPiece: string // e.g. 'bP'
   attackerPiece: string // e.g. 'wN'
+  isEnPassant?: boolean
+  capturedSquare?: string
+  promotion?: string
   timestamp: number
   onAnimationComplete?: () => void
+}
+
+export interface AstraMoveMeta {
+  isCastling?: boolean
+  promotion?: string
 }
 
 export interface AstraPieceModelProvider {
@@ -93,5 +102,5 @@ export interface AstraPieceModelProvider {
   version: string
   supportedPieces: string[]
   onCapture?: (event: AstraCaptureEvent) => void
-  onMove?: (from: string, to: string, piece: string) => void
+  onMove?: (from: string, to: string, piece: string, meta?: AstraMoveMeta) => void
 }

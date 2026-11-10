@@ -135,15 +135,6 @@ export class PhysicalBoard3D {
 
     const tileGeo = new THREE.BoxGeometry(tileWidth, tileHeight, tileWidth)
 
-    // Soft contact shadow decal geometry under each tile (prevents floating piece perception)
-    const shadowGeo = new THREE.CircleGeometry(0.36, 16)
-    const shadowMat = new THREE.MeshBasicMaterial({
-      color: 0x000000,
-      transparent: true,
-      opacity: 0.32,
-      depthWrite: false,
-    })
-
     for (let f = 0; f < 8; f++) {
       for (let r = 0; r < 8; r++) {
         const square = `${files[f]}${r + 1}`
@@ -157,13 +148,7 @@ export class PhysicalBoard3D {
         tile.position.set(x, tileHeight / 2 + 0.015, z)
         tile.receiveShadow = true
         tile.name = `Tile_${square}`
-        tile.userData = { square, file: files[f], rank: r + 1 }
-
-        // Contact shadow disk directly atop tile
-        const contactShadow = new THREE.Mesh(shadowGeo, shadowMat)
-        contactShadow.rotation.x = -Math.PI / 2
-        contactShadow.position.set(0, tileHeight / 2 + 0.001, 0)
-        tile.add(contactShadow)
+        tile.userData = { square, file: files[f], rank: r + 1, isLight }
 
         this.tileMeshes.set(square, tile)
         this.group.add(tile)
@@ -254,19 +239,19 @@ export class PhysicalBoard3D {
     const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
 
     // 3D Slender Polished Gold Pip for quiet legal moves (uncluttered, elegant)
-    const pipGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.015, 16)
+    const pipGeo = new THREE.CylinderGeometry(0.085, 0.085, 0.016, 16)
     const pipMat = new THREE.MeshStandardMaterial({
       color: 0xd4a559,
-      roughness: 0.28,
+      roughness: 0.25,
       metalness: 0.88,
     })
 
-    // Slender Crimson/Amber Ring Bracket for captures (low-noise, non-distracting)
-    const ringGeo = new THREE.RingGeometry(0.32, 0.38, 32)
+    // Crisp Crimson Ring Bracket for legal captures
+    const ringGeo = new THREE.RingGeometry(0.36, 0.43, 32)
     const ringMat = new THREE.MeshBasicMaterial({
-      color: 0xdc3545,
+      color: 0xef4444,
       transparent: true,
-      opacity: 0.48,
+      opacity: 0.65,
       depthWrite: false,
     })
 
@@ -375,6 +360,19 @@ export class PhysicalBoard3D {
   public clearLegalMoves() {
     this.moveIndicators.forEach((grp) => {
       grp.visible = false
+    })
+  }
+
+  public setPreset(preset: BoardPreset) {
+    this.preset = preset
+    const lightColor = new THREE.Color(preset.lightSquare)
+    const darkColor = new THREE.Color(preset.darkSquare)
+    this.tileMeshes.forEach((tile) => {
+      const mat = tile.material as THREE.MeshStandardMaterial
+      if (mat && mat.color) {
+        mat.color.copy(tile.userData?.isLight ? lightColor : darkColor)
+        mat.needsUpdate = true
+      }
     })
   }
 

@@ -149,6 +149,7 @@ export function ChessboardFrame({
           lastMove={lastMove}
           inCheckSquare={inCheckSquare}
           onSquareClick={onSquareClick}
+          boardOnlyRef={boardOnlyRef}
         />
       </div>
     )

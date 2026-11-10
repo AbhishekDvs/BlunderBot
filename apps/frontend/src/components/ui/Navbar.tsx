@@ -48,7 +48,7 @@ export function Navbar({ onNewGameClick }: { onNewGameClick?: () => void }) {
               <span className="font-black tracking-tight text-base sm:text-lg text-[#F5F6F8] uppercase font-sans">
                 Blunder<span className="text-[#DDAA57]">Bot</span>
               </span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-[#1C232D] text-[#84919D] border border-[#283341] tracking-wider uppercase">
+              <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-[#1C232D] text-[#84919D] border border-[#283341] tracking-wider uppercase">
                 Tactical HUD
               </span>
             </div>
@@ -114,9 +114,9 @@ export function Navbar({ onNewGameClick }: { onNewGameClick?: () => void }) {
             <PerspectiveIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">
               {settings.perspective === 'true-3d'
-                ? '3D War Chess'
+                ? (settings.experimental3d ? '3D Exp' : '2.5D War')
                 : settings.perspective === 'elevated-2.5d'
-                ? '2.5D Depth'
+                ? '2D Tilted'
                 : '2D Flat'}
             </span>
           </button>

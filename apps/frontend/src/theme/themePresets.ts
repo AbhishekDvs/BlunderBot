@@ -118,9 +118,9 @@ export const BOARD_PRESETS: Record<string, BoardPreset> = {
   },
   'ancient-battlefield': {
     id: 'ancient-battlefield',
-    name: 'Ancient Battlefield · Experimental',
-    subtitle: 'Material study — army assets not ready',
-    description: 'Experimental sandstone color study. Sculpted armies, physical materials and combat animation are not production-ready.',
+    name: 'Ancient Battlefield',
+    subtitle: 'Carved Sandstone & Basalt',
+    description: 'Royal sandstone light tiles and volcanic basalt dark tiles calibrated for Animated 2.5D Indian War Chess.',
     lightSquare: '#C8A87D',
     darkSquare: '#483526',
     lightSquareText: '#261C14',
@@ -174,13 +174,13 @@ export const PIECE_SETS: Record<string, PieceSet> = {
   },
   'astra-medieval': {
     id: 'astra-medieval',
-    name: 'Astra Medieval Army (3D)',
+    name: 'Astra Indian War Chess (2.5D)',
     author: 'Astra Studio (Ancient Indian War Chess)',
-    description: 'Padati (Pawn), Ashva Senani (Knight), Durg (Rook), Acharya (Bishop), Samrajni (Queen), Raja (King). True 3D animated war chess.',
+    description: 'Padati (Pawn), Ashva Senani (Knight), Durg (Rook), Acharya (Bishop), Samrajni (Queen), Raja (King) — animated 2.5D Indian war chess.',
     type: 'astra-3d-model',
     isAvailable: true,
     previewPieceCode: 'wN',
-    tag: 'Astra Royal War Miniatures (3D)',
+    tag: 'Animated 2.5D War Chess',
   },
 }
 
@@ -193,6 +193,7 @@ export const DEFAULT_THEME_SETTINGS: ThemeSettings = {
   soundEnabled: true,
   animationDuration: 250,
   showMoveHints: true,
+  experimental3d: false,
 }
 
 /** Apply the asset gate to hydration and every settings write. */
