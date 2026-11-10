@@ -289,12 +289,12 @@ export function ThreeBoardCanvas({
 
   // Skip active combat or ending sequence
   const handleSkipCombat = useCallback(() => {
-    if (rendererRef.current) {
-      rendererRef.current.cancelActiveAnimations()
-      if (rendererRef.current.endingDirector.isActive) {
-        rendererRef.current.skipEnding()
-      }
-    }
+    const renderer = rendererRef.current
+    if (!renderer) return
+    // Completing the final capture may synchronously start the queued ending.
+    // One input belongs only to the presentation that was active when clicked.
+    if (renderer.endingDirector.isActive) renderer.skipEnding()
+    else renderer.cancelActiveAnimations()
   }, [])
 
   // Inspector Mode Setup (dev-only)

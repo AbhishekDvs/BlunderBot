@@ -110,3 +110,33 @@ yarn --cwd apps/frontend build
    - Debug & stabilize **Test C** (ensure `Skip` click hits while the first capture `wP x bP` is in its active React + stage window and queued `Qxd5` proceeds cleanly).
    - Debug & stabilize **Test H** (verify real square click hit-testing in 2.5D and `flat-2d` modes and confirm Stockfish WASM worker initialization/reply timing in Playwright).
    - Inspect live desktop & mobile gameplay frames (`1. e4 d5 2. exd5 Qxd5` and `4k3/8/4b3/8/3N4/8/8/4K3` `d4e6`) to sign off final 2.5D visual polish, re-run `yarn --cwd apps/frontend build`, then push and open PR once green.
+
+## Home-PC continuation — intermediate checkpoint (2026-11-10)
+
+- Recovered the complete `origin/codex/cinematic-recovery-checkpoint` at
+  `1b9225cf2115fec76bfe39eecb04d30fcc19a9f7`; verified `18352da` is an ancestor.
+- Working branch: `codex/cinematic-gameplay-stabilization`. Original checkpoint,
+  art branch and `main` remain unchanged.
+- Original browser Tests C and H both passed against the production build here.
+  The original PC's timeout was not reproduced; no engine or hit-test defect has
+  been established. Test weaknesses were renderer-only reset versus React game
+  state, sleeps around selection, unbounded polling, and broad SAN selectors.
+- Reworked C to click the real Skip button atomically with active-stage identity,
+  phase and queued-reply checks. It verifies exact next ownership, removed units,
+  effects cleanup, final FEN and restoration of the previous camera.
+- Reworked H to use fresh actual UI games, selection acknowledgement, real worker
+  `bestmove` messages and exact chess.js/FEN reconciliation in both modes, with
+  multiple moves/captures and authored gait-frame/movement checks.
+- Fixed one Skip input also skipping an ending started by that capture.
+- Fixed encounter-stage scale changing as actors approach/settle; frame the full
+  movement path once while preserving authored contact and artwork.
+- Production build, standalone TypeScript, ESLint and all 30 unit/asset tests pass.
+- Expanded browser run: A–G passed, including new C and stable-scale contact
+  assertion. New Black/draw/UI tests exposed test harness assumptions (no stage
+  has undefined effects ownership; Playwright actionability can outlast an ending
+  under SwiftShader). These harness fixes are under revalidation, not yet signed off.
+- Screenshots are in ignored `.cache/recovery/` only. No evidence artifacts staged.
+- Browser invocation on this PC: set `PLAYWRIGHT_MODULE` to the installed runtime's
+  `node_modules/playwright` and `PLAYWRIGHT_EXECUTABLE_PATH` to installed Chromium.
+  `BLUNDERBOT_BROWSER_GPU=hardware` omits forced SwiftShader flags; report the
+  actual WebGL renderer before attributing measurements to hardware GPU rendering.

@@ -199,8 +199,11 @@ export class SpriteEncounterStage {
     const settle=Math.max(0,Math.min(1,(elapsed-this.times.settlement)/430))
     const charge=Math.sign(sep || 1)*.72
     const ax=-sep-charge*(1-approach)+sep*settle
-    const left=Math.min(ax-ad.width*.5,-bd.width*.5)
-    const right=Math.max(ax+ad.width*.5,bd.width*.5)
+    // Fit the whole movement path once. Reframing around the current pose made
+    // the actors grow during approach and shrink again during settlement.
+    const startX=-sep-charge
+    const left=Math.min(startX-ad.width*.5,-sep-ad.width*.5,-ad.width*.5,-bd.width*.5)
+    const right=Math.max(startX+ad.width*.5,-sep+ad.width*.5,ad.width*.5,bd.width*.5)
     const scale=Math.min(w*.86/(right-left),h*.75/Math.max(ad.height,bd.height))
     const center=w/2-(left+right)*.5*scale
     const floor=h*.84
@@ -244,7 +247,7 @@ export class SpriteEncounterStage {
     ctx.textAlign='center';ctx.fillStyle='#d9b878';ctx.font=`600 ${Math.max(10,w*.021)}px Georgia, serif`;ctx.fillText('ANCIENT INDIAN WAR CHESS',w/2,h*.075)
     ctx.fillStyle='#f2e7d0';ctx.font=`${Math.max(12,w*.026)}px Georgia, serif`;ctx.fillText(`${name(a.pieceCode)}  ·  ${name(b.pieceCode)}`,w/2,h*.123)
     ctx.fillStyle='#b5b5a1';ctx.font='12px Georgia, serif';ctx.fillText(`${this.params?.attackerSquare}  →  ${this.params?.destinationSquare ?? this.params?.defenderSquare}`,w/2,h*.94)
-    this.diagnostics={owner:this.owner,phase:this.phase,elapsed,actorIds:actors.map(actor=>actor.node.instanceId),bounds,viewport:[w,h],contactPoint:point,contactErrorPx:Math.abs(this.contact.tipLocal[1]-this.contact.blockLocal[1])*scale,calibratedContact:this.contact.calibrated,effectsOwner:this.firedContact?this.owner:null}
+    this.diagnostics={owner:this.owner,phase:this.phase,elapsed,scale,actorIds:actors.map(actor=>actor.node.instanceId),bounds,viewport:[w,h],contactPoint:point,contactErrorPx:Math.abs(this.contact.tipLocal[1]-this.contact.blockLocal[1])*scale,calibratedContact:this.contact.calibrated,effectsOwner:this.firedContact?this.owner:null}
   }
 
   public finish(skipped=false) {

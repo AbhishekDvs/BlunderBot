@@ -139,7 +139,13 @@ export function ChessboardFrame({
 
   if (is3D) {
     return (
-      <div className="relative flex flex-col items-center justify-center p-0.5">
+      <div
+        data-testid="chessboard-frame"
+        data-fen={fen}
+        data-perspective={settings.perspective}
+        data-selected-square={selectedSquare ?? ''}
+        className="relative flex flex-col items-center justify-center p-0.5"
+      >
         <ThreeBoardCanvas
           fen={fen}
           side={side}
@@ -157,6 +163,10 @@ export function ChessboardFrame({
 
   return (
     <div
+      data-testid="chessboard-frame"
+      data-fen={fen}
+      data-perspective={settings.perspective}
+      data-selected-square={selectedSquare ?? ''}
       className="relative flex items-center justify-center transition-all duration-500 ease-out"
       style={{
         transform: is25D ? 'perspective(1100px) rotateX(4.5deg) translateY(-6px)' : 'none',
