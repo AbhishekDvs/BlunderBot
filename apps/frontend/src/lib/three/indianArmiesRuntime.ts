@@ -92,6 +92,7 @@ export interface EncounterEntry {
     defender: [number, number]
   }
   worldContact: {
+    defenderContactPx?: [number, number]
     attackerLocal: [number, number, number]
     defenderLocal: [number, number, number]
     defenderRootOffset: [number, number, number]
@@ -488,5 +489,10 @@ export class IndianArmiesRuntime {
     const physicalDuration = (worldDistance / worldStridePerCycle) * cycleMs * 0.22
     const minDur = isKnight ? 640 : worldDistance >= 1.5 ? 720 : 520
     return Math.round(Math.min(960, Math.max(minDur, physicalDuration)))
+  }
+
+  public static getMoveStrideWorld(pieceCode:string):number {
+    const stride=this.pieceClips.get(pieceCode)?.traversal?.nominalStridePx ?? DEFAULT_STRIDE_PX[pieceCode[1]] ?? 76
+    return stride*this.getCardPlacement(pieceCode[1]).width/256
   }
 }

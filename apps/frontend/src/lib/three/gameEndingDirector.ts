@@ -62,7 +62,7 @@ export class GameEndingDirector3D {
           node.group.visible = true
           if (is2p5d) {
             // Slight dignified posture bow without sinking plinth edge into board
-            node.group.rotation.x = winnerPrefix === 'w' ? 0.04 : -0.04
+            node.group.rotation.x = 0
           } else {
             node.group.rotation.x = winnerPrefix === 'w' ? 0.35 : -0.35
             if (node.weaponNode) {
@@ -92,6 +92,7 @@ export class GameEndingDirector3D {
     const elapsed = now - this.startTime
     if (elapsed >= this.durationMs) {
       this.isActive = false
+      this.cameraCtrl.setMode('tactical')
     }
   }
 
@@ -104,7 +105,7 @@ export class GameEndingDirector3D {
     pieceNodes.forEach((node) => {
       const is2p5d = !!node.cardMesh || node.group.name.includes('2p5D')
       const baseYaw = is2p5d
-        ? (this.cameraCtrl.isFlipped ? Math.PI : 0)
+        ? 0
         : (node.pieceCode.startsWith('b') ? Math.PI : 0)
       node.group.rotation.set(0, baseYaw, 0)
       if (node.weaponNode) node.weaponNode.rotation.set(0, 0, 0)

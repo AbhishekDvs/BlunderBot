@@ -36,6 +36,7 @@ export function ThreeBoardCanvas({
   boardOnlyRef,
 }: ThreeBoardCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const viewportHeight=Math.round(boardWidth*.82)
   const rendererRef = useRef<ThreeChessRenderer | null>(null)
   const { activePreset, settings } = useTheme()
   const systemReducedMotion = useReducedMotion()
@@ -101,12 +102,15 @@ export function ThreeBoardCanvas({
             soundService.playCombatImpact(attackerClass, settings.soundEnabled)
           },
           () => {
-            setIsCombatOrEndingActive(false)
             event.onAnimationComplete?.()
           },
           {
             isEnPassant: event.isEnPassant,
             capturedSquare: event.capturedSquare,
+            beforeFen: event.beforeFen,
+            afterFen: event.afterFen,
+            moveId: event.moveId,
+            promotion: event.promotion,
             onAnticipation: () => {
               soundService.playCombatAnticipation(attackerClass, settings.soundEnabled)
             },
@@ -117,14 +121,14 @@ export function ThreeBoardCanvas({
 
     const unsubMove = astraHub.onMove((from, to, piece, meta) => {
       if (rendererRef.current) {
-        rendererRef.current.triggerMove(from, to, piece, undefined, { isCastling: meta?.isCastling })
+        rendererRef.current.triggerMove(from, to, piece, undefined, meta)
       }
     })
 
-    const unsubEnd = astraHub.onGameEnd((outcome) => {
+    const unsubEnd = astraHub.onGameEnd((outcome,onComplete) => {
       if (rendererRef.current) {
         setIsCombatOrEndingActive(true)
-        rendererRef.current.triggerGameEnding(outcome)
+        rendererRef.current.triggerGameEnding(outcome,onComplete)
       }
     })
 
@@ -161,6 +165,7 @@ export function ThreeBoardCanvas({
     })
 
     rendererRef.current = renderer
+    renderer.onPresentationChange=setIsCombatOrEndingActive
     renderer.setFen(fenRef.current)
     if (typeof window !== 'undefined') {
       (window as unknown as { __THREE_RENDERER__: unknown }).__THREE_RENDERER__ = renderer
@@ -169,7 +174,6 @@ export function ThreeBoardCanvas({
     // Preload 2.5D animated textures and refresh board pieces
     PieceBuilder3D.preloadArmyModels('2p5d-stylized', sideRef.current).then(() => {
       if (isMounted && rendererRef.current) {
-        rendererRef.current.clearPieces()
         rendererRef.current.setFen(fenRef.current)
       }
     })
@@ -200,7 +204,7 @@ export function ThreeBoardCanvas({
 
   // Sync Last Move
   useEffect(() => {
-    if (rendererRef.current && !isInspectorOpen) {
+    if (rendererRef.current && !isInspectorOpen && !rendererRef.current.presentation.busy) {
       rendererRef.current.board.setLastMove(lastMove)
     }
   }, [lastMove, isInspectorOpen])
@@ -254,9 +258,9 @@ export function ThreeBoardCanvas({
   // Handle Resize
   useEffect(() => {
     if (rendererRef.current && boardWidth > 0) {
-      rendererRef.current.resize(boardWidth, boardWidth)
+      rendererRef.current.resize(boardWidth, viewportHeight)
     }
-  }, [boardWidth])
+  }, [boardWidth,viewportHeight])
 
   // Manifest switcher (dev-only)
   const handleSwitchManifest = useCallback(async (newManifestId: string) => {
@@ -285,7 +289,6 @@ export function ThreeBoardCanvas({
 
   // Skip active combat or ending sequence
   const handleSkipCombat = useCallback(() => {
-    setIsCombatOrEndingActive(false)
     if (rendererRef.current) {
       rendererRef.current.cancelActiveAnimations()
       if (rendererRef.current.endingDirector.isActive) {
@@ -354,7 +357,7 @@ export function ThreeBoardCanvas({
         className="relative rounded-2xl overflow-hidden shadow-2xl border border-[#283341] bg-[#0A0D12]"
         style={{
           width: `${boardWidth}px`,
-          height: `${boardWidth}px`,
+          height: `${viewportHeight}px`,
         }}
       />
 
@@ -378,7 +381,7 @@ export function ThreeBoardCanvas({
 
       {/* Clean Tactical Camera & Pacing Bar */}
       <div className="absolute top-2.5 right-2.5 z-30 flex items-center gap-1 p-1 rounded-xl bg-[#0C0F14]/85 backdrop-blur-md border border-[#202832] shadow-lg text-[11px]">
-        <button
+        {showDevTools && <button
           type="button"
           onClick={handleToggleCamera}
           className="px-2 py-1 rounded-lg hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8] transition font-medium flex items-center gap-1"
@@ -387,7 +390,7 @@ export function ThreeBoardCanvas({
           <span className="font-semibold text-[#F5F6F8]">
             {cameraMode === 'tactical' ? 'Tactical 48°' : 'Cinematic 34°'}
           </span>
-        </button>
+        </button>}
 
         <button
           type="button"

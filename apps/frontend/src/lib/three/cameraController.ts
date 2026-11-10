@@ -42,13 +42,41 @@ export class CameraController3D {
   // Orbit angle for ending cinematics
   private orbitAngle = 0
   private isOrbiting = false
+  private encounterOwner: string | null = null
+  private encounterState: {
+    position: THREE.Vector3; quaternion: THREE.Quaternion; targetPosition: THREE.Vector3;
+    targetLookAt: THREE.Vector3; lookAt: THREE.Vector3; mode: CameraViewMode; orbiting: boolean
+  } | null = null
+
+  public acquireEncounter(owner: string) {
+    if (this.encounterOwner && this.encounterOwner !== owner) throw new Error('Camera is already owned by another encounter')
+    if (this.encounterOwner === owner) return
+    this.encounterOwner=owner
+    this.encounterState={position:this.camera.position.clone(),quaternion:this.camera.quaternion.clone(),targetPosition:this.targetPosition.clone(),targetLookAt:this.targetLookAt.clone(),lookAt:this.currentLookAt.clone(),mode:this.currentMode,orbiting:this.isOrbiting}
+    this.targetPosition.copy(this.camera.position);this.targetLookAt.copy(this.currentLookAt)
+    this.isOrbiting=false;this.trauma=0;this.currentMode='encounter'
+  }
+
+  public releaseEncounter(owner: string) {
+    if (owner !== this.encounterOwner || !this.encounterState) return false
+    const saved=this.encounterState
+    this.camera.position.copy(saved.position);this.camera.quaternion.copy(saved.quaternion)
+    this.targetPosition.copy(saved.targetPosition);this.targetLookAt.copy(saved.targetLookAt);this.currentLookAt.copy(saved.lookAt)
+    this.currentMode=saved.mode;this.isOrbiting=saved.orbiting
+    this.encounterOwner=null;this.encounterState=null;this.trauma=0
+    return true
+  }
+
+  public getSnapshot() {
+    return {position:this.camera.position.toArray(),quaternion:this.camera.quaternion.toArray(),target:this.targetPosition.toArray(),lookAt:this.currentLookAt.toArray(),mode:this.currentMode,owner:this.encounterOwner,isFlipped:this.isFlipped,azimuth:this.userAzimuth,pitch:this.userPitchOffset,zoom:this.userZoom}
+  }
 
   // Camera trauma / impact shake
   private trauma = 0
 
   constructor(aspect = 1.0) {
     // 34 deg FOV gives crisp long-focal-length perspective, preventing wide-angle edge warping
-    this.camera = new THREE.PerspectiveCamera(34, aspect, 0.1, 100)
+    this.camera = new THREE.PerspectiveCamera(22, aspect, 0.1, 100)
     this.updateCameraFitting()
     this.camera.position.copy(this.targetPosition)
     this.camera.lookAt(this.targetLookAt)
@@ -64,8 +92,6 @@ export class CameraController3D {
   public fitToBounds(box: THREE.Box3, margin = 0.07) {
     const center = new THREE.Vector3()
     box.getCenter(center)
-    const size = new THREE.Vector3()
-    box.getSize(size)
 
     const vFovRad = THREE.MathUtils.degToRad(this.camera.fov)
     const hFovRad = 2 * Math.atan(Math.tan(vFovRad / 2) * this.camera.aspect)
@@ -73,14 +99,12 @@ export class CameraController3D {
 
     let elevationRad: number
     let lookAtOffsetZ: number
-    let fitHeightDist: number
 
     switch (this.currentMode) {
       case 'cinematic':
         // Dedicated combat cinematic angle (30–40 deg)
         elevationRad = THREE.MathUtils.degToRad(34)
         lookAtOffsetZ = 0.25 * flipFactor
-        fitHeightDist = ((size.y * 0.5 + size.z * 0.5) / Math.tan(vFovRad / 2)) * (1.0 + margin)
         break
 
       case 'tactical':
@@ -95,31 +119,38 @@ export class CameraController3D {
         )
         lookAtOffsetZ = 0.0
 
-        // Projected vertical extent in camera plane: board depth * cos(elev) + piece height * sin(elev)
-        const projDepth = size.z * Math.cos(elevationRad) + size.y * Math.sin(elevationRad)
-        fitHeightDist = ((projDepth * 0.5) / Math.tan(vFovRad / 2)) * (1.0 + margin)
         break
       }
     }
 
-    // Horizontal extent distance to prevent left/right board cropping across aspect ratios
-    const fitWidthDist = ((size.x * 0.5) / Math.tan(hFovRad / 2)) * (1.0 + margin)
-
-    // Base distance fitted tightly to whichever axis constrains the viewport
-    const baseDistance = Math.max(fitHeightDist, fitWidthDist)
+    // Fit every bounding corner in camera space; the old projected-depth
+    // approximation ignored near corners and cropped the nearest ranks.
+    const azimuth=(this.isFlipped ? Math.PI : 0)+this.userAzimuth
+    const outward=new THREE.Vector3(Math.cos(elevationRad)*Math.sin(azimuth),Math.sin(elevationRad),Math.cos(elevationRad)*Math.cos(azimuth))
+    const right=new THREE.Vector3(Math.cos(azimuth),0,-Math.sin(azimuth))
+    const up=new THREE.Vector3().crossVectors(outward,right)
+    const aim=new THREE.Vector3(center.x,.32,center.z+lookAtOffsetZ)
+    let cornerDistance=0
+    for (const x of [box.min.x,box.max.x]) for (const y of [box.min.y,box.max.y]) for (const z of [box.min.z,box.max.z]) {
+      const p=new THREE.Vector3(x,y,z).sub(aim)
+      cornerDistance=Math.max(cornerDistance,p.dot(outward)+Math.abs(p.dot(right))/Math.tan(hFovRad/2),p.dot(outward)+Math.abs(p.dot(up))/Math.tan(vFovRad/2))
+    }
+    const baseDistance = cornerDistance*(1+margin)
     const distance = baseDistance * this.userZoom
 
-    // Base azimuth based on board orientation + user drag offset
-    const baseAzimuth = (this.isFlipped ? Math.PI : 0) + this.userAzimuth
-
-    const horizontalDist = distance * Math.cos(elevationRad)
-    const posX = center.x + horizontalDist * Math.sin(baseAzimuth)
-    const posY = center.y + distance * Math.sin(elevationRad)
-    const posZ = center.z + horizontalDist * Math.cos(baseAzimuth)
-
-    this.targetPosition.set(posX, posY, posZ)
-    // Center lookAt cleanly at board surface + modest piece waist height (0.32) so board fills viewport vertically
-    this.targetLookAt.set(center.x, 0.32, center.z + lookAtOffsetZ)
+    // Center the projected bounds, not an arbitrary offset on the board.
+    // Translating aim in the viewing plane preserves elevation and sprite perspective.
+    for(let pass=0;pass<3;pass++) {
+      let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity
+      for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z]) {
+        const p=new THREE.Vector3(x,y,z).sub(aim),depth=Math.max(.1,distance-p.dot(outward))
+        const px=p.dot(right)/depth,py=p.dot(up)/depth
+        minX=Math.min(minX,px);maxX=Math.max(maxX,px);minY=Math.min(minY,py);maxY=Math.max(maxY,py)
+      }
+      aim.addScaledVector(right,(minX+maxX)*distance/2).addScaledVector(up,(minY+maxY)*distance/2)
+    }
+    this.targetPosition.copy(aim).addScaledVector(outward,distance)
+    this.targetLookAt.copy(aim)
 
     if (this.currentMode === 'tactical') {
       this.savedTacticalPosition.copy(this.targetPosition)
@@ -131,7 +162,10 @@ export class CameraController3D {
    * Recalculates camera target based on active scene bounds and mode
    */
   public updateCameraFitting() {
+    const fov=this.restrict2p5d?22:34
+    if(this.camera.fov!==fov){this.camera.fov=fov;this.camera.updateProjectionMatrix()}
     if (this.currentMode === 'ending') {
+      if (this.restrict2p5d) { this.fitToBounds(this.sceneBox,.07);return }
       this.orbitAngle = this.isFlipped ? Math.PI : 0
       this.targetPosition.set(
         Math.sin(this.orbitAngle) * 7.5,
@@ -163,8 +197,9 @@ export class CameraController3D {
    * Sets camera view mode
    */
   public setMode(mode: CameraViewMode) {
+    if (this.encounterOwner) return
     this.currentMode = mode
-    this.isOrbiting = mode === 'ending'
+    this.isOrbiting = mode === 'ending' && !this.restrict2p5d
     this.updateCameraFitting()
   }
 
@@ -173,6 +208,7 @@ export class CameraController3D {
    * Positions camera at 30–40 deg (34°) focused on the clash line between attacker and defender
    */
   public frameCombatEncounter(attackerPos: THREE.Vector3, defenderPos: THREE.Vector3) {
+    this.acquireEncounter('legacy-combat')
     // 1. Save tactical camera state for clean return
     this.savedTacticalPosition.copy(this.camera.position)
     this.savedTacticalLookAt.copy(this.currentLookAt)
@@ -202,6 +238,7 @@ export class CameraController3D {
    * Smoothly returns camera from combat encounter to tactical gameplay framing
    */
   public returnFromCombat() {
+    if (this.releaseEncounter('legacy-combat')) return
     this.currentMode = 'tactical'
     this.updateCameraFitting()
   }
@@ -215,11 +252,11 @@ export class CameraController3D {
     this.userPitchOffset -= deltaY * 0.0035
     if (this.restrict2p5d) {
       // Keep 2.5D sprite cards strictly aligned to readable tactical perspective
-      this.userAzimuth = THREE.MathUtils.clamp(this.userAzimuth, -0.22, 0.22)
+      this.userAzimuth = THREE.MathUtils.clamp(this.userAzimuth, -0.10, 0.10)
       this.userPitchOffset = THREE.MathUtils.clamp(
         this.userPitchOffset,
-        THREE.MathUtils.degToRad(-10),
-        THREE.MathUtils.degToRad(14)
+        THREE.MathUtils.degToRad(-4),
+        THREE.MathUtils.degToRad(4)
       )
     } else {
       this.userPitchOffset = THREE.MathUtils.clamp(
@@ -278,6 +315,7 @@ export class CameraController3D {
    * Smooth update loop (rAF)
    */
   public update(delta: number) {
+    if (this.encounterOwner && this.encounterOwner!=='legacy-combat') return
     const lerpFactor = Math.min(1.0, delta * 5.2)
 
     // Slow cinematic orbit during game ending
@@ -285,7 +323,7 @@ export class CameraController3D {
       this.orbitAngle += delta * 0.28
       const baseYaw = this.isFlipped ? Math.PI : 0
       const sweepYaw = this.restrict2p5d
-        ? baseYaw + Math.sin(this.orbitAngle) * 0.26 // ±15 deg tactical sweep preserving 2.5D illusion
+        ? baseYaw
         : this.orbitAngle
       this.targetPosition.set(
         Math.sin(sweepYaw) * 8.2,

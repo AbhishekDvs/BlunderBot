@@ -231,6 +231,7 @@ export class PieceBuilder3D {
    * Preloads army models or 2.5D textures for the specified or active manifest
    */
   public static async preloadArmyModels(manifestId?: string, _side: 'white' | 'black' = 'white'): Promise<void> {
+    void _side // Authored views are shared across board orientations, never mirrored.
     const manifest = manifestId ? ASSET_MANIFESTS[manifestId] || this.getManifest() : this.getManifest()
     const codes = ['wP', 'wR', 'wN', 'wB', 'wQ', 'wK', 'bP', 'bR', 'bN', 'bB', 'bQ', 'bK']
 
@@ -399,16 +400,29 @@ export class PieceBuilder3D {
     const dim = this.DIMENSIONS_2P5D[classChar] || this.DIMENSIONS_2P5D.P
 
     // 1. Ground Contact Shadow Disc (Y = 0.005)
-    const shadowGeo = new THREE.CircleGeometry(placement.plinthR * 1.08, 24)
+    const shadowGeo = new THREE.CircleGeometry(placement.plinthR * .62, 32)
+    let shadowTexture: THREE.Texture | undefined
+    if (typeof document!=='undefined') {
+      const shadowCanvas=document.createElement('canvas');shadowCanvas.width=64;shadowCanvas.height=64
+      const context=shadowCanvas.getContext('2d')
+      if (context) {
+        const gradient=context.createRadialGradient(32,32,0,32,32,32)
+        gradient.addColorStop(0,'rgba(255,255,255,.9)');gradient.addColorStop(.45,'rgba(255,255,255,.45)');gradient.addColorStop(1,'rgba(255,255,255,0)')
+        context.fillStyle=gradient;context.fillRect(0,0,64,64)
+        shadowTexture=new THREE.CanvasTexture(shadowCanvas)
+      }
+    }
     const shadowMat = new THREE.MeshBasicMaterial({
+      ...(shadowTexture?{map:shadowTexture}:{}),
       color: 0x0a0806,
       transparent: true,
-      opacity: 0.45,
+      opacity: 0.22,
       depthWrite: false,
     })
     const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat)
     shadowMesh.rotation.x = -Math.PI / 2
-    shadowMesh.position.y = 0.005
+    shadowMesh.position.y = 0.012
+    shadowMesh.scale.y=.58
     group.add(shadowMesh)
 
     // 2. Beveled Stone Plinth Base (Y = 0.02, top surface Y = 0.04)
@@ -418,6 +432,7 @@ export class PieceBuilder3D {
     plinthMesh.position.y = 0.02
     plinthMesh.castShadow = true
     plinthMesh.receiveShadow = true
+    plinthMesh.visible = false
     group.add(plinthMesh)
 
     // 3. Antique Gold / Brass Inlay Ring on Plinth
@@ -425,6 +440,7 @@ export class PieceBuilder3D {
     const rimMesh = new THREE.Mesh(rimGeo, pal.gold)
     rimMesh.rotation.x = Math.PI / 2
     rimMesh.position.y = 0.04
+    rimMesh.visible = false
     group.add(rimMesh)
 
     // 4. Upright 2.5D Animated Character Card Mesh anchored to foot pivot ([128, 220] -> [0.5, 0.859375])
@@ -434,14 +450,13 @@ export class PieceBuilder3D {
     let activeTexture = mainTexture
 
     const cardGeo = new THREE.PlaneGeometry(placement.width, placement.height)
-    const cardMat = new THREE.MeshStandardMaterial({
+    const cardMat = new THREE.MeshBasicMaterial({
       map: activeTexture,
       transparent: true,
-      alphaTest: 0.08,
-      roughness: 0.35,
-      metalness: 0.12,
-      side: THREE.DoubleSide,
-      shadowSide: THREE.DoubleSide,
+      alphaTest: 0.035,
+      depthWrite: false,
+      side: THREE.FrontSide,
+      toneMapped: false,
     })
     const cardMesh = new THREE.Mesh(cardGeo, cardMat)
     cardMesh.name = `Card_${pieceCode}`
@@ -449,6 +464,7 @@ export class PieceBuilder3D {
     cardMesh.receiveShadow = false
     cardMesh.userData.cardRestPos = [...placement.cardPosition]
     cardMesh.userData.cardRestTiltX = placement.tiltRad
+    cardMesh.userData.cardDimensions = [placement.width,placement.height]
     cardMesh.userData.mainTexture = mainTexture
     cardMesh.position.set(placement.cardPosition[0], placement.cardPosition[1], placement.cardPosition[2])
     // Tilted backwards (-0.58 rad = ~33 deg) to perpendicularly face 48 deg oblique tactical camera
@@ -502,6 +518,7 @@ export class PieceBuilder3D {
         const atlasIndex = resolved.start + localFrame
         const cols = Math.max(1, resolved.cols)
         const rows = Math.max(1, resolved.rows)
+        activeTexture.repeat.set(1/cols,1/rows)
         const col = atlasIndex % cols
         const row = Math.floor(atlasIndex / cols)
         activeTexture.offset.x = col / cols
@@ -1083,5 +1100,18 @@ export class PieceBuilder3D {
         }
       }
     })
+  }
+
+  /** Face the viewing plane without ever reflecting artwork or rotating a sprite back into view. */
+  public static orientSprite(node: Piece3DNode,camera: THREE.Camera) {
+    const card=node.cardMesh
+    if (!card) return
+    const parent=card.parent!
+    parent.updateWorldMatrix(true,false)
+    const parentRotation=parent.getWorldQuaternion(new THREE.Quaternion())
+    card.quaternion.copy(parentRotation.invert().multiply(camera.quaternion))
+    const height=(card.userData.cardDimensions as [number,number])[1]
+    const center=new THREE.Vector3(0,(220/256-.5)*height,0).applyQuaternion(card.quaternion)
+    card.position.copy(center).add(new THREE.Vector3(0,.02,0))
   }
 }

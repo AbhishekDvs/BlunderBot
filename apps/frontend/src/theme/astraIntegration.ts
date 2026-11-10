@@ -15,7 +15,7 @@ import { AstraCaptureEvent, AstraMoveMeta, AstraPieceModelProvider } from './the
 
 type CaptureListener = (event: AstraCaptureEvent) => void
 type MoveListener = (from: string, to: string, piece: string, meta?: AstraMoveMeta) => void
-type GameEndListener = (outcome: 'white_wins' | 'black_wins' | 'draw') => void
+type GameEndListener = (outcome: 'white_wins' | 'black_wins' | 'draw',onPresentationComplete?:()=>void) => void
 type GameResetListener = () => void
 
 class AstraIntegrationHub {
@@ -75,14 +75,15 @@ class AstraIntegrationHub {
   /**
    * Dispatches game end outcome to Astra's 3D cinematic ending director
    */
-  public notifyGameEnd(outcome: 'white_wins' | 'black_wins' | 'draw') {
+  public notifyGameEnd(outcome: 'white_wins' | 'black_wins' | 'draw',onPresentationComplete?:()=>void) {
     this.gameEndListeners.forEach((listener) => {
       try {
-        listener(outcome)
+        listener(outcome,onPresentationComplete)
       } catch (err) {
         console.error('[AstraIntegration] Game end listener error:', err)
       }
     })
+    return this.gameEndListeners.size>0
   }
 
   public notifyGameReset() {

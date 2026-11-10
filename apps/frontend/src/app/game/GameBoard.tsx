@@ -207,11 +207,14 @@ export function GameBoard({
     let type: 'win' | 'loss' | 'draw' = 'draw'
     let title = 'Game Drawn'
     let subtitle = 'The game reached a peaceful resolution.'
+    const cinematic=settings.perspective==='true-3d' && settings.animationDuration>0
+    const presentationComplete=()=> { setIsEndingSequencePending(false);setShowResultModal(true) }
+    let presentationHandled=false
 
     if (game.current.isCheckmate()) {
       const winner = game.current.turn() === 'w' ? 'b' : 'w'
       const outcome = winner === 'w' ? 'white_wins' : 'black_wins'
-      astraHub.notifyGameEnd(outcome)
+      presentationHandled=astraHub.notifyGameEnd(outcome,cinematic?presentationComplete:undefined)
       if (winner === playerColor) {
         type = 'win'
         title = 'Glorious Victory!'
@@ -238,19 +241,15 @@ export function GameBoard({
     }
 
     if (!game.current.isCheckmate()) {
-      astraHub.notifyGameEnd('draw')
+      presentationHandled=astraHub.notifyGameEnd('draw',cinematic?presentationComplete:undefined)
     }
 
     setResultData({ type, title, subtitle })
 
     // For 2.5D War Chess, delay modal by 3800ms to allow royal salute/bow to finish unobstructed. For 2D, show in 750ms.
-    const modalDelay = settings.perspective === 'true-3d' && settings.animationDuration > 0 ? 3800 : 750
     if (resultModalTimeoutRef.current) clearTimeout(resultModalTimeoutRef.current)
-    setIsEndingSequencePending(settings.perspective === 'true-3d' && settings.animationDuration > 0)
-    resultModalTimeoutRef.current = setTimeout(() => {
-      setIsEndingSequencePending(false)
-      setShowResultModal(true)
-    }, modalDelay)
+    setIsEndingSequencePending(cinematic && presentationHandled)
+    if (!cinematic || !presentationHandled) resultModalTimeoutRef.current=setTimeout(presentationComplete,750)
     return true
   }, [initialSide, difficulty, settings.perspective, settings.animationDuration])
 
@@ -289,6 +288,8 @@ export function GameBoard({
           isEnPassant,
           capturedSquare,
           promotion: move.promotion,
+          beforeFen: move.before,
+          afterFen: move.after,
           timestamp: Date.now(),
         })
       } else {
@@ -296,6 +297,8 @@ export function GameBoard({
         astraHub.notifyMove(move.from, move.to, pieceCode, {
           isCastling,
           promotion: move.promotion,
+          beforeFen: move.before,
+          afterFen: move.after,
         })
       }
     },

@@ -163,7 +163,8 @@ test('M5: Game-Ending sequences salute without capturing the king', () => {
 
   // Black king posture acknowledges defeat, but is not deleted or hidden
   assert.ok(blackKing.group.visible, 'King must never be hidden or removed from the board')
-  assert.ok(blackKing.group.rotation.x > 0, 'Defeated king bows in submission')
+  assert.equal(blackKing.animator.currentClip, 'defeat_acknowledgement', 'King uses the authored acknowledgement animation')
+  assert.equal(blackKing.group.rotation.x, 0, 'The whole sprite card must remain grounded and untilted')
 
   // Reset restores tactical camera
   ending.reset(nodes)

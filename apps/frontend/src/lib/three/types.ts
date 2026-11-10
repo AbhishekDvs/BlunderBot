@@ -33,6 +33,7 @@ export interface PieceAnimator {
 }
 
 export interface Piece3DNode {
+  instanceId?: string
   pieceCode: string // 'wP', 'bK', etc.
   square: string // 'e4'
   group: THREE.Group
@@ -49,6 +50,7 @@ export interface Piece3DNode {
 }
 
 export interface CombatEncounterParams {
+  destinationSquare?: string
   attackerCode: string
   attackerSquare: string
   defenderCode: string

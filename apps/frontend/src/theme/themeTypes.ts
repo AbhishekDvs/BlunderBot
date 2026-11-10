@@ -81,6 +81,9 @@ export interface ThemeSettings {
  * animation triggers, and capture destruction sequences.
  */
 export interface AstraCaptureEvent {
+  moveId?: string
+  beforeFen?: string
+  afterFen?: string
   victimSquare: string
   attackerSquare: string
   victimPiece: string // e.g. 'bP'
@@ -93,6 +96,9 @@ export interface AstraCaptureEvent {
 }
 
 export interface AstraMoveMeta {
+  moveId?: string
+  beforeFen?: string
+  afterFen?: string
   isCastling?: boolean
   promotion?: string
 }

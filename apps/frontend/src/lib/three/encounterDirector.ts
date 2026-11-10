@@ -16,6 +16,8 @@ import { CARD_REST_TILT_X, PieceBuilder3D } from './pieceBuilder.ts'
 import { DebrisSystem3D } from './debris3D.ts'
 import { CameraController3D } from './cameraController.ts'
 import { IndianArmiesRuntime } from './indianArmiesRuntime.ts'
+import { SpriteEncounterStage } from './spriteEncounterStage.ts'
+import type { VisualPhase } from './visualEventQueue.ts'
 
 export type EncounterPhase =
   | 'idle'
@@ -26,6 +28,8 @@ export type EncounterPhase =
   | 'settling'         // 80% - 100%
 
 export class EncounterDirector3D {
+  public spriteStage: SpriteEncounterStage | null = null
+  public onPhase?: (phase: VisualPhase) => void
   public currentPhase: EncounterPhase = 'idle'
   public isActive = false
 
@@ -85,6 +89,19 @@ export class EncounterDirector3D {
     defender: Piece3DNode,
     params: CombatEncounterParams
   ) {
+    if (this.isActive) throw new Error('Capture must be serialized before starting another encounter')
+    if (this.spriteStage && attacker.cardMesh && defender.cardMesh) {
+      this.isActive=true
+      this.currentPhase='anticipation'
+      this.spriteStage.onPhase=(phase) => {
+        this.currentPhase=phase==='APPROACHING'?'approach':phase==='CONTACT'||phase==='IMPACT'?'impact':phase==='DESTRUCTION'?'stagger_fracture':phase==='SETTLEMENT'?'settling':'anticipation'
+        this.onPhase?.(phase)
+      }
+      this.spriteStage.start(attacker,defender,{
+        ...params,onComplete:() => { this.isActive=false;this.currentPhase='idle';params.onComplete?.() },
+      },attacker.group.userData.encounterId as string || attacker.group.uuid)
+      return
+    }
     this.attackerNode = attacker
     this.defenderNode = defender
     this.pacing = params.pacing
@@ -220,6 +237,7 @@ export class EncounterDirector3D {
    * Advances the two-piece encounter step
    */
   public update(now: number) {
+    if (this.spriteStage?.isActive) { this.spriteStage.update(now);return }
     if (!this.isActive || !this.attackerNode || !this.defenderNode) return
 
     const elapsed = now - this.startTime
@@ -571,6 +589,7 @@ export class EncounterDirector3D {
    * Finalizes encounter, restores camera, and signals game completion
    */
   public finish() {
+    if (this.spriteStage?.isActive) { this.spriteStage.finish(true);return }
     if (this.attackerNode) {
       this.attackerNode.group.position.copy(this.destinationPos)
       this.attackerNode.group.rotation.x = 0
@@ -614,7 +633,7 @@ export class EncounterDirector3D {
 
     // Return camera smoothly to active mode (tactical or cinematic)
     if (this.cameraCtrl.currentMode === 'encounter') {
-      this.cameraCtrl.setMode('tactical')
+      this.cameraCtrl.returnFromCombat()
     }
 
     this.isActive = false
@@ -629,5 +648,15 @@ export class EncounterDirector3D {
     if (this.isActive) {
       this.finish()
     }
+  }
+
+  /** Invalidation is different from skip: it must never fire a stale completion. */
+  public abort() {
+    this.spriteStage?.cancel()
+    this.isActive=false;this.currentPhase='idle'
+    this.onCompleteCallback=undefined;this.onContactCallback=undefined
+    this.onAnticipationCallback=undefined;this.onDefeatCallback=undefined
+    this.attackerNode=null;this.defenderNode=null
+    if (this.cameraCtrl.currentMode==='encounter') this.cameraCtrl.returnFromCombat()
   }
 }
