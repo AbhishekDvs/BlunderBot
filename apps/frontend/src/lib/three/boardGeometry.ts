@@ -378,18 +378,23 @@ export class PhysicalBoard3D {
 
   public setLastMove(lastMove: { from: string; to: string } | null) {
     for (const h of this.lastMoveHighlights) {
-      this.group.remove(h)
+      h.visible = false
     }
-    this.lastMoveHighlights = []
 
     if (!lastMove) return
 
-    for (const sq of [lastMove.from, lastMove.to]) {
-      const highlight = this.createHighlightMesh(0xeab308, 0.32)
+    // Keep the two overlays attached and reusable. Removing them on every move
+    // without disposal leaked GPU geometry/materials for the entire match.
+    for (const [index, sq] of [lastMove.from, lastMove.to].entries()) {
+      let highlight = this.lastMoveHighlights[index]
+      if (!highlight) {
+        highlight = this.createHighlightMesh(0xeab308, 0.32)
+        this.group.add(highlight)
+        this.lastMoveHighlights.push(highlight)
+      }
       const pos = this.squareToWorld(sq)
       highlight.position.set(pos.x, 0.067, pos.z)
-      this.group.add(highlight)
-      this.lastMoveHighlights.push(highlight)
+      highlight.visible = true
     }
   }
 }

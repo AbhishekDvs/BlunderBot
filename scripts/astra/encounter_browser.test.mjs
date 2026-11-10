@@ -245,14 +245,14 @@ test('I: repeated captures and resets release scene instances and GPU resources'
     await reset();await fire(moves(initial,line));await idle();await reset()
     const sample=await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>{
       const r=window.__THREE_RENDERER__,s=r.getPresentationSnapshot()
-      resolve({memory:{...r.renderer.info.memory},nodes:r.nodesById.size,pieces:r.pieceNodes.size,s,canvases:r.renderer.domElement.parentElement.querySelectorAll('canvas').length})
+      resolve({memory:{...r.renderer.info.memory},nodes:r.nodesById.size,pieces:r.pieceNodes.size,highlights:r.board.lastMoveHighlights.filter(h=>h.visible).length,s,canvases:r.renderer.domElement.parentElement.querySelectorAll('canvas').length})
     })))
-    assert.equal(sample.nodes,32);assert.equal(sample.pieces,32);assert.equal(sample.canvases,2)
-    assert.equal(sample.s.stage.owner,undefined);assert.equal(sample.s.active,null);assert.equal(sample.s.queued.length,0)
+    assert.equal(sample.nodes,32);assert.equal(sample.pieces,32);assert.equal(sample.canvases,2);assert.equal(sample.highlights,0)
+    assert.ok(sample.s.stage.owner==null,'no stage owns a completed/reset encounter');assert.equal(sample.s.active,null);assert.equal(sample.s.queued.length,0)
     memory.push(sample.memory)
   }
-  assert.deepEqual(memory[2],memory[1],'GPU geometry/texture counts plateau after warm-up')
   console.log('Repeated encounter/reset GPU allocations:',memory)
+  assert.deepEqual(memory[2],memory[1],'GPU geometry/texture counts plateau after warm-up')
 })
 
 test('J: a missing Pawn atlas remains visible in every idle and walking frame', {timeout:90000}, async()=>{

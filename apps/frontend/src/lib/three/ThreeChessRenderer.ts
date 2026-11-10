@@ -506,6 +506,7 @@ export class ThreeChessRenderer {
     this.presentation.reset(this.currentFen)
     this.reconcile(this.currentFen,this.presentation.tail)
     this.debris.clear()
+    this.board.setLastMove(null)
     this.board.setSelectedSquare(null)
     this.board.setInCheckSquare(null)
     this.board.clearLegalMoves()
