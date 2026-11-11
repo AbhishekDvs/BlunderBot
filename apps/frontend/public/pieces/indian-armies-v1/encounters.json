@@ -1,0 +1,377 @@
+{
+  "version": 1,
+  "encounters": [
+    {
+      "attacker": "wN",
+      "defender": "wB",
+      "contactTimeMs": 1440,
+      "attackStartMs": 1190,
+      "attackClip": "attack",
+      "contactFrame": 4,
+      "contactLocalTimeMs": 250,
+      "defenseClip": "defend",
+      "defenseFrame": 5,
+      "defenseHoldUntilMs": 1503,
+      "attackerContactPx": [
+        212.18035766427076,
+        136.16874136888356
+      ],
+      "defenderContactPx": [
+        70.18787332784795,
+        136.16874136888356
+      ],
+      "defenderStaffSegmentPx": [
+        [
+          97.87289645602402,
+          83.61481909806535
+        ],
+        [
+          67.74611012519824,
+          140.80389131843143
+        ]
+      ],
+      "defenderRootOffsetPx": [
+        141.99248433642282,
+        0
+      ],
+      "sharedBaselinePx": 220,
+      "contactErrorPx": 0,
+      "nativeCardDimensions": {
+        "attacker": [
+          1.25,
+          1.28
+        ],
+        "defender": [
+          1.1,
+          1.32
+        ]
+      },
+      "worldContact": {
+        "attackerLocal": [
+          0.4110369026575721,
+          0.35060858370154524,
+          -0.22970768190621083
+        ],
+        "defenderLocal": [
+          -0.2541617026156832,
+          0.35060858370154524,
+          -0.22970768190621083
+        ],
+        "defenderRootOffset": [
+          0.6651986052732553,
+          0,
+          0
+        ],
+        "defenderContactPx": [
+          68.84964011853191,
+          138.70908253952345
+        ],
+        "tiltRad": -0.58,
+        "error": 0
+      },
+      "timeline": [
+        {
+          "timeMs": 0,
+          "attackerClip": "attack_anticipation",
+          "defenderClip": "defend",
+          "event": "coil; raise staff"
+        },
+        {
+          "timeMs": 333,
+          "attackerClip": "move",
+          "event": "articulated cavalry charge; hold staff block"
+        },
+        {
+          "timeMs": 1190,
+          "attackerClip": "attack",
+          "event": "lower lance and extend"
+        },
+        {
+          "timeMs": 1440,
+          "attackerFrame": 4,
+          "defenderClip": "defend",
+          "defenderFrame": 5,
+          "event": "contact; warm dust/chips"
+        },
+        {
+          "timeMs": 1503,
+          "defenderClip": "hit",
+          "event": "recoil from held staff block"
+        },
+        {
+          "timeMs": 1690,
+          "attackerClip": "idle",
+          "event": "recover stance"
+        },
+        {
+          "timeMs": 1753,
+          "defenderClip": "stagger",
+          "event": "stagger back"
+        },
+        {
+          "timeMs": 2253,
+          "defenderClip": "defeat",
+          "event": "split sculpted shell; falling fragments"
+        },
+        {
+          "timeMs": 2920,
+          "event": "hold debris briefly"
+        },
+        {
+          "timeMs": 3357,
+          "event": "end"
+        }
+      ],
+      "placement": "fixed angle only; pixel offset is for equal-size review. In game use worldContact and native card dimensions, with feet anchors registered first.",
+      "status": "offline synchronized art candidate; actual board contact approval pending"
+    },
+    {
+      "attacker": "wN",
+      "defender": "bB",
+      "contactTimeMs": 1440,
+      "attackStartMs": 1190,
+      "attackClip": "attack",
+      "contactFrame": 4,
+      "contactLocalTimeMs": 250,
+      "defenseClip": "defend",
+      "defenseFrame": 5,
+      "defenseHoldUntilMs": 1503,
+      "attackerContactPx": [
+        212.18035766427076,
+        136.16874136888356
+      ],
+      "defenderContactPx": [
+        70.18787332784794,
+        136.16874136888356
+      ],
+      "defenderStaffSegmentPx": [
+        [
+          97.36663240381874,
+          84.57584996030897
+        ],
+        [
+          68.06907167574298,
+          140.1908199063105
+        ]
+      ],
+      "defenderRootOffsetPx": [
+        141.99248433642282,
+        0
+      ],
+      "sharedBaselinePx": 220,
+      "contactErrorPx": 0,
+      "nativeCardDimensions": {
+        "attacker": [
+          1.25,
+          1.28
+        ],
+        "defender": [
+          1.1,
+          1.32
+        ]
+      },
+      "worldContact": {
+        "attackerLocal": [
+          0.4110369026575721,
+          0.35060858370154524,
+          -0.22970768190621083
+        ],
+        "defenderLocal": [
+          -0.25416170261568327,
+          0.35060858370154524,
+          -0.22970768190621083
+        ],
+        "defenderRootOffset": [
+          0.6651986052732554,
+          0,
+          0
+        ],
+        "defenderContactPx": [
+          68.8496401185319,
+          138.70908253952345
+        ],
+        "tiltRad": -0.58,
+        "error": 0
+      },
+      "timeline": [
+        {
+          "timeMs": 0,
+          "attackerClip": "attack_anticipation",
+          "defenderClip": "defend",
+          "event": "coil; raise staff"
+        },
+        {
+          "timeMs": 333,
+          "attackerClip": "move",
+          "event": "articulated cavalry charge; hold staff block"
+        },
+        {
+          "timeMs": 1190,
+          "attackerClip": "attack",
+          "event": "lower lance and extend"
+        },
+        {
+          "timeMs": 1440,
+          "attackerFrame": 4,
+          "defenderClip": "defend",
+          "defenderFrame": 5,
+          "event": "contact; warm dust/chips"
+        },
+        {
+          "timeMs": 1503,
+          "defenderClip": "hit",
+          "event": "recoil from held staff block"
+        },
+        {
+          "timeMs": 1690,
+          "attackerClip": "idle",
+          "event": "recover stance"
+        },
+        {
+          "timeMs": 1753,
+          "defenderClip": "stagger",
+          "event": "stagger back"
+        },
+        {
+          "timeMs": 2253,
+          "defenderClip": "defeat",
+          "event": "split sculpted shell; falling fragments"
+        },
+        {
+          "timeMs": 2920,
+          "event": "hold debris briefly"
+        },
+        {
+          "timeMs": 3357,
+          "event": "end"
+        }
+      ],
+      "placement": "fixed angle only; pixel offset is for equal-size review. In game use worldContact and native card dimensions, with feet anchors registered first.",
+      "status": "offline synchronized art candidate; actual board contact approval pending"
+    },
+    {
+      "attacker": "bN",
+      "defender": "wB",
+      "contactTimeMs": 1440,
+      "attackStartMs": 1190,
+      "attackClip": "attack",
+      "contactFrame": 4,
+      "contactLocalTimeMs": 250,
+      "defenseClip": "defend",
+      "defenseFrame": 5,
+      "defenseHoldUntilMs": 1503,
+      "attackerContactPx": [
+        211.1115449166425,
+        136.2445360584703
+      ],
+      "defenderContactPx": [
+        70.1479452379256,
+        136.2445360584703
+      ],
+      "defenderStaffSegmentPx": [
+        [
+          97.87289645602402,
+          83.61481909806535
+        ],
+        [
+          67.74611012519824,
+          140.80389131843143
+        ]
+      ],
+      "defenderRootOffsetPx": [
+        140.9635996787169,
+        0
+      ],
+      "sharedBaselinePx": 220,
+      "contactErrorPx": 0,
+      "nativeCardDimensions": {
+        "attacker": [
+          1.25,
+          1.28
+        ],
+        "defender": [
+          1.1,
+          1.32
+        ]
+      },
+      "worldContact": {
+        "attackerLocal": [
+          0.4058180904132934,
+          0.3502915865670392,
+          -0.22949999538533464
+        ],
+        "defenderLocal": [
+          -0.2543280696570264,
+          0.3502915865670392,
+          -0.22949999538533464
+        ],
+        "defenderRootOffset": [
+          0.6601461600703198,
+          0,
+          0
+        ],
+        "defenderContactPx": [
+          68.8109219707284,
+          138.78258042033482
+        ],
+        "tiltRad": -0.58,
+        "error": 0
+      },
+      "timeline": [
+        {
+          "timeMs": 0,
+          "attackerClip": "attack_anticipation",
+          "defenderClip": "defend",
+          "event": "coil; raise staff"
+        },
+        {
+          "timeMs": 333,
+          "attackerClip": "move",
+          "event": "articulated cavalry charge; hold staff block"
+        },
+        {
+          "timeMs": 1190,
+          "attackerClip": "attack",
+          "event": "lower lance and extend"
+        },
+        {
+          "timeMs": 1440,
+          "attackerFrame": 4,
+          "defenderClip": "defend",
+          "defenderFrame": 5,
+          "event": "contact; warm dust/chips"
+        },
+        {
+          "timeMs": 1503,
+          "defenderClip": "hit",
+          "event": "recoil from held staff block"
+        },
+        {
+          "timeMs": 1690,
+          "attackerClip": "idle",
+          "event": "recover stance"
+        },
+        {
+          "timeMs": 1753,
+          "defenderClip": "stagger",
+          "event": "stagger back"
+        },
+        {
+          "timeMs": 2253,
+          "defenderClip": "defeat",
+          "event": "split sculpted shell; falling fragments"
+        },
+        {
+          "timeMs": 2920,
+          "event": "hold debris briefly"
+        },
+        {
+          "timeMs": 3357,
+          "event": "end"
+        }
+      ],
+      "placement": "fixed angle only; pixel offset is for equal-size review. In game use worldContact and native card dimensions, with feet anchors registered first.",
+      "status": "offline synchronized art candidate; actual board contact approval pending"
+    }
+  ]
+}

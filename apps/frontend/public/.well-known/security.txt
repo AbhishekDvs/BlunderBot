@@ -1,0 +1,4 @@
+Contact: mailto:abhishek280194@gmail.com
+Preferred-Languages: en
+Canonical: https://blunderbot.pages.dev/.well-known/security.txt
+Policy: https://github.com/AbhishekDvs/BlunderBot/security/policy

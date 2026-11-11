@@ -1,0 +1,212 @@
+{
+  "wP": {
+    "filename": "wP.glb",
+    "vertices": 5831,
+    "triangles": 11404,
+    "materials": [
+      "stone",
+      "sandstone",
+      "bone",
+      "gold",
+      "bronze",
+      "saffron",
+      "crimson",
+      "green",
+      "steel",
+      "wood",
+      "shadow",
+      "darkgold",
+      "vermillion",
+      "linen"
+    ],
+    "bounds": [
+      [
+        -0.3400000035762787,
+        0.0,
+        -0.3480000001490116
+      ],
+      [
+        0.3400000035762787,
+        0.7429999856948852,
+        0.3480000001490116
+      ]
+    ],
+    "bytes": 130960,
+    "category": "DEVELOPMENT_MODEL_NOT_APPROVED"
+  },
+  "wN": {
+    "filename": "wN.glb",
+    "vertices": 8423,
+    "triangles": 16550,
+    "materials": [
+      "stone",
+      "sandstone",
+      "bone",
+      "gold",
+      "bronze",
+      "saffron",
+      "crimson",
+      "green",
+      "steel",
+      "wood",
+      "shadow",
+      "darkgold",
+      "vermillion",
+      "linen"
+    ],
+    "bounds": [
+      [
+        -0.3400000035762787,
+        0.0,
+        -0.4790293276309967
+      ],
+      [
+        0.3400000035762787,
+        0.8400000014007092,
+        0.4909999976158142
+      ]
+    ],
+    "bytes": 159496,
+    "category": "DEVELOPMENT_MODEL_NOT_APPROVED"
+  },
+  "wB": {
+    "filename": "wB.glb",
+    "vertices": 5077,
+    "triangles": 9954,
+    "materials": [
+      "stone",
+      "sandstone",
+      "bone",
+      "gold",
+      "bronze",
+      "saffron",
+      "crimson",
+      "green",
+      "steel",
+      "wood",
+      "shadow",
+      "darkgold",
+      "vermillion",
+      "linen"
+    ],
+    "bounds": [
+      [
+        -0.3400000035762787,
+        0.0,
+        -0.3480000001490116
+      ],
+      [
+        0.3400000035762787,
+        0.8579999995529651,
+        0.3480000001490116
+      ]
+    ],
+    "bytes": 119348,
+    "category": "DEVELOPMENT_MODEL_NOT_APPROVED"
+  },
+  "wR": {
+    "filename": "wR.glb",
+    "vertices": 1824,
+    "triangles": 3468,
+    "materials": [
+      "stone",
+      "sandstone",
+      "bone",
+      "gold",
+      "bronze",
+      "saffron",
+      "crimson",
+      "green",
+      "steel",
+      "wood",
+      "shadow",
+      "darkgold",
+      "vermillion",
+      "linen"
+    ],
+    "bounds": [
+      [
+        -0.3400000035762787,
+        0.0,
+        -0.3480000001490116
+      ],
+      [
+        0.3400000035762787,
+        0.7264999983608723,
+        0.42999999642372133
+      ]
+    ],
+    "bytes": 48104,
+    "category": "DEVELOPMENT_MODEL_NOT_APPROVED"
+  },
+  "wQ": {
+    "filename": "wQ.glb",
+    "vertices": 4181,
+    "triangles": 8150,
+    "materials": [
+      "stone",
+      "sandstone",
+      "bone",
+      "gold",
+      "bronze",
+      "saffron",
+      "crimson",
+      "green",
+      "steel",
+      "wood",
+      "shadow",
+      "darkgold",
+      "vermillion",
+      "linen"
+    ],
+    "bounds": [
+      [
+        -0.3400000035762787,
+        0.0,
+        -0.3480000001490116
+      ],
+      [
+        0.3400000035762787,
+        0.9150615334510803,
+        0.3480000001490116
+      ]
+    ],
+    "bytes": 100052,
+    "category": "DEVELOPMENT_MODEL_NOT_APPROVED"
+  },
+  "wK": {
+    "filename": "wK.glb",
+    "vertices": 4336,
+    "triangles": 8476,
+    "materials": [
+      "stone",
+      "sandstone",
+      "bone",
+      "gold",
+      "bronze",
+      "saffron",
+      "crimson",
+      "green",
+      "steel",
+      "wood",
+      "shadow",
+      "darkgold",
+      "vermillion",
+      "linen"
+    ],
+    "bounds": [
+      [
+        -0.3400000035762787,
+        0.0,
+        -0.3480000001490116
+      ],
+      [
+        0.3400000035762787,
+        0.9310000005364418,
+        0.3480000001490116
+      ]
+    ],
+    "bytes": 102488,
+    "category": "DEVELOPMENT_MODEL_NOT_APPROVED"
+  }
+}

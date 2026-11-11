@@ -1,0 +1,74 @@
+/**
+ * Three.js 3D Chessboard & Cinematic Encounter Types
+ * Authoritative specification: docs/astra/README.md, DESIGN.md, ANIMATION.md
+ */
+
+import * as THREE from 'three'
+
+export type CameraViewMode = 'tactical' | 'cinematic' | 'encounter' | 'ending'
+
+export type AnimationPacing = 'cinematic' | 'fast' | 'reduced' | 'off'
+
+export interface SquareCoordinates {
+  file: string // 'a'-'h'
+  rank: number // 1-8
+  square: string // 'e4'
+  worldX: number
+  worldZ: number
+}
+
+export interface PieceAnimator {
+  currentClip: string
+  currentFrame: number
+  frameTime: number
+  loop: boolean
+  isFinished: boolean
+  facing?: 'front' | 'back'
+  onComplete?: (() => void) | undefined
+  updateUV: () => void
+  playClip: (clipName: string, loop?: boolean, onComplete?: () => void) => void
+  setFrame: (frameIndex: number) => void
+  setFacing?: (facing: 'front' | 'back') => void
+  update: (deltaSeconds: number) => void
+}
+
+export interface Piece3DNode {
+  instanceId?: string
+  pieceCode: string // 'wP', 'bK', etc.
+  square: string // 'e4'
+  group: THREE.Group
+  torsoNode?: THREE.Object3D
+  weaponNode?: THREE.Object3D
+  shieldNode?: THREE.Object3D
+  plinthNode?: THREE.Object3D
+  cardMesh?: THREE.Mesh
+  initialScale: THREE.Vector3
+  currentPosition: THREE.Vector3
+  targetPosition: THREE.Vector3
+  isAnimating: boolean
+  animator?: PieceAnimator
+}
+
+export interface CombatEncounterParams {
+  destinationSquare?: string
+  attackerCode: string
+  attackerSquare: string
+  defenderCode: string
+  defenderSquare: string
+  isEnPassant?: boolean
+  capturedSquare?: string
+  pacing: AnimationPacing
+  onAnticipation?: () => void
+  onContact?: () => void
+  onDefeat?: () => void
+  onComplete?: () => void
+}
+
+export interface DebrisParticle3D {
+  mesh: THREE.Mesh
+  velocity: THREE.Vector3
+  angularVelocity: THREE.Vector3
+  birthTime: number
+  lifespanMs: number
+  bounces: number
+}

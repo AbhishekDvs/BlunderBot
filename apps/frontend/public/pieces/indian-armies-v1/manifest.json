@@ -1,0 +1,194 @@
+{
+  "version": "1.0.0-art-candidate",
+  "pieces": [
+    "wP",
+    "wN",
+    "wB",
+    "wR",
+    "wQ",
+    "wK",
+    "bP",
+    "bN",
+    "bB",
+    "bR",
+    "bQ",
+    "bK"
+  ],
+  "cell": 256,
+  "cols": 8,
+  "rows": 8,
+  "cameraAngleDeg": 48,
+  "baseCommit": "4aa2b90109ea512a1682297138f5df96aef1c9ca",
+  "selectedInGame": false,
+  "mainFramesPerPiece": 64,
+  "endingFramesPerPiece": 16,
+  "effectFrames": 32,
+  "totalCharacterFrames": 960,
+  "effects": {
+    "w": {
+      "image": "effects/w_impact_debris.webp",
+      "cols": 8,
+      "rows": 2,
+      "cell": 256,
+      "count": 16,
+      "fps": 24,
+      "loop": false,
+      "anchor": [
+        0.5,
+        0.5
+      ],
+      "durationMs": 666.6666666666666,
+      "faction": "white"
+    },
+    "b": {
+      "image": "effects/b_impact_debris.webp",
+      "cols": 8,
+      "rows": 2,
+      "cell": 256,
+      "count": 16,
+      "fps": 24,
+      "loop": false,
+      "anchor": [
+        0.5,
+        0.5
+      ],
+      "durationMs": 666.6666666666666,
+      "faction": "black"
+    }
+  },
+  "clips": {
+    "idle": {
+      "start": 0,
+      "count": 8,
+      "fps": 10,
+      "loop": true
+    },
+    "move": {
+      "start": 8,
+      "count": 12,
+      "fps": 14,
+      "loop": true
+    },
+    "attack_anticipation": {
+      "start": 20,
+      "count": 4,
+      "fps": 12,
+      "loop": false
+    },
+    "attack": {
+      "start": 24,
+      "count": 8,
+      "fps": 16,
+      "loop": false
+    },
+    "defend": {
+      "start": 32,
+      "count": 6,
+      "fps": 12,
+      "loop": false
+    },
+    "hit": {
+      "start": 38,
+      "count": 4,
+      "fps": 16,
+      "loop": false
+    },
+    "stagger": {
+      "start": 42,
+      "count": 6,
+      "fps": 12,
+      "loop": false
+    },
+    "defeat": {
+      "start": 48,
+      "count": 8,
+      "fps": 12,
+      "loop": false
+    },
+    "victory": {
+      "start": 56,
+      "count": 8,
+      "fps": 12,
+      "loop": false
+    }
+  },
+  "manifests": {
+    "wP": "wP/wP_clip.json",
+    "wN": "wN/wN_clip.json",
+    "wB": "wB/wB_clip.json",
+    "wR": "wR/wR_clip.json",
+    "wQ": "wQ/wQ_clip.json",
+    "wK": "wK/wK_clip.json",
+    "bP": "bP/bP_clip.json",
+    "bN": "bN/bN_clip.json",
+    "bB": "bB/bB_clip.json",
+    "bR": "bR/bR_clip.json",
+    "bQ": "bQ/bQ_clip.json",
+    "bK": "bK/bK_clip.json"
+  },
+  "encounters": "encounters.json",
+  "endings": "endings.json",
+  "cameraValidation": "pending in-game art review; 48 degrees supplied to illustration generator",
+  "runtimeCompatibility": "main 8x8 layout exactly matches verified CLIPS_DEF; supplementary endings use 8x2 grids and their supplied clip metadata",
+  "sources": "../source",
+  "export": "../tools/render_rigs.py",
+  "verifiedCardDimensions": {
+    "P": [
+      0.96,
+      1.05
+    ],
+    "N": [
+      1.25,
+      1.28
+    ],
+    "B": [
+      1.1,
+      1.32
+    ],
+    "R": [
+      1.1,
+      1.15
+    ],
+    "Q": [
+      1.2,
+      1.38
+    ],
+    "K": [
+      1.3,
+      1.45
+    ]
+  },
+  "planeTiltRad": -0.58,
+  "planeCenterFromFootAnchor": {
+    "P": [
+      0,
+      0.3156339530539338,
+      -0.20679340739880855
+    ],
+    "N": [
+      0,
+      0.38477281896098603,
+      -0.25209101092426184
+    ],
+    "B": [
+      0,
+      0.39679696955351684,
+      -0.25996885501564504
+    ],
+    "R": [
+      0,
+      0.34569432953526086,
+      -0.22648801762726647
+    ],
+    "Q": [
+      0,
+      0.414833195442313,
+      -0.27178562115271976
+    ],
+    "K": [
+      0,
+      0.43587545897924196,
+      -0.2855718483126404
+    ]
+  }
+}

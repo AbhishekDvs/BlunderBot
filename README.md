@@ -1,3 +1,11 @@
+# BlunderBot ♟️
+
+> Stylized 2.5D Ancient Indian War Chess with Warcraft-inspired tactical unit movement and combat animation.
+
+See [README_PENDING_WORK.md](file:///home/fullmetal-alchemist/Documents/projects/BlunderBot/README_PENDING_WORK.md) for the active 2.5D animation architecture, delivered production assets, and technical roadmap.
+
+---
+
 ### 🙏 Credits
 
 **BlunderBot** was created with 💡 and caffeine by **[Abhishek Dvs](https://github.com/abhishekdvs)**.

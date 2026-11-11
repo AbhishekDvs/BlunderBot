@@ -1,0 +1,178 @@
+{
+  "system": "BlunderBot White Army Development Candidates v0.2",
+  "status": "EXPERIMENTAL_CANDIDATE_GATE_STAGED",
+  "faction": "white",
+  "date": "2026-11-09",
+  "coordinate_conventions": {
+    "source_blender": {
+      "up": "+Z",
+      "forward": "+Y"
+    },
+    "exported_gltf": {
+      "up": "+Y",
+      "forward": "-Z"
+    },
+    "ground_plane": "Y = 0.0"
+  },
+  "materials": {
+    "palette": [
+      "ivory_carved_stone",
+      "ivory_woven_cloth",
+      "forest_green_cloth",
+      "antique_gold",
+      "aged_bronze",
+      "saffron_vermilion",
+      "polished_steel",
+      "dark_timber"
+    ]
+  },
+  "standard_actions": [
+    "idle",
+    "move",
+    "attack_anticipation",
+    "attack",
+    "defend",
+    "hit",
+    "stagger",
+    "defeat",
+    "victory",
+    "draw"
+  ],
+  "classes": {
+    "wR": {
+      "name": "Durg (Rook)",
+      "archetype": "Indian Wheeled Military Fortress",
+      "source_blend": "art/white_army_v02/blender/durg.blend",
+      "export_glb": "apps/frontend/public/models/astra-dev-v02/wR.glb",
+      "armature": "Durg_Rig",
+      "triangles": 1179,
+      "bounds": {
+        "width_x": 0.66,
+        "height_y": 1.15,
+        "depth_z": 0.79
+      },
+      "sockets": [
+        "weapon_tip_socket",
+        "contact_anchor",
+        "Plinth_Stone"
+      ],
+      "debris_chunks": 3
+    },
+    "wP": {
+      "name": "Padati (Pawn)",
+      "archetype": "Ancient Indian Infantry Warrior",
+      "source_blend": "art/white_army_v02/blender/padati.blend",
+      "export_glb": "apps/frontend/public/models/astra-dev-v02/wP.glb",
+      "armature": "Padati_Rig",
+      "triangles": 10100,
+      "bounds": {
+        "width_x": 0.65,
+        "height_y": 1.07,
+        "depth_z": 0.56
+      },
+      "sockets": [
+        "weapon_tip_socket",
+        "grip_R",
+        "Pawn_DhalShield",
+        "contact_anchor",
+        "Plinth_Stone"
+      ],
+      "debris_chunks": 3
+    },
+    "wB": {
+      "name": "Acharya (Bishop) - Repaired v03",
+      "archetype": "Ancient Indian Royal Preceptor",
+      "source_blend": "art/white_army_v02/blender/acharya_v03.blend",
+      "export_glb": "apps/frontend/public/models/astra-dev-v02/wB.glb",
+      "armature": "Acharya_Rig",
+      "triangles": 9938,
+      "bounds": {
+        "width_x": 0.60,
+        "height_y": 1.39,
+        "depth_z": 0.60
+      },
+      "sockets": [
+        "weapon_tip_socket",
+        "staff_head_socket",
+        "grip_R",
+        "grip_L",
+        "contact_anchor",
+        "Plinth_Stone"
+      ],
+      "debris_chunks": 3,
+      "audit_fixes": [
+        "Garment openings healed with continuous quad tunic",
+        "Mesh intersections removed via tailored shawl drape",
+        "Staff grip verified on grip_R and grip_L",
+        "Polygon count reduced from 143,316 to 9,938 (93% reduction)",
+        "Defense animation upgraded to braced two-handed ward",
+        "Complete 10-action animation suite provided"
+      ]
+    },
+    "wN": {
+      "name": "Ashva Senani (Knight)",
+      "archetype": "Armored Cavalry Horse and Mounted Warrior",
+      "source_blend": "art/white_army_v02/blender/ashva.blend",
+      "export_glb": "apps/frontend/public/models/astra-dev-v02/wN.glb",
+      "armature": "Ashva_Rig",
+      "triangles": 2108,
+      "bounds": {
+        "width_x": 0.62,
+        "height_y": 1.25,
+        "depth_z": 1.15
+      },
+      "sockets": [
+        "weapon_tip_socket",
+        "contact_anchor",
+        "Plinth_Stone"
+      ],
+      "debris_chunks": 3
+    },
+    "wQ": {
+      "name": "Samrajni (Queen)",
+      "archetype": "Imperial Battle Commander",
+      "source_blend": "art/white_army_v02/blender/samrajni.blend",
+      "export_glb": "apps/frontend/public/models/astra-dev-v02/wQ.glb",
+      "armature": "Samrajni_Rig",
+      "triangles": 10308,
+      "bounds": {
+        "width_x": 0.62,
+        "height_y": 1.32,
+        "depth_z": 0.61
+      },
+      "sockets": [
+        "weapon_tip_socket",
+        "grip_R",
+        "contact_anchor",
+        "Plinth_Stone"
+      ],
+      "debris_chunks": 3
+    },
+    "wK": {
+      "name": "Raja (King)",
+      "archetype": "Imposing Royal Warrior",
+      "source_blend": "art/white_army_v02/blender/raja.blend",
+      "export_glb": "apps/frontend/public/models/astra-dev-v02/wK.glb",
+      "armature": "Raja_Rig",
+      "triangles": 10486,
+      "bounds": {
+        "width_x": 0.68,
+        "height_y": 1.43,
+        "depth_z": 0.64
+      },
+      "sockets": [
+        "weapon_tip_socket",
+        "grip_R",
+        "grip_L",
+        "contact_anchor",
+        "Plinth_Stone"
+      ],
+      "debris_chunks": 3
+    }
+  },
+  "licensing": {
+    "human_mesh_source": "Blender Studio Human Base Meshes v1.4.1 (CC0)",
+    "architectural_assets": "Original procedural authored geometry",
+    "materials": "Original procedural PBR texture fields"
+  }
+}

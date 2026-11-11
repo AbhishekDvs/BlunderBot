@@ -1,0 +1,136 @@
+{
+  "method": "built-in image generation of matched illustrated cutout source components; deterministic articulated export",
+  "referenceBaseCommit": "4aa2b90109ea512a1682297138f5df96aef1c9ca",
+  "references": [
+    "BlunderBot_White_Army_AssetKit/reference/approved_identity_concept_cutouts/wP_concept.png",
+    "BlunderBot_White_Army_AssetKit/reference/approved_identity_concept_cutouts/wN_concept.png",
+    "BlunderBot_White_Army_AssetKit/reference/approved_identity_concept_cutouts/wB_concept.png",
+    "BlunderBot_White_Army_AssetKit/reference/approved_identity_concept_cutouts/wR_concept.png",
+    "BlunderBot_White_Army_AssetKit/reference/approved_identity_concept_cutouts/wQ_concept.png",
+    "BlunderBot_White_Army_AssetKit/reference/approved_identity_concept_cutouts/wK_concept.png"
+  ],
+  "pillowVersion": "13.0.0",
+  "files": {
+    "bB_parts.png": {
+      "sha256": "d64a7059bf7daa558f7471e0cc2b1b59a8e8ac289926f3664f900f9097476371",
+      "bytes": 1587395,
+      "dimensions": [
+        1448,
+        1086
+      ]
+    },
+    "bK_parts.png": {
+      "sha256": "31ed9ebd38564b0ff72f6397f68c2195c155b8e1af0aeef658b2c9ccac5dfe93",
+      "bytes": 1747302,
+      "dimensions": [
+        1448,
+        1086
+      ]
+    },
+    "bN_lance.png": {
+      "sha256": "70bed01d642efb7fbb67c66050a1e176e47d9dadbcafbd0449c71dfeb5dde5cc",
+      "bytes": 295088,
+      "dimensions": [
+        1060,
+        1484
+      ]
+    },
+    "bN_parts.png": {
+      "sha256": "bfac2d21537387e9e38dc1b9a3655cd923aa47658bd5b4f24befa1317173c5e0",
+      "bytes": 1460063,
+      "dimensions": [
+        1261,
+        1247
+      ]
+    },
+    "bP_parts.png": {
+      "sha256": "3c4de8f9784ca749b30883abe50d817977c694db9119b4c57bfa93e5952123f4",
+      "bytes": 1524823,
+      "dimensions": [
+        1448,
+        1086
+      ]
+    },
+    "bQ_parts.png": {
+      "sha256": "707eeb2b9535ccf43a697efb5cd8d84db54cc5c110fd488107fd274557f3f82f",
+      "bytes": 1688908,
+      "dimensions": [
+        1448,
+        1086
+      ]
+    },
+    "bR_parts.png": {
+      "sha256": "a21200bb477d9f8b8a7f74c5c9fe6795cf4f35ad7588d289f7ea0f28240d5179",
+      "bytes": 2159615,
+      "dimensions": [
+        1774,
+        887
+      ]
+    },
+    "royal_torsos.png": {
+      "sha256": "925451fa58e962d522a70abcff7354bbc055bf9d33a50084ad8d8c8ebecf4329",
+      "bytes": 1563707,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    "wB_parts.png": {
+      "sha256": "d274554f4d313bd2a64cf31214af52228cf3064a30c73727d83b26546b3639cc",
+      "bytes": 1595446,
+      "dimensions": [
+        1448,
+        1086
+      ]
+    },
+    "wK_parts.png": {
+      "sha256": "b85f8a9558317b7eec439565cc3ccd51a558fd952bb0af6a2172c0789f67d836",
+      "bytes": 1664788,
+      "dimensions": [
+        1448,
+        1086
+      ]
+    },
+    "wN_lance.png": {
+      "sha256": "9d4978e9d2849fd3d49e0e8663ea62b0e94c7db838a9fbdfd54412d213cb80f0",
+      "bytes": 281433,
+      "dimensions": [
+        1060,
+        1484
+      ]
+    },
+    "wN_parts.png": {
+      "sha256": "3984f8880184b157a8172906bac635e5b104da24d8f22956af42812e914307fd",
+      "bytes": 1407277,
+      "dimensions": [
+        1261,
+        1247
+      ]
+    },
+    "wP_parts.png": {
+      "sha256": "cd97b794b60b536d6ea8ae276532961a1af7160ad5e5fdd29be0ee43d60428bd",
+      "bytes": 1373256,
+      "dimensions": [
+        1448,
+        1086
+      ]
+    },
+    "wQ_parts.png": {
+      "sha256": "e5f2b9536273e8d7a91a85c087c389f58bf599d8893f91acf7f66f71d1e58911",
+      "bytes": 1679346,
+      "dimensions": [
+        1448,
+        1086
+      ]
+    },
+    "wR_parts.png": {
+      "sha256": "e2416f2e6ddd8a35984c682c3708df402e9d63fae3e1a191f064cf289f82d24e",
+      "bytes": 2024491,
+      "dimensions": [
+        1774,
+        887
+      ]
+    }
+  },
+  "reproduction": "source painting regeneration is stochastic; all selected painting pixels are retained. render_rigs.py reproduces exports without an image-generation call."
+}

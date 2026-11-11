@@ -1,0 +1,75 @@
+{
+  "cols": 8,
+  "rows": 8,
+  "cell": 256,
+  "clips": {
+    "idle": {
+      "start": 0,
+      "count": 8,
+      "fps": 10,
+      "loop": true
+    },
+    "move": {
+      "start": 8,
+      "count": 12,
+      "fps": 14,
+      "loop": true
+    },
+    "attack_anticipation": {
+      "start": 20,
+      "count": 4,
+      "fps": 12,
+      "loop": false
+    },
+    "attack": {
+      "start": 24,
+      "count": 8,
+      "fps": 16,
+      "loop": false,
+      "contactFrame": 4
+    },
+    "defend": {
+      "start": 32,
+      "count": 6,
+      "fps": 12,
+      "loop": false
+    },
+    "hit": {
+      "start": 38,
+      "count": 4,
+      "fps": 16,
+      "loop": false
+    },
+    "stagger": {
+      "start": 42,
+      "count": 6,
+      "fps": 12,
+      "loop": false
+    },
+    "defeat": {
+      "start": 48,
+      "count": 6,
+      "fps": 10,
+      "loop": false
+    },
+    "victory": {
+      "start": 54,
+      "count": 6,
+      "fps": 10,
+      "loop": true
+    },
+    "draw": {
+      "start": 60,
+      "count": 4,
+      "fps": 6,
+      "loop": false
+    }
+  },
+  "pieceCode": "bN",
+  "image": "/pieces/2p5d-animated/bN_atlas.webp",
+  "backImage": "/pieces/2p5d-animated/bN_back_atlas.webp",
+  "directions": [
+    "front",
+    "back"
+  ]
+}

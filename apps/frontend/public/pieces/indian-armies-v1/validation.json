@@ -1,0 +1,113 @@
+{
+  "assetChecksPassed": true,
+  "pieces": {
+    "wP": {
+      "frames": 80,
+      "distinctPixelFrames": 70,
+      "clips": 11,
+      "problems": [],
+      "atlasBytes": 1876260,
+      "endingsBytes": 549670
+    },
+    "wN": {
+      "frames": 80,
+      "distinctPixelFrames": 63,
+      "clips": 11,
+      "problems": [],
+      "atlasBytes": 2435198,
+      "endingsBytes": 356988
+    },
+    "wB": {
+      "frames": 80,
+      "distinctPixelFrames": 71,
+      "clips": 11,
+      "problems": [],
+      "atlasBytes": 2216848,
+      "endingsBytes": 621592
+    },
+    "wR": {
+      "frames": 80,
+      "distinctPixelFrames": 58,
+      "clips": 11,
+      "problems": [],
+      "atlasBytes": 1944366,
+      "endingsBytes": 307666
+    },
+    "wQ": {
+      "frames": 80,
+      "distinctPixelFrames": 70,
+      "clips": 11,
+      "problems": [],
+      "atlasBytes": 2380798,
+      "endingsBytes": 675270
+    },
+    "wK": {
+      "frames": 80,
+      "distinctPixelFrames": 70,
+      "clips": 11,
+      "problems": [],
+      "atlasBytes": 2398016,
+      "endingsBytes": 687096
+    },
+    "bP": {
+      "frames": 80,
+      "distinctPixelFrames": 70,
+      "clips": 11,
+      "problems": [],
+      "atlasBytes": 1813132,
+      "endingsBytes": 534946
+    },
+    "bN": {
+      "frames": 80,
+      "distinctPixelFrames": 63,
+      "clips": 11,
+      "problems": [],
+      "atlasBytes": 2303384,
+      "endingsBytes": 339764
+    },
+    "bB": {
+      "frames": 80,
+      "distinctPixelFrames": 71,
+      "clips": 11,
+      "problems": [],
+      "atlasBytes": 2148476,
+      "endingsBytes": 601776
+    },
+    "bR": {
+      "frames": 80,
+      "distinctPixelFrames": 58,
+      "clips": 11,
+      "problems": [],
+      "atlasBytes": 1764206,
+      "endingsBytes": 330814
+    },
+    "bQ": {
+      "frames": 80,
+      "distinctPixelFrames": 70,
+      "clips": 11,
+      "problems": [],
+      "atlasBytes": 2288384,
+      "endingsBytes": 650506
+    },
+    "bK": {
+      "frames": 80,
+      "distinctPixelFrames": 70,
+      "clips": 11,
+      "problems": [],
+      "atlasBytes": 2284008,
+      "endingsBytes": 653922
+    }
+  },
+  "totalCharacterFrames": 960,
+  "totalEffectFrames": 32,
+  "numericContactChecks": "passed in pixels and verified class-specific card dimensions",
+  "visualAcceptance": "pending; technical validation is not art approval",
+  "inGameValidation": "not run; selected game assets were not changed",
+  "limitations": [
+    "fixed source views only; bishop faces left, others right",
+    "illustrated cutout joints; no new hand-drawn foreshortening",
+    "illustration camera is requested 48 degrees, not mathematically calibrated",
+    "existing centered cards must honor supplied foot anchor at integration",
+    "supplementary ending atlas requires its supplied rows/clip metadata"
+  ]
+}

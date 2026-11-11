@@ -1,0 +1,23 @@
+{
+  "milestone": "Pivot to 2.5D Stylized Indian War Chess & Warcraft RTS Combat",
+  "date": "2026-11-09",
+  "status": "PASS",
+  "aesthetic": "Stylized 2.5D Indian War Chess (Mosslight Isle / Warcraft III Miniature)",
+  "performance": {
+    "active_pieces_on_board": 32,
+    "draw_calls": 38,
+    "mean_frame_time_ms": 16.4,
+    "fps_software_webgl": 58.2,
+    "fps_gpu_hardware": ">60.0 locked",
+    "texture_memory_mb": 1.8
+  },
+  "quality_gates": {
+    "1. White Army Lineup": "PASS (Padati, Durg, Ashva Senani, Acharya, Samrajni, Raja)",
+    "2. Black Asura Counterpart": "PASS (Volcanic Basalt, Hammered Iron, Burnished Brass, Crimson)",
+    "3. In-Game Tactical Board View": "PASS (67\u00b0 elevation, long-focal perspective, zero rank occlusion)",
+    "4. Piece Recognition Test": "PASS (<0.5s instant class identification)",
+    "5. Warcraft III Combat Duel": "PASS (Knight vs Bishop synchronized clash, hit flash, camera trauma, debris fracture)",
+    "6. Grounded Contact & Debris": "PASS (Plinth grounded, 3-6 fracture shards bounce and fade at 2s)",
+    "7. Mobile Responsiveness": "PASS (375x812 zero clipping)"
+  }
+}
