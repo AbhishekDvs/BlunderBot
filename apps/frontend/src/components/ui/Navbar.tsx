@@ -3,6 +3,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { useTheme } from '@/theme/ThemeContext'
+import { useStockfishStatus } from '@/hooks/useStockfish'
 import { soundService } from '@/theme/soundService'
 import {
   LogoMark,
@@ -16,6 +17,7 @@ import {
 
 export function Navbar({ onNewGameClick }: { onNewGameClick?: () => void }) {
   const { settings, toggleSound, togglePerspective, setIsCustomizerOpen, activePreset } = useTheme()
+  const engineState = useStockfishStatus()
 
   const handleSoundClick = () => {
     soundService.playClick(!settings.soundEnabled)
@@ -75,9 +77,27 @@ export function Navbar({ onNewGameClick }: { onNewGameClick?: () => void }) {
           <span className="w-1 h-1 rounded-full bg-[#2D3847]" />
 
           {/* Engine Status */}
-          <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#84919D]">
-            <span className="w-2 h-2 rounded-full bg-[#438A69] animate-pulse" />
-            <span>Stockfish 16</span>
+          <div
+            className="flex items-center gap-1.5 text-[11px] font-mono text-[#84919D]"
+            role="status"
+            aria-live="polite"
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                engineState.status === 'error'
+                  ? 'bg-red-500'
+                  : engineState.status === 'searching'
+                  ? 'bg-[#DDAA57] animate-pulse'
+                  : 'bg-[#438A69]'
+              }`}
+            />
+            <span>
+              {engineState.status === 'error'
+                ? 'Engine Error'
+                : engineState.status === 'searching'
+                ? 'Stockfish Thinking'
+                : 'Stockfish 16'}
+            </span>
           </div>
         </div>
 

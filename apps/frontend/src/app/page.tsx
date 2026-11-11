@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useState, useMemo, useRef } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Chess } from 'chess.js'
 import type { Square, Move } from 'chess.js'
 import { Navbar } from '@/components/ui/Navbar'
 import { ThemeCustomizerModal } from '@/components/ui/ThemeCustomizerModal'
 import { useTheme } from '@/theme/ThemeContext'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { BOARD_PRESETS } from '@/theme/themePresets'
 import { BoardPresetId } from '@/theme/themeTypes'
 import { soundService } from '@/theme/soundService'
@@ -74,10 +75,18 @@ const TIME_CONTROLS = [
 export default function Home() {
   const router = useRouter()
   const { settings, setBoardPreset, setIsCustomizerOpen, activePreset } = useTheme()
+  const systemReducedMotion = useReducedMotion()
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('easy')
   const [selectedSide, setSelectedSide] = useState<'white' | 'black' | 'random'>('white')
   const [timeControl, setTimeControl] = useState<string>('casual')
   const [isLaunching, setIsLaunching] = useState(false)
+  const launchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (launchTimeoutRef.current) clearTimeout(launchTimeoutRef.current)
+    }
+  }, [])
 
   // Interactive Hero Preview Chessboard state
   const heroGame = useRef(new Chess('r1bqkb1r/pp2pppp/2n5/1B1p4/3P4/8/PPP2PPP/R1BQK1NR w KQkq - 0 1'))
@@ -134,9 +143,11 @@ export default function Home() {
     const resolvedSide =
       selectedSide === 'random' ? (Math.random() > 0.5 ? 'white' : 'black') : selectedSide
 
-    setTimeout(() => {
+    const delay = systemReducedMotion || settings.animationDuration === 0 ? 0 : 250
+    if (launchTimeoutRef.current) clearTimeout(launchTimeoutRef.current)
+    launchTimeoutRef.current = setTimeout(() => {
       router.push(`/game?difficulty=${diff}&side=${resolvedSide}&timeControl=${timeControl}`)
-    }, 250)
+    }, delay)
   }
 
   const handleSelectPreset = (id: BoardPresetId) => {
@@ -301,8 +312,10 @@ export default function Home() {
                       <button
                         key={preset.id}
                         type="button"
+                        aria-label={`Select ${preset.name} board material`}
+                        aria-pressed={isSelected}
                         onClick={() => handleSelectPreset(preset.id)}
-                        className={`w-9 h-9 rounded-lg overflow-hidden grid grid-cols-2 grid-rows-2 border transition ${
+                        className={`w-9 h-9 rounded-lg overflow-hidden grid grid-cols-2 grid-rows-2 border focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DDAA57] transition ${
                           isSelected
                             ? 'border-[#DDAA57] scale-110 shadow-lg shadow-[#DDAA57]/20 ring-1 ring-[#DDAA57]'
                             : 'border-[#2D3847] opacity-60 hover:opacity-100 hover:scale-105'
@@ -390,21 +403,23 @@ export default function Home() {
             {AI_OPPONENTS.map((opp) => {
               const isSelected = selectedDifficulty === opp.value
               return (
-                <div
+                <button
                   key={opp.value}
+                  type="button"
+                  aria-pressed={isSelected}
                   onClick={() => {
                     soundService.playClick(settings.soundEnabled)
                     setSelectedDifficulty(opp.value)
                   }}
-                  className={`relative p-5 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between ${
+                  className={`relative p-5 rounded-2xl border cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DDAA57] transition-all flex flex-col justify-between ${
                     isSelected
                       ? 'tactical-panel-active ring-1 ring-[#DDAA57]/60'
                       : 'tactical-panel hover:border-[#2D3847] hover:bg-[#151A22]'
                   }`}
                 >
-                  <div className="space-y-3">
+                  <div className="space-y-3 w-full">
                     <div className="flex items-center justify-between">
-                      <span className="text-3xl select-none">{opp.avatar}</span>
+                      <span className="text-3xl select-none" aria-hidden="true">{opp.avatar}</span>
                       <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${opp.badgeClass}`}>
                         {opp.elo}
                       </span>
@@ -420,11 +435,11 @@ export default function Home() {
                     </p>
                   </div>
 
-                  <div className="pt-4 mt-4 border-t border-[#202832] flex items-center justify-between text-xs">
+                  <div className="pt-4 mt-4 w-full border-t border-[#202832] flex items-center justify-between text-xs">
                     <span className="text-[#84919D] font-mono">Engine Scan:</span>
                     <span className="font-mono text-[#F5F6F8] font-bold">{opp.depth}</span>
                   </div>
-                </div>
+                </button>
               )
             })}
           </div>

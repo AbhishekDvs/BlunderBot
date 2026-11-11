@@ -73,6 +73,7 @@ export function PlayerCard({
 }: PlayerCardProps) {
   const meta = isBot ? DIFFICULTY_METADATA[difficulty] : null
   const sideColorCode = side === 'white' ? 'w' : 'b'
+  const showThinking = isBot && isThinking
 
   return (
     <div
@@ -121,7 +122,7 @@ export function PlayerCard({
 
           {/* Contextual Subtitle or Roast */}
           <div className="text-[11px] text-[#84919D] truncate">
-            {isThinking ? (
+            {showThinking ? (
               <span className="text-[#DDAA57] font-semibold animate-pulse flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#DDAA57] animate-ping" />
                 Calculating line...
@@ -158,7 +159,7 @@ export function PlayerCard({
 
         {/* Turn Pill */}
         <div className="hidden sm:block">
-          {isThinking ? (
+          {showThinking ? (
             <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#DDAA57]/20 text-[#DDAA57] border border-[#DDAA57]/30">
               Thinking
             </span>

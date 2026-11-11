@@ -1,9 +1,11 @@
 'use client'
 
-import React from 'react'
+import React, { useCallback, useRef } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme } from '@/theme/ThemeContext'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useModalAccessibility } from '@/hooks/useModalAccessibility'
 import { BOARD_PRESETS, PIECE_SETS } from '@/theme/themePresets'
 import { BoardPresetId, PieceSetId } from '@/theme/themeTypes'
 import { soundService } from '@/theme/soundService'
@@ -32,8 +34,12 @@ export function ThemeCustomizerModal() {
     isCustomizerOpen,
     setIsCustomizerOpen,
   } = useTheme()
+  const systemReducedMotion = useReducedMotion()
+  const noMotion = systemReducedMotion || settings.animationDuration === 0
+  const dialogRef = useRef<HTMLDivElement | null>(null)
+  const handleClose = useCallback(() => setIsCustomizerOpen(false), [setIsCustomizerOpen])
 
-  if (!isCustomizerOpen) return null
+  useModalAccessibility(isCustomizerOpen, dialogRef, handleClose)
 
   const handleSelectPreset = (id: BoardPresetId) => {
     soundService.playPieceMove(BOARD_PRESETS[id].defaultSoundPack, settings.soundEnabled)
@@ -47,22 +53,31 @@ export function ThemeCustomizerModal() {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+      {isCustomizerOpen && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="theme-customizer-title"
+      >
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: noMotion ? 0 : 0.16 }}
           onClick={() => setIsCustomizerOpen(false)}
           className="fixed inset-0 bg-black/80 backdrop-blur-md"
         />
 
         {/* Modal Container */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
+          ref={dialogRef}
+          tabIndex={-1}
+          initial={noMotion ? false : { opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          transition={{ duration: 0.2 }}
+          exit={noMotion ? undefined : { opacity: 0, scale: 0.95, y: 15 }}
+          transition={{ duration: noMotion ? 0 : 0.2 }}
           className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl bg-[#151A22] border border-[#2D3847] text-[#F5F6F8] shadow-2xl shadow-black/90 overflow-hidden"
         >
           {/* Header */}
@@ -72,7 +87,7 @@ export function ThemeCustomizerModal() {
                 <PaletteIcon className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-[#F5F6F8] tracking-tight">
+                <h2 id="theme-customizer-title" className="text-lg font-bold text-[#F5F6F8] tracking-tight">
                   Board & Appearance Studio
                 </h2>
                 <p className="text-xs text-[#84919D]">
@@ -414,6 +429,7 @@ export function ThemeCustomizerModal() {
           </div>
         </motion.div>
       </div>
+      )}
     </AnimatePresence>
   )
 }

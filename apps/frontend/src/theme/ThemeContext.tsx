@@ -39,6 +39,41 @@ const STORAGE_KEY = 'blunderbot_theme_v2'
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
+const VALID_PERSPECTIVES: readonly BoardPerspective[] = ['flat-2d', 'elevated-2.5d', 'true-3d']
+const VALID_SOUND_PACKS: readonly SoundPackId[] = ['wood', 'marble', 'stone', 'soft', 'silent']
+
+function sanitizeSettings(raw: Partial<ThemeSettings>, base: ThemeSettings): ThemeSettings {
+  const validPresetId = raw.boardPresetId && BOARD_PRESETS[raw.boardPresetId]
+    ? raw.boardPresetId
+    : base.boardPresetId
+  const validPieceSetId = raw.pieceSetId && PIECE_SETS[raw.pieceSetId]?.isAvailable
+    ? raw.pieceSetId
+    : base.pieceSetId
+  const perspective = raw.perspective && VALID_PERSPECTIVES.includes(raw.perspective)
+    ? raw.perspective
+    : base.perspective
+  const soundPackId = raw.soundPackId && VALID_SOUND_PACKS.includes(raw.soundPackId)
+    ? raw.soundPackId
+    : base.soundPackId
+  const animationDuration =
+    typeof raw.animationDuration === 'number' && Number.isFinite(raw.animationDuration) && raw.animationDuration >= 0
+      ? raw.animationDuration
+      : base.animationDuration
+
+  return enforceAssetAvailability({
+    ...base,
+    boardPresetId: validPresetId,
+    pieceSetId: validPieceSetId,
+    perspective,
+    soundPackId,
+    animationDuration,
+    showCoordinates: typeof raw.showCoordinates === 'boolean' ? raw.showCoordinates : base.showCoordinates,
+    soundEnabled: typeof raw.soundEnabled === 'boolean' ? raw.soundEnabled : base.soundEnabled,
+    showMoveHints: typeof raw.showMoveHints === 'boolean' ? raw.showMoveHints : base.showMoveHints,
+    experimental3d: typeof raw.experimental3d === 'boolean' ? raw.experimental3d : base.experimental3d,
+  })
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<ThemeSettings>(DEFAULT_THEME_SETTINGS)
   const [isHydrated, setIsHydrated] = useState(false)
@@ -50,20 +85,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored) {
         const parsed = JSON.parse(stored) as Partial<ThemeSettings>
-        // Validate preset and piece set exist
-        const validPresetId = parsed.boardPresetId && BOARD_PRESETS[parsed.boardPresetId]
-          ? parsed.boardPresetId
-          : DEFAULT_THEME_SETTINGS.boardPresetId
-        const validPieceSetId = parsed.pieceSetId && PIECE_SETS[parsed.pieceSetId]
-          ? parsed.pieceSetId
-          : DEFAULT_THEME_SETTINGS.pieceSetId
-
-        setSettings((prev) => enforceAssetAvailability({
-          ...prev,
-          ...parsed,
-          boardPresetId: validPresetId,
-          pieceSetId: validPieceSetId,
-        }))
+        if (parsed && typeof parsed === 'object') {
+          setSettings((prev) => sanitizeSettings(parsed, prev))
+        }
       }
     } catch {
       // Fallback to default settings
