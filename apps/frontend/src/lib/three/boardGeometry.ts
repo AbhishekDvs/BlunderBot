@@ -23,6 +23,8 @@ export class PhysicalBoard3D {
   public boardSize = 8.0 // 8 units across 8 squares, 1 unit per square
   public squareSize = 1.0
   private preset: BoardPreset
+  private coordinateCanvas: HTMLCanvasElement | null = null
+  private coordinateTexture: THREE.CanvasTexture | null = null
 
   constructor(preset: BoardPreset) {
     this.preset = preset
@@ -57,8 +59,8 @@ export class PhysicalBoard3D {
     const frameGeo = new THREE.BoxGeometry(frameSize, frameHeight, frameSize)
     const frameMat = new THREE.MeshStandardMaterial({
       color: 0x16120e,
-      roughness: 0.52,
-      metalness: 0.16,
+      roughness: 0.78,
+      metalness: 0.04,
     })
     const frameMesh = new THREE.Mesh(frameGeo, frameMat)
     frameMesh.position.y = -frameHeight / 2
@@ -83,8 +85,8 @@ export class PhysicalBoard3D {
     const inlayGeo = new THREE.BoxGeometry(outerInlaySize, inlayHeight, outerInlaySize)
     const inlayMat = new THREE.MeshStandardMaterial({
       color: 0x9b7846, // Polished aged brass / gold trim
-      roughness: 0.24,
-      metalness: 0.90,
+      roughness: 0.42,
+      metalness: 0.65,
     })
     const inlayMesh = new THREE.Mesh(inlayGeo, inlayMat)
     inlayMesh.position.y = 0.02
@@ -120,17 +122,38 @@ export class PhysicalBoard3D {
 
     const lightColor = new THREE.Color(this.preset.lightSquare)
     const darkColor = new THREE.Color(this.preset.darkSquare)
+    // Restrained stone relief, shared by every tile. Keep the alternating
+    // square colours clear; a glossy reflection washed them out in Black view.
+    let relief: THREE.CanvasTexture | null = null
+    if (typeof document !== 'undefined') {
+      const canvas=document.createElement('canvas');canvas.width=128;canvas.height=128
+      const ctx=canvas.getContext('2d')
+      if(ctx) {
+        const pixels=ctx.createImageData(128,128)
+        for(let y=0;y<128;y++)for(let x=0;x<128;x++) {
+          const grain=((x*197+y*83+x*y*13)%31)-15
+          const value=128+grain*.65+Math.sin(x*.09+y*.04)*5
+          const index=(y*128+x)*4
+          pixels.data[index]=pixels.data[index+1]=pixels.data[index+2]=value;pixels.data[index+3]=255
+        }
+        ctx.putImageData(pixels,0,0);relief=new THREE.CanvasTexture(canvas)
+      }
+    }
 
     const lightMat = new THREE.MeshStandardMaterial({
       color: lightColor,
-      roughness: 0.38,
-      metalness: 0.06,
+      roughness: 0.74,
+      metalness: 0.015,
+      bumpMap: relief,
+      bumpScale: .012,
     })
 
     const darkMat = new THREE.MeshStandardMaterial({
       color: darkColor,
-      roughness: 0.44,
-      metalness: 0.10,
+      roughness: 0.8,
+      metalness: 0.025,
+      bumpMap: relief,
+      bumpScale: .012,
     })
 
     const tileGeo = new THREE.BoxGeometry(tileWidth, tileHeight, tileWidth)
@@ -161,45 +184,16 @@ export class PhysicalBoard3D {
    */
   private buildCoordinateLabels() {
     if (typeof document === 'undefined') return
-    const files = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
-    const ranks = ['1', '2', '3', '4', '5', '6', '7', '8']
-
     const canvas = document.createElement('canvas')
     canvas.width = 1024
     canvas.height = 1024
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    ctx.fillStyle = 'rgba(0,0,0,0)'
-    ctx.fillRect(0, 0, 1024, 1024)
-
-    ctx.font = 'bold 38px "Cinzel", "Times New Roman", serif, monospace'
-    ctx.fillStyle = 'rgba(225, 192, 138, 0.88)'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-
-    // Subtle drop shadow for engraved depth
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.85)'
-    ctx.shadowBlur = 6
-    ctx.shadowOffsetX = 1
-    ctx.shadowOffsetY = 2
-
-    // Draw file letters along bottom and top borders
-    for (let f = 0; f < 8; f++) {
-      const u = (f + 0.5) / 8 * 800 + 112
-      ctx.fillText(files[f], u, 960)
-      ctx.fillText(files[f], u, 64)
-    }
-
-    // Draw rank numbers along left and right borders
-    for (let r = 0; r < 8; r++) {
-      const v = (7 - r + 0.5) / 8 * 800 + 112
-      ctx.fillText(ranks[r], 64, v)
-      ctx.fillText(ranks[r], 960, v)
-    }
-
     const texture = new THREE.CanvasTexture(canvas)
     texture.anisotropy = 4
+    this.coordinateCanvas=canvas;this.coordinateTexture=texture
+    this.setOrientation('white')
 
     const labelGeo = new THREE.PlaneGeometry(9.6, 9.6)
     const labelMat = new THREE.MeshBasicMaterial({
@@ -212,6 +206,29 @@ export class PhysicalBoard3D {
     labelMesh.rotation.x = -Math.PI / 2
     labelMesh.position.y = 0.045
     this.group.add(labelMesh)
+  }
+
+  /** Turn each glyph in place, preserving its square and file/rank identity. */
+  public setOrientation(side: 'white' | 'black') {
+    const ctx=this.coordinateCanvas?.getContext('2d')
+    if(!ctx || !this.coordinateTexture)return
+    ctx.clearRect(0,0,1024,1024)
+    ctx.font='bold 38px "Cinzel", "Times New Roman", serif'
+    ctx.fillStyle='rgba(225,192,138,.9)';ctx.textAlign='center';ctx.textBaseline='middle'
+    ctx.shadowColor='rgba(0,0,0,.85)';ctx.shadowBlur=6
+    const glyph=(text: string,x: number,y: number) => {
+      ctx.save();ctx.translate(x,y);if(side==='black')ctx.rotate(Math.PI)
+      ctx.fillText(text,0,0);ctx.restore()
+    }
+    for(let file=0;file<8;file++) {
+      const u=(file+.5)/8*800+112
+      glyph('ABCDEFGH'[file],u,960);glyph('ABCDEFGH'[file],u,64)
+    }
+    for(let rank=0;rank<8;rank++) {
+      const v=(7-rank+.5)/8*800+112
+      glyph(String(rank+1),64,v);glyph(String(rank+1),960,v)
+    }
+    this.coordinateTexture.needsUpdate=true
   }
 
   /**

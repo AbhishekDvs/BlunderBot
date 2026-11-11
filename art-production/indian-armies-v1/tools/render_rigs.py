@@ -7,7 +7,7 @@ import json
 import math
 import hashlib
 from pathlib import Path
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageChops, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[1]
 S = 3
@@ -45,10 +45,11 @@ def planted_stride(hip_x,phase,stride,lift):
 
 
 class Rig:
-    def __init__(self, code):
+    def __init__(self, code, source_name=None, left_view=False):
         self.code=code
+        self.left_view=left_view
         self.parts=[]
-        with Image.open(ROOT/"source"/f"{code}_parts.png") as sheet:
+        with Image.open(ROOT/"source"/(source_name or f"{code}_parts.png")) as sheet:
             if sheet.mode != "RGBA" or sheet.getchannel("A").getextrema() != (0,255):
                 raise ValueError(f"{code}: transparent RGBA required")
             rows=4 if code[1]=="N" else (2 if code[1]=="R" else 3)
@@ -57,7 +58,23 @@ class Rig:
                 tile=sheet.crop((round(x*sheet.width/4),round(y*sheet.height/rows),round((x+1)*sheet.width/4),round((y+1)*sheet.height/rows)))
                 bounds=tile.getchannel("A").point(lambda p: 255 if p>96 else 0).getbbox()
                 if bounds is None: raise ValueError(f"{code}: missing part {i}")
-                self.parts.append(tile.crop(bounds))
+                part=tile.crop(bounds)
+                if left_view and i<10:
+                    # Remove disconnected generation dust from single rig parts,
+                    # retaining antialiased edges around the largest solid island.
+                    mask=part.getchannel('A').point(lambda a:255 if a>96 else 0)
+                    largest=None;area=0
+                    while True:
+                        first=mask.tobytes().find(b'\xff')
+                        if first<0:break
+                        ImageDraw.floodfill(mask,(first%mask.width,first//mask.width),128)
+                        component=mask.point(lambda a:255 if a==128 else 0)
+                        size=component.histogram()[255]
+                        if size>area:largest=component;area=size
+                        mask=mask.point(lambda a:0 if a==128 else a)
+                    if largest is not None:
+                        part.putalpha(ImageChops.multiply(part.getchannel('A'),largest.filter(ImageFilter.MaxFilter(5))))
+                self.parts.append(part)
         if code[1]=="N":
             with Image.open(ROOT/"source"/f"{code}_lance.png") as accessory:
                 bounds=accessory.getchannel("A").point(lambda p: 255 if p>96 else 0).getbbox()
@@ -166,14 +183,17 @@ class Rig:
             # No whole-character shrinking. Fragments have independent trajectories.
             hip=(hip[0]-defeat*12,hip[1]+defeat*28)
             torso_top=(torso_top[0]-defeat*23,torso_top[1]+defeat*42)
-        flip=lambda p: (256-p[0],p[1]) if adviser else p
+        # Opposite-view Pawn paintings are independently authored. Only joint
+        # positions change sides; no source pixels or equipment are mirrored.
+        flip=lambda p: (256-p[0],p[1]) if adviser or self.left_view else p
         def paint(idx,p,q,a,b,opacity=1):
             return self.draw(canvas,idx,p,q,flip(a),flip(b),opacity)
         self.sockets={"feet":[flip(f) for f in feet],"hip":flip(hip)}
         shell=max(0,1-defeat*2.5)
         for j,(h,f) in enumerate(zip((farhip,nearhip),feet)):
             k=knee(h,f)
-            paint(3+j,(.36,.10),(.36,1),k,f,shell)
+            calf_anchor=.64 if self.left_view else .36
+            paint(3+j,(calf_anchor,.10),(calf_anchor,1),k,f,shell)
             # Long layered garments overlap the articulated knees/calves.
             panel=point(k,f,.76 if royal else (.48 if adviser else 0))
             paint(1+j,(.5,.10),(.5,.90),h,panel,shell)
@@ -192,6 +212,7 @@ class Rig:
         v=(hand[0]-elbow[0],hand[1]-elbow[1])
         hand=(elbow[0]+v[0]*math.cos(spear)-v[1]*math.sin(spear),elbow[1]+v[0]*math.sin(spear)+v[1]*math.cos(spear))
         wsrc=((.95,.6),(.30,.6),(.27,.02)) if adviser else (((.05,.73),(.8,.73),(.94,.02)) if royal else ((.06,.64),(.77,.64),(.77,.02)))
+        if self.left_view:wsrc=((.94,.64),(.23,.64),(.23,.02))
         gripmap=paint(8,wsrc[0],wsrc[1],elbow,hand,0)
         self.sockets["weaponTip"]=gripmap(wsrc[2])
         if adviser:
@@ -207,10 +228,17 @@ class Rig:
         sh=(hip[0]+19,hip[1]-48)
         el=(sh[0]+8-shield*8-swing*.6,sh[1]+23-shield*8)
         wrist=(el[0]+18,el[1]+10-shield*15)
+        if self.left_view:
+            # The acceptance attack lands at waist height (~160px). The low
+            # guard is articulated from shoulder through elbow, not a floating
+            # shield translated away from its arm.
+            el=(sh[0]+8-shield*8,sh[1]+38-shield*8)
+            wrist=(el[0]+18,el[1]+24-shield*15)
         paint(5,(.5,.15),(.5,.87),sh,el,shell)
         lsrc=((.96,.80),(.18,.34)) if adviser else (((.06,.35),(.9,.52)) if royal else ((.07,.18),(.43,.43)))
+        if self.left_view:lsrc=((.93,.18),(.57,.43))
         palm=paint(7,lsrc[0],lsrc[1],el,wrist,shell)
-        self.sockets["defenseContact"]=palm((.1,.4) if adviser else (.7,.5))
+        self.sockets["defenseContact"]=palm((.3,.5) if self.left_view else (.1,.4) if adviser else (.7,.5))
         if defeat:
             for j in range(6):
                 col,row=j%2,j//2

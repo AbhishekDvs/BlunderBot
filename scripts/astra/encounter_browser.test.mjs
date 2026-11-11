@@ -74,9 +74,11 @@ test('A: consecutive Pawn and Queen captures are separate, ordered and reconcile
   await fire(events);await captureStarted('wP')
   let s=await snapshot()
   assert.equal(s.active.defender.code,'bP');assert.equal(s.queued.at(-1).attacker.code,'bQ')
+  assert.equal(s.stage.defenderView,'authored-left','Pawn defense uses the independently painted opposite view')
   const id=s.active.id
   await captureStarted('bQ');s=await snapshot()
   assert.notEqual(s.active.id,id);assert.equal(s.active.defender.code,'wP');assert.ok(s.stage.effectsOwner==null,'no encounter owns stale effects')
+  assert.equal(s.stage.defenderView,'authored-left','Queen recapture retains the White Pawn defense identity and view')
   const captures=s.history.filter(e=>e.defender)
   assert.equal(captures[0].attacker.id,s.active.defender.id)
   const done=await idle();finalPosition(done,events.at(-1).afterFen)

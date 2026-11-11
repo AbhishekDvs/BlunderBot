@@ -384,8 +384,8 @@ export function ThreeBoardCanvas({
       )}
 
       {/* Clean Tactical Camera & Pacing Bar */}
-      <div className="absolute top-2.5 right-2.5 z-30 flex items-center gap-1 p-1 rounded-xl bg-[#0C0F14]/85 backdrop-blur-md border border-[#202832] shadow-lg text-[11px]">
-        {showDevTools && <button
+      <div className={`absolute ${isCombatOrEndingActive ? 'bottom-2.5' : 'top-2.5'} right-2.5 z-30 flex items-center gap-1 p-1 rounded-xl bg-[#0C0F14]/85 backdrop-blur-md border border-[#202832] shadow-lg text-[11px]`}>
+        {showDevTools && !isCombatOrEndingActive && <button
           type="button"
           onClick={handleToggleCamera}
           className="px-2 py-1 rounded-lg hover:bg-[#1C232D] text-[#84919D] hover:text-[#F5F6F8] transition font-medium flex items-center gap-1"
@@ -396,16 +396,16 @@ export function ThreeBoardCanvas({
           </span>
         </button>}
 
-        <button
+        {!isCombatOrEndingActive && <button
           type="button"
           onClick={handleResetCamera}
           className="px-2 py-1 rounded-lg hover:bg-[#1C232D] text-[#84919D] hover:text-[#DDAA57] transition font-mono"
           title="Reset Camera to Default Tactical Framing (Double-click board)"
         >
           Reset
-        </button>
+        </button>}
 
-        <button
+        {!isCombatOrEndingActive && <button
           type="button"
           onClick={() => {
             const pacings: AnimationPacing[] = ['cinematic', 'fast', 'reduced']
@@ -417,7 +417,7 @@ export function ThreeBoardCanvas({
           title="Animation pacing: Cinematic, Fast, or Reduced"
         >
           <span className="capitalize font-semibold text-[#DDAA57]">{effectivePacing}</span>
-        </button>
+        </button>}
 
         {isCombatOrEndingActive && (
           <button

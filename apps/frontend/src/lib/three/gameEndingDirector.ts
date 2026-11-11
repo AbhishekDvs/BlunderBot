@@ -21,9 +21,17 @@ export class GameEndingDirector3D {
   private outcome: EndingOutcome = 'draw'
   private durationMs = 4500
   private cameraCtrl: CameraController3D
+  private banner: HTMLDivElement | null = null
 
-  constructor(cameraCtrl: CameraController3D) {
+  constructor(cameraCtrl: CameraController3D, container?: HTMLElement) {
     this.cameraCtrl = cameraCtrl
+    if(container && typeof document!=='undefined') {
+      this.banner=document.createElement('div')
+      this.banner.setAttribute('role','status')
+      this.banner.setAttribute('aria-live','polite')
+      Object.assign(this.banner.style,{position:'absolute',top:'5%',left:'4%',right:'4%',display:'none',pointerEvents:'none',zIndex:'12',textAlign:'center',fontFamily:'Georgia, serif',fontSize:'clamp(14px, 2vw, 22px)',letterSpacing:'.12em',color:'#eed5a3',textShadow:'0 2px 12px #000',padding:'8px',background:'linear-gradient(90deg, transparent, rgba(10,15,16,.7), transparent)'})
+      container.appendChild(this.banner)
+    }
   }
 
   /**
@@ -37,6 +45,10 @@ export class GameEndingDirector3D {
     this.outcome = outcome
     this.startTime = performance.now()
     this.isActive = true
+    if(this.banner) {
+      this.banner.textContent=outcome==='draw'?'HONOURS SHARED':outcome==='white_wins'?'WHITE PREVAILS':'BLACK PREVAILS'
+      this.banner.style.display='block'
+    }
 
     // Trigger slow camera orbit
     this.cameraCtrl.setMode('ending')
@@ -92,6 +104,7 @@ export class GameEndingDirector3D {
     const elapsed = now - this.startTime
     if (elapsed >= this.durationMs) {
       this.isActive = false
+      if(this.banner)this.banner.style.display='none'
       this.cameraCtrl.setMode('tactical')
     }
   }
@@ -102,6 +115,7 @@ export class GameEndingDirector3D {
 
   public reset(pieceNodes: Map<string, Piece3DNode>) {
     this.isActive = false
+    if(this.banner)this.banner.style.display='none'
     pieceNodes.forEach((node) => {
       const is2p5d = !!node.cardMesh || node.group.name.includes('2p5D')
       const baseYaw = is2p5d
@@ -113,4 +127,6 @@ export class GameEndingDirector3D {
     })
     this.cameraCtrl.setMode('tactical')
   }
+
+  public dispose() { this.banner?.remove();this.banner=null }
 }

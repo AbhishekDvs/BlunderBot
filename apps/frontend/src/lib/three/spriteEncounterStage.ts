@@ -7,6 +7,7 @@ import { PieceBuilder3D } from './pieceBuilder.ts'
 
 const NAMES: Record<string,string> = { P:'Padati',N:'Ashva Senani',B:'Acharya',R:'Durg',Q:'Samrajni',K:'Raja' }
 const name = (code: string) => `${code[0] === 'w' ? 'White' : 'Black'} ${NAMES[code[1]]}`
+const APPROACH_WORLD = .28
 const duration = (code: string,clip: string) => {
   const def = IndianArmiesRuntime.resolveClip(code,clip)
   return def.frameDurationsMs?.reduce((sum,n) => sum+n,0) ?? def.count/def.fps*1000
@@ -14,7 +15,7 @@ const duration = (code: string,clip: string) => {
 
 export function resolveSpriteContact(attacker: string,defender: string) {
   const a = IndianArmiesRuntime.getPieceClipManifest(attacker)
-  const b = IndianArmiesRuntime.getPieceClipManifest(defender)
+  const b = IndianArmiesRuntime.getDefenseClipManifest(defender) ?? IndianArmiesRuntime.getPieceClipManifest(defender)
   const entries = IndianArmiesRuntime.getEncountersManifest()?.encounters ?? []
   const entry = entries.find(e => e.attacker === attacker && e.defender === defender) ??
     entries.find(e => e.attacker[1] === attacker[1] && e.defender[1] === defender[1])
@@ -38,6 +39,7 @@ export class SpriteEncounterStage {
   public onPhase?: (phase: VisualPhase) => void
   private canvas: HTMLCanvasElement | null = null
   private ctx: CanvasRenderingContext2D | null = null
+  private backdrop: HTMLImageElement | null = null
   private actors: [ActorState,ActorState] | null = null
   private params: CombatEncounterParams | null = null
   private startTime = 0
@@ -50,6 +52,7 @@ export class SpriteEncounterStage {
   private finalDestination = new THREE.Vector3()
   private diagnostics: Record<string,unknown> = {}
   private effectTexture: THREE.Texture | null = null
+  private defenseTexture: THREE.Texture | null = null
   private timelineOffset=0
   private holdStart=0
   private holdUntil=0
@@ -64,6 +67,8 @@ export class SpriteEncounterStage {
       Object.assign(this.canvas.style,{ position:'absolute',inset:'0',width:'100%',height:'100%',pointerEvents:'none',display:'none',zIndex:'10' })
       container.appendChild(this.canvas)
       this.ctx = this.canvas.getContext('2d')
+      this.backdrop = new Image()
+      this.backdrop.src = '/pieces/indian-armies-v1/stage/terrace.webp'
     }
   }
 
@@ -73,6 +78,7 @@ export class SpriteEncounterStage {
     this.params = params
     this.actors = [attacker,defender].map(node => ({node,visible:node.group.visible,position:node.group.position.clone()})) as [ActorState,ActorState]
     this.finalDestination.copy(attacker.targetPosition)
+    this.defenseTexture=PieceBuilder3D.getDefenseSpriteTexture(defender.pieceCode)
     this.contact = resolveSpriteContact(attacker.pieceCode,defender.pieceCode)
     if (!this.contact.calibrated) this.alignGuardSilhouette(defender)
     const anticipation = duration(attacker.pieceCode,'attack_anticipation')
@@ -117,7 +123,7 @@ export class SpriteEncounterStage {
 
   private alignGuardSilhouette(defender:Piece3DNode) {
     if(typeof document==='undefined')return
-    const image=(defender.cardMesh?.material as THREE.MeshBasicMaterial)?.map?.image as CanvasImageSource & {width:number;height:number} | undefined
+    const image=(this.defenseTexture ?? (defender.cardMesh?.material as THREE.MeshBasicMaterial)?.map)?.image as CanvasImageSource & {width:number;height:number} | undefined
     if(!image?.width)return
     const dimensions=IndianArmiesRuntime.getCardPlacement(defender.pieceCode[1])
     const py=220-this.contact.tipLocal[1]/dimensions.height*256
@@ -167,7 +173,7 @@ export class SpriteEncounterStage {
     else phase='SETTLEMENT'
     if (phase !== this.phase) { this.phase=phase;this.onPhase?.(phase) }
     if (elapsed < t.anticipation) this.pose(a,'attack_anticipation',elapsed)
-    else if (elapsed < t.attack) this.pose(a,'move',(elapsed-t.anticipation)*.72/IndianArmiesRuntime.getMoveStrideWorld(a.pieceCode))
+    else if (elapsed < t.attack) this.pose(a,'move',(elapsed-t.anticipation)*APPROACH_WORLD/IndianArmiesRuntime.getMoveStrideWorld(a.pieceCode))
     else if (elapsed < t.attack+duration(a.pieceCode,'attack')) this.pose(a,'attack',elapsed-t.attack)
     else if (elapsed < t.settlement) this.pose(a,'idle',elapsed-t.attack)
     else this.pose(a,'move',(elapsed-t.settlement)*Math.abs(this.contact.separation)/IndianArmiesRuntime.getMoveStrideWorld(a.pieceCode)*duration(a.pieceCode,'move')/430)
@@ -192,41 +198,58 @@ export class SpriteEncounterStage {
     const background=ctx.createLinearGradient(0,0,0,h)
     background.addColorStop(0,'rgba(12,20,19,.98)');background.addColorStop(.75,'rgba(39,42,31,.98)');background.addColorStop(1,'rgba(18,24,22,.98)')
     ctx.fillStyle=background;ctx.fillRect(0,0,w,h)
+    if (this.backdrop?.complete && this.backdrop.naturalWidth) {
+      // A fixed painted camera, never an orbit around the authored illustrations.
+      // Cover-cropping retains the open central terrace on narrow viewports.
+      const fit=Math.max(w/this.backdrop.naturalWidth,h/this.backdrop.naturalHeight)
+      const bw=this.backdrop.naturalWidth*fit,bh=this.backdrop.naturalHeight*fit
+      ctx.drawImage(this.backdrop,(w-bw)/2,(h-bh)/2,bw,bh)
+      const shade=ctx.createLinearGradient(0,0,0,h)
+      shade.addColorStop(0,'rgba(6,13,16,.8)');shade.addColorStop(.28,'rgba(6,13,16,.28)');shade.addColorStop(.7,'rgba(6,13,16,.1)');shade.addColorStop(1,'rgba(6,13,16,.45)')
+      ctx.fillStyle=shade;ctx.fillRect(0,0,w,h)
+    }
     const [a,b]=actors.map(actor => actor.node)
     const ad=IndianArmiesRuntime.getCardPlacement(a.pieceCode[1]),bd=IndianArmiesRuntime.getCardPlacement(b.pieceCode[1])
     const sep=this.contact.separation
     const approach=Math.max(0,Math.min(1,(elapsed-this.times.anticipation)/(this.times.attack-this.times.anticipation)))
     const settle=Math.max(0,Math.min(1,(elapsed-this.times.settlement)/430))
-    const charge=Math.sign(sep || 1)*.72
+    const charge=Math.sign(sep || 1)*APPROACH_WORLD
     const ax=-sep-charge*(1-approach)+sep*settle
     // Fit the whole movement path once. Reframing around the current pose made
     // the actors grow during approach and shrink again during settlement.
     const startX=-sep-charge
     const left=Math.min(startX-ad.width*.5,-sep-ad.width*.5,-ad.width*.5,-bd.width*.5)
     const right=Math.max(startX+ad.width*.5,-sep+ad.width*.5,ad.width*.5,bd.width*.5)
-    const scale=Math.min(w*.86/(right-left),h*.75/Math.max(ad.height,bd.height))
+    const scale=Math.min(w*.90/(right-left),h*.80/Math.max(ad.height,bd.height))
     const center=w/2-(left+right)*.5*scale
-    const floor=h*.84
+    const floor=h*.80
     const glow=ctx.createRadialGradient(w*.5,floor,5,w*.5,floor,w*.65)
     glow.addColorStop(0,'rgba(183,147,88,.22)');glow.addColorStop(1,'rgba(183,147,88,0)')
     ctx.fillStyle=glow;ctx.fillRect(0,h*.3,w,h*.7)
-    ctx.strokeStyle='rgba(214,178,107,.3)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(w*.07,floor+8);ctx.lineTo(w*.93,floor+8);ctx.stroke()
     const bounds: number[][]=[]
     const paint=(node: Piece3DNode,x: number,width: number,height: number) => {
       const clip=IndianArmiesRuntime.resolveClip(node.pieceCode,node.animator?.currentClip ?? 'idle')
       const index=clip.start+Math.min(clip.count-1,node.animator?.currentFrame ?? 0)
-      const texture=(node.cardMesh?.material as THREE.MeshBasicMaterial | undefined)?.map
+      const texture=node===b && this.defenseTexture ? this.defenseTexture : (node.cardMesh?.material as THREE.MeshBasicMaterial | undefined)?.map
       const image=texture?.image as CanvasImageSource & { width: number; height: number } | undefined
       const px=center+x*scale,drawW=width*scale,drawH=height*scale
       const x0=px-drawW*.5,y0=floor-drawH*220/256
       bounds.push([x0,y0,x0+drawW,y0+drawH])
-      ctx.save();ctx.fillStyle='rgba(0,0,0,.32)';ctx.beginPath();ctx.ellipse(px,floor+2,drawW*.15,drawW*.035,0,0,Math.PI*2);ctx.fill();ctx.restore()
+      ctx.save();ctx.translate(px,floor+2);ctx.scale(drawW*(node.pieceCode[1]==='N'?.28:.20),Math.max(2,drawW*.048))
+      const shadow=ctx.createRadialGradient(0,0,0,0,0,1)
+      shadow.addColorStop(0,'rgba(16,10,6,.56)');shadow.addColorStop(.45,'rgba(16,10,6,.28)');shadow.addColorStop(1,'rgba(16,10,6,0)')
+      ctx.fillStyle=shadow;ctx.beginPath();ctx.arc(0,0,1,0,Math.PI*2);ctx.fill();ctx.restore()
       if (image?.width && image.height) ctx.drawImage(image,(index%clip.cols)*image.width/clip.cols,Math.floor(index/clip.cols)*image.height/clip.rows,image.width/clip.cols,image.height/clip.rows,x0,y0,drawW,drawH)
     }
     paint(a,ax,ad.width,ad.height)
     if (elapsed < this.times.settlement) paint(b,0,bd.width,bd.height)
     const impactAge=elapsed-this.times.contact
     const point=[center+(-sep+this.contact.tipLocal[0])*scale,floor-this.contact.tipLocal[1]*scale]
+    if (impactAge>=0 && impactAge<160 && this.params?.pacing!=='reduced') {
+      const radius=scale*.15,flash=ctx.createRadialGradient(point[0],point[1],0,point[0],point[1],radius)
+      flash.addColorStop(0,`rgba(255,239,193,${.7*(1-impactAge/160)})`);flash.addColorStop(.25,'rgba(238,178,83,.24)');flash.addColorStop(1,'rgba(238,178,83,0)')
+      ctx.fillStyle=flash;ctx.fillRect(point[0]-radius,point[1]-radius,radius*2,radius*2)
+    }
     if (impactAge >= 0 && impactAge < 667 && this.params?.pacing !== 'reduced') {
       // One event-owned burst, using the existing authored faction effect atlas.
       const effect=IndianArmiesRuntime.getEffectSpriteDef(b.pieceCode[0] as 'w'|'b')
@@ -244,10 +267,10 @@ export class SpriteEncounterStage {
       for (let i=0;i<5;i++) { ctx.fillStyle=b.pieceCode[0]==='w'?'#cbb887':'#8b7052';ctx.fillRect(center+(i-2)*9,floor-2+(i%2)*4,4+i%2,3) }
       ctx.restore()
     }
-    ctx.textAlign='center';ctx.fillStyle='#d9b878';ctx.font=`600 ${Math.max(10,w*.021)}px Georgia, serif`;ctx.fillText('ANCIENT INDIAN WAR CHESS',w/2,h*.075)
-    ctx.fillStyle='#f2e7d0';ctx.font=`${Math.max(12,w*.026)}px Georgia, serif`;ctx.fillText(`${name(a.pieceCode)}  ·  ${name(b.pieceCode)}`,w/2,h*.123)
+    ctx.textAlign='center';ctx.fillStyle='#d9b878';ctx.font=`600 ${Math.max(10,w*.019)}px Georgia, serif`;ctx.fillText('ANCIENT INDIAN WAR CHESS',w/2,h*.075)
+    ctx.fillStyle='#f2e7d0';ctx.font=`${Math.max(11,w*.025)}px Georgia, serif`;ctx.fillText(`${name(a.pieceCode)}  ·  ${name(b.pieceCode)}`,w/2,h*.123)
     ctx.fillStyle='#b5b5a1';ctx.font='12px Georgia, serif';ctx.fillText(`${this.params?.attackerSquare}  →  ${this.params?.destinationSquare ?? this.params?.defenderSquare}`,w/2,h*.94)
-    this.diagnostics={owner:this.owner,phase:this.phase,elapsed,scale,actorIds:actors.map(actor=>actor.node.instanceId),bounds,viewport:[w,h],contactPoint:point,contactErrorPx:Math.abs(this.contact.tipLocal[1]-this.contact.blockLocal[1])*scale,calibratedContact:this.contact.calibrated,effectsOwner:this.firedContact?this.owner:null}
+    this.diagnostics={owner:this.owner,phase:this.phase,elapsed,scale,actorIds:actors.map(actor=>actor.node.instanceId),bounds,viewport:[w,h],contactPoint:point,contactErrorPx:Math.abs(this.contact.tipLocal[1]-this.contact.blockLocal[1])*scale,calibratedContact:this.contact.calibrated,defenderView:this.defenseTexture?'authored-left':'main',effectsOwner:this.firedContact?this.owner:null}
   }
 
   public finish(skipped=false) {
@@ -258,6 +281,7 @@ export class SpriteEncounterStage {
     b.node.group.visible=false;b.node.isAnimating=false
     this.isActive=false
     this.effectTexture?.dispose();this.effectTexture=null
+    this.defenseTexture?.dispose();this.defenseTexture=null
     this.camera.releaseEncounter(this.owner)
     if (this.canvas) this.canvas.style.display='none'
     this.actors=null;this.params=null
@@ -270,6 +294,7 @@ export class SpriteEncounterStage {
     for (const actor of this.actors) { actor.node.group.position.copy(actor.position);actor.node.group.visible=actor.visible;actor.node.isAnimating=false;actor.node.animator?.playClip('idle',true) }
     this.camera.releaseEncounter(this.owner)
     this.effectTexture?.dispose();this.effectTexture=null
+    this.defenseTexture?.dispose();this.defenseTexture=null
     this.isActive=false;this.actors=null;this.params=null
     if (this.canvas) this.canvas.style.display='none'
     this.diagnostics={}

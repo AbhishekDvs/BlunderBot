@@ -126,6 +126,10 @@
     "bQ": "bQ/bQ_clip.json",
     "bK": "bK/bK_clip.json"
   },
+  "defenseViews": {
+    "wP": "wP/wP_guard_clip.json",
+    "bP": "bP/bP_guard_clip.json"
+  },
   "encounters": "encounters.json",
   "endings": "endings.json",
   "cameraValidation": "pending in-game art review; 48 degrees supplied to illustration generator",

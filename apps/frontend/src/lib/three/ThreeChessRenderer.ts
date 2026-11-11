@@ -106,6 +106,7 @@ export class ThreeChessRenderer {
 
     // 5. Board & Subsystems
     this.board = new PhysicalBoard3D(options.preset)
+    this.board.setOrientation(this.side)
     this.scene.add(this.board.group)
 
     this.debris = new DebrisSystem3D()
@@ -117,7 +118,7 @@ export class ThreeChessRenderer {
       const active=this.presentation.active
       if (active) this.presentation.transition(active.event.id,phase)
     }
-    this.endingDirector = new GameEndingDirector3D(this.cameraCtrl)
+    this.endingDirector = new GameEndingDirector3D(this.cameraCtrl,options.container)
     this.presentation.reset(this.currentFen)
     this.applyPendingOrientation()
 
@@ -138,6 +139,7 @@ export class ThreeChessRenderer {
 
     // Directional Key Sun (Upper-left screen space as per Astra spec)
     const dirLight = new THREE.DirectionalLight(0xfffaed, 2.3)
+    dirLight.name='TacticalKeyLight'
     dirLight.position.set(-6, 12, 6)
     dirLight.castShadow = true
     dirLight.shadow.mapSize.width = 2048
@@ -155,13 +157,24 @@ export class ThreeChessRenderer {
 
     // Neutral frontal fill to lift dark basalt shadows and reveal armor plate engravings
     const frontalFill = new THREE.DirectionalLight(0xffffff, 1.10)
+    frontalFill.name='TacticalFillLight'
     frontalFill.position.set(0, 9, 10)
     this.scene.add(frontalFill)
 
     // Warm Rim light for piece silhouette definition & specular sheen
     const rimLight = new THREE.DirectionalLight(0xd4af37, 1.05)
+    rimLight.name='TacticalRimLight'
     rimLight.position.set(6, 5, -8)
     this.scene.add(rimLight)
+    this.orientLighting()
+  }
+
+  private orientLighting() {
+    const flip=this.side==='black'?-1:1
+    this.scene.getObjectByName('TacticalKeyLight')?.position.set(-6*flip,12,6*flip)
+    this.scene.getObjectByName('TacticalFillLight')?.position.set(0,9,10*flip)
+    this.scene.getObjectByName('TacticalRimLight')?.position.set(6*flip,5,-8*flip)
+    this.renderer.shadowMap.needsUpdate=true
   }
 
   /**
@@ -720,6 +733,8 @@ export class ThreeChessRenderer {
     if(this.presentation.busy || this.endingDirector.isActive){this.pendingSide=side;return}
     this.side = side
     this.cameraCtrl.setOrientation(side)
+    this.board.setOrientation(side)
+    this.orientLighting()
     this.updateAllPieceOrientations()
   }
 
@@ -739,6 +754,7 @@ export class ThreeChessRenderer {
     this.cleanupListeners?.()
     this.clearPieces()
     this.encounterDirector.spriteStage?.dispose()
+    this.endingDirector.dispose()
     this.debris.clear()
     this.renderer.dispose()
     if (this.renderer.domElement.parentElement) {

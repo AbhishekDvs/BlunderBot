@@ -145,10 +145,11 @@ export function Navbar({ onNewGameClick }: { onNewGameClick?: () => void }) {
           ) : (
             <Link
               href="/game"
+              aria-label="Start a new game"
               className="tactical-button-primary flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm transition active:scale-95"
             >
               <ZapIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>Deploy</span>
+              <span className="hidden sm:inline">Deploy</span>
             </Link>
           )}
         </div>

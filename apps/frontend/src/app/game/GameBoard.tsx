@@ -183,10 +183,14 @@ export function GameBoard({
         const maxAvailable = windowWidth - horizontalPadding
         setBoardWidth(Math.max(280, Math.min(maxAvailable, 540)))
       } else {
-        // Desktop: Fit top banner, board, bottom banner, and toolbar cleanly within 768px+ viewports
-        const availableHeight = windowHeight - 250
-        const maxDesktopWidth = isSidebarCollapsed ? 760 : 620
-        const optimal = Math.max(380, Math.min(maxDesktopWidth, availableHeight))
+        // The animated canvas is .82 as tall as it is wide. Fit its actual
+        // height, leaving room for both player cards and the action toolbar.
+        const animated = settings.perspective === 'true-3d'
+        const availableHeight = windowHeight - (animated ? 286 : 250)
+        const sidebarWidth = isSidebarCollapsed ? 64 : windowWidth >= 1280 ? 384 : 320
+        const availableWidth = windowWidth - sidebarWidth - 80
+        const maxDesktopWidth = animated ? (isSidebarCollapsed ? 1040 : 900) : (isSidebarCollapsed ? 760 : 620)
+        const optimal = Math.max(380, Math.min(maxDesktopWidth, availableWidth, availableHeight / (animated ? .82 : 1)))
         setBoardWidth(optimal)
       }
     }
@@ -197,7 +201,7 @@ export function GameBoard({
       window.removeEventListener('resize', updateSize)
       if (resultModalTimeoutRef.current) clearTimeout(resultModalTimeoutRef.current)
     }
-  }, [isSidebarCollapsed])
+  }, [isSidebarCollapsed, settings.perspective])
 
   // Check Game Over status
   const evaluateGameEnd = useCallback(() => {
@@ -636,8 +640,9 @@ export function GameBoard({
       {/* Main Board Arena (Centerpiece Dominance) */}
       <div
         ref={boardContainerRef}
+        style={settings.perspective === 'true-3d' ? { maxWidth: boardWidth + 4 } : undefined}
         className={`w-full flex flex-col items-center justify-center transition-all duration-300 ${
-          isSidebarCollapsed ? 'max-w-[820px]' : 'max-w-[680px]'
+          settings.perspective === 'true-3d' ? 'max-w-[1044px]' : isSidebarCollapsed ? 'max-w-[820px]' : 'max-w-[680px]'
         } space-y-2 sm:space-y-3`}
       >
         {/* Top Player Banner */}

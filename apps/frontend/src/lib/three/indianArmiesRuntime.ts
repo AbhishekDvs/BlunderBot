@@ -69,6 +69,7 @@ export interface MasterRuntimeManifest {
   >
   clips: Record<string, RuntimeClipDef>
   manifests: Record<string, string>
+  defenseViews?: Record<string, string>
   encounters: string
   endings: string
   verifiedCardDimensions: Record<string, [number, number]>
@@ -192,6 +193,7 @@ export class IndianArmiesRuntime {
   private static encountersManifest: EncountersManifest | null = null
   private static endingsManifest: EndingsManifest | null = null
   private static pieceClips = new Map<string, PieceClipManifest>()
+  private static defenseClips = new Map<string, PieceClipManifest>()
   private static loadPromise: Promise<void> | null = null
   private static loadErrors: string[] = []
   private static errorListeners = new Set<(errors: string[]) => void>()
@@ -229,6 +231,15 @@ export class IndianArmiesRuntime {
 
   public static getPieceClipManifest(pieceCode: string): PieceClipManifest | undefined {
     return this.pieceClips.get(pieceCode)
+  }
+
+  public static getDefenseClipManifest(pieceCode: string): PieceClipManifest | undefined {
+    return this.defenseClips.get(pieceCode)
+  }
+
+  public static getDefenseAtlasUrl(pieceCode: string): string | null {
+    const meta=this.defenseClips.get(pieceCode)
+    return meta ? `${INDIAN_ARMIES_BASE_URL}/${pieceCode}/${meta.image.replace(/^\.\//,'')}` : null
   }
 
   private static async fetchJson<T>(url: string, label: string): Promise<T | null> {
@@ -273,9 +284,11 @@ export class IndianArmiesRuntime {
       const endingsUrl = `${INDIAN_ARMIES_BASE_URL}/${master.endings || 'endings.json'}`
 
       const manifestEntries = Object.entries(master.manifests || {})
-      const [encounters, endings, ...clipResults] = await Promise.all([
+      const [encounters, endings, defenses, ...clipResults] = await Promise.all([
         this.fetchJson<EncountersManifest>(encountersUrl, 'encounters manifest'),
         this.fetchJson<EndingsManifest>(endingsUrl, 'endings manifest'),
+        Promise.all(Object.entries(master.defenseViews ?? {}).map(async ([code,path]) =>
+          [code,await this.fetchJson<PieceClipManifest>(`${INDIAN_ARMIES_BASE_URL}/${path}`,`${code} defense view`)] as const)),
         ...manifestEntries.map(async ([code, relPath]) => {
           const data = await this.fetchJson<PieceClipManifest>(
             `${INDIAN_ARMIES_BASE_URL}/${relPath}`,
@@ -287,6 +300,7 @@ export class IndianArmiesRuntime {
 
       if (encounters) this.encountersManifest = encounters
       if (endings) this.endingsManifest = endings
+      for(const [code,data] of defenses)if(data)this.defenseClips.set(code,data)
 
       for (const [code, data] of clipResults) {
         if (data) {

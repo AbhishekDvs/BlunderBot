@@ -242,9 +242,12 @@ export class PieceBuilder3D {
       // Load all 12 main character atlases immediately so every board piece renders crisply,
       // then warm supplementary ending atlases & impact debris sprites asynchronously.
       await Promise.allSettled(
-        codes.map((code) =>
+        [...codes.map((code) =>
           this.loadCachedTexture(`atlas_${code}`, IndianArmiesRuntime.getMainAtlasUrl(code), code)
-        )
+        ),...codes.flatMap(code => {
+          const url=IndianArmiesRuntime.getDefenseAtlasUrl(code)
+          return url ? [this.loadCachedTexture(`defense_${code}`,url,code)] : []
+        })]
       )
 
       const effectW = IndianArmiesRuntime.getEffectSpriteDef('w')
@@ -391,6 +394,11 @@ export class PieceBuilder3D {
     return tex
   }
 
+  /** Alternate painted performance for the same live defender; never mirrored. */
+  public static getDefenseSpriteTexture(pieceCode: string): THREE.Texture | null {
+    return this.textureCache.get(`defense_${pieceCode}`)?.clone() ?? null
+  }
+
   /**
    * Constructs an authoritative 2.5D stylized Indian war chess miniature:
    * Upright card with animated 8x8 sprite atlas texture (Warcraft RTS inspired),
@@ -416,7 +424,7 @@ export class PieceBuilder3D {
     const dim = this.DIMENSIONS_2P5D[classChar] || this.DIMENSIONS_2P5D.P
 
     // 1. Ground Contact Shadow Disc (Y = 0.005)
-    const shadowGeo = new THREE.CircleGeometry(placement.plinthR * .62, 32)
+    const shadowGeo = new THREE.CircleGeometry(placement.plinthR * .82, 32)
     let shadowTexture: THREE.Texture | undefined
     if (typeof document!=='undefined') {
       const shadowCanvas=document.createElement('canvas');shadowCanvas.width=64;shadowCanvas.height=64
@@ -432,7 +440,7 @@ export class PieceBuilder3D {
       ...(shadowTexture?{map:shadowTexture}:{}),
       color: 0x0a0806,
       transparent: true,
-      opacity: 0.22,
+      opacity: 0.4,
       depthWrite: false,
     })
     const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat)
