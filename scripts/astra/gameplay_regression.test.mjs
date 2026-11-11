@@ -85,6 +85,26 @@ async function playHumanMove(page, perspective, from, to, promotionPiece) {
   return await frame.getAttribute('data-fen')
 }
 
+async function playHumanAndExpectBot(page, perspective, chess, from, to, expectedBotUci, promotionPiece) {
+  const afterHuman = await playHumanMove(page, perspective, from, to, promotionPiece)
+  const hm = chess.move({ from, to, promotion: promotionPiece })
+  assert.ok(hm, `expected legal human move ${from}->${to}`)
+  if (!expectedBotUci) {
+    assert.equal(afterHuman, chess.fen())
+    return { hm, fen: afterHuman }
+  }
+  const expectedHumanFen = chess.fen()
+  chess.move({ from: expectedBotUci.slice(0, 2), to: expectedBotUci.slice(2, 4), promotion: expectedBotUci[4] })
+  const expectedAfterBotFen = chess.fen()
+  if (afterHuman !== expectedAfterBotFen) {
+    assert.equal(afterHuman, expectedHumanFen)
+    const botFen = await waitForBotReply(page, afterHuman, hm.color)
+    assert.equal(botFen, expectedAfterBotFen, `bot reply ${expectedBotUci} matches chess.js`)
+    return { hm, fen: botFen }
+  }
+  return { hm, fen: afterHuman }
+}
+
 async function waitForBotReply(page, prevFen, expectedTurn = 'w', timeout = 20000) {
   await page.waitForFunction(
     ({ prev, turn }) => {
@@ -178,9 +198,7 @@ test('Core chess rules: illegal move rejection, castling both sides, en passant,
 
     for (let i = 0; i < pairs.length; i++) {
       const [from, to] = pairs[i]
-      const fenAfterHuman = await playHumanMove(page, 'true-3d', from, to)
-      const hm = chess.move({ from, to })
-      assert.equal(fenAfterHuman, chess.fen(), `human move ${hm.san} matches chess.js`)
+      const { hm } = await playHumanAndExpectBot(page, 'true-3d', chess, from, to, replies1[i])
       if (i === 2) {
         assert.equal(hm.isEnPassant(), true)
         assert.equal(chess.get('d5'), undefined, 'en passant removes d5 pawn')
@@ -189,10 +207,6 @@ test('Core chess rules: illegal move rejection, castling both sides, en passant,
         assert.equal(hm.isKingsideCastle(), true)
         assert.equal(chess.get('f1')?.type, 'r', 'kingside castling moves rook to f1')
       }
-      const fenAfterBot = await waitForBotReply(page, fenAfterHuman, 'w')
-      const bm = replies1[i]
-      chess.move({ from: bm.slice(0, 2), to: bm.slice(2, 4) })
-      assert.equal(fenAfterBot, chess.fen(), `bot reply ${bm} matches chess.js`)
     }
 
     // Verify renderer reconciled after castling + en passant
@@ -261,13 +275,7 @@ test('Core chess rules: Queenside castling, Pawn Promotion modal selection (Knig
     const preCheckMoves = [['d2', 'd4'], ['b1', 'c3'], ['c1', 'f4'], ['d1', 'd3']]
     for (let i = 0; i < preCheckMoves.length; i++) {
       const [from, to] = preCheckMoves[i]
-      const fen1 = await playHumanMove(pageA, 'flat-2d', from, to)
-      chess.move({ from, to })
-      assert.equal(fen1, chess.fen())
-      const fen2 = await waitForBotReply(pageA, fen1, 'w')
-      const bm = repliesA[i]
-      chess.move({ from: bm.slice(0, 2), to: bm.slice(2, 4) })
-      assert.equal(fen2, chess.fen())
+      await playHumanAndExpectBot(pageA, 'flat-2d', chess, from, to, repliesA[i])
     }
 
     // White is in check from Bxc3+! Try illegal e2->e4 while in check -> must be rejected
@@ -277,18 +285,11 @@ test('Core chess rules: Queenside castling, Pawn Promotion modal selection (Knig
     assert.equal(await pageA.getByTestId('chessboard-frame').getAttribute('data-fen'), chess.fen(), 'illegal move while in check is rejected')
 
     // Legal check evasion: bxc3
-    const afterEvasion = await playHumanMove(pageA, 'flat-2d', 'b2', 'c3')
-    chess.move({ from: 'b2', to: 'c3' })
-    assert.equal(afterEvasion, chess.fen())
-    const afterBot5 = await waitForBotReply(pageA, afterEvasion, 'w')
-    chess.move({ from: 'g8', to: 'e7' })
-    assert.equal(afterBot5, chess.fen())
+    await playHumanAndExpectBot(pageA, 'flat-2d', chess, 'b2', 'c3', 'g8e7')
 
     // Queenside castling O-O-O!
-    const afterCastleQ = await playHumanMove(pageA, 'flat-2d', 'e1', 'c1')
-    const castleMove = chess.move({ from: 'e1', to: 'c1' })
+    const { hm: castleMove } = await playHumanAndExpectBot(pageA, 'flat-2d', chess, 'e1', 'c1')
     assert.equal(castleMove.isQueensideCastle(), true)
-    assert.equal(afterCastleQ, chess.fen())
     assert.equal(chess.get('d1')?.type, 'r')
     await collectRejections(pageA)
   } finally {
@@ -319,16 +320,9 @@ test('Core chess rules: Queenside castling, Pawn Promotion modal selection (Knig
     const promoSeq = [['a2', 'a4'], ['a4', 'b5'], ['b5', 'b6'], ['b6', 'c7']]
     for (let i = 0; i < promoSeq.length; i++) {
       const [from, to] = promoSeq[i]
-      const fen1 = await playHumanMove(pageB, 'flat-2d', from, to)
-      chess.move({ from, to })
-      const fen2 = await waitForBotReply(pageB, fen1, 'w')
-      const bm = repliesB[i]
-      chess.move({ from: bm.slice(0, 2), to: bm.slice(2, 4) })
-      assert.equal(fen2, chess.fen())
+      await playHumanAndExpectBot(pageB, 'flat-2d', chess, from, to, repliesB[i])
     }
-    const fenPromo = await playHumanMove(pageB, 'flat-2d', 'c7', 'b8', 'n')
-    chess.move({ from: 'c7', to: 'b8', promotion: 'n' })
-    assert.equal(fenPromo, chess.fen())
+    await playHumanAndExpectBot(pageB, 'flat-2d', chess, 'c7', 'b8', undefined, 'n')
     assert.equal(chess.get('b8')?.type, 'n')
     await collectRejections(pageB)
   } finally {
@@ -362,15 +356,7 @@ test('Core chess rules: Queenside castling, Pawn Promotion modal selection (Knig
     const chess = new Chess()
     for (let i = 0; i < stalemateHuman.length; i++) {
       const [from, to] = stalemateHuman[i]
-      const fen1 = await playHumanMove(pageC, 'flat-2d', from, to)
-      chess.move({ from, to })
-      assert.equal(fen1, chess.fen())
-      if (i < stalemateBot.length) {
-        const fen2 = await waitForBotReply(pageC, fen1, 'w')
-        const bm = stalemateBot[i]
-        chess.move({ from: bm.slice(0, 2), to: bm.slice(2, 4) })
-        assert.equal(fen2, chess.fen())
-      }
+      await playHumanAndExpectBot(pageC, 'flat-2d', chess, from, to, stalemateBot[i])
     }
     assert.equal(chess.isStalemate(), true)
     const dialog = pageC.getByRole('dialog')
@@ -384,11 +370,7 @@ test('Core chess rules: Queenside castling, Pawn Promotion modal selection (Knig
     const repHuman = [['g1', 'f3'], ['f3', 'g1'], ['g1', 'f3'], ['f3', 'g1']]
     for (let i = 0; i < repHuman.length; i++) {
       const [from, to] = repHuman[i]
-      const f1 = await playHumanMove(pageC, 'flat-2d', from, to)
-      repChess.move({ from, to })
-      const f2 = await waitForBotReply(pageC, f1, 'w')
-      repChess.move({ from: repBot[i].slice(0, 2), to: repBot[i].slice(2, 4) })
-      assert.equal(f2, repChess.fen())
+      await playHumanAndExpectBot(pageC, 'flat-2d', repChess, from, to, repBot[i])
     }
     assert.equal(repChess.isThreefoldRepetition(), true)
     await dialog.waitFor({ state: 'visible', timeout: 5000 })
@@ -401,14 +383,7 @@ test('Core chess rules: Queenside castling, Pawn Promotion modal selection (Knig
     const mateHuman = [['e2', 'e4'], ['f1', 'c4'], ['d1', 'h5'], ['h5', 'f7']]
     for (let i = 0; i < mateHuman.length; i++) {
       const [from, to] = mateHuman[i]
-      const f1 = await playHumanMove(pageC, 'flat-2d', from, to)
-      mateChess.move({ from, to })
-      assert.equal(f1, mateChess.fen())
-      if (i < mateBot.length) {
-        const f2 = await waitForBotReply(pageC, f1, 'w')
-        mateChess.move({ from: mateBot[i].slice(0, 2), to: mateBot[i].slice(2, 4) })
-        assert.equal(f2, mateChess.fen())
-      }
+      await playHumanAndExpectBot(pageC, 'flat-2d', mateChess, from, to, mateBot[i])
     }
     assert.equal(mateChess.isCheckmate(), true)
     await dialog.waitFor({ state: 'visible', timeout: 5000 })
@@ -449,28 +424,37 @@ test('Live Stockfish: Human plays Black, Board flip, Theme switch while active, 
     for (let turn = 0; turn < 2; turn++) {
       const legal = chess.moves({ verbose: true })
       const move = legal.find((m) => m.captured) || legal.find((m) => ['e5', 'd5', 'c5', 'Nf6'].includes(m.san)) || legal[0]
-      const afterHuman = await playHumanMove(page, 'elevated-2.5d', move.from, move.to)
+      const afterMove = await playHumanMove(page, 'elevated-2.5d', move.from, move.to)
       chess.move(move.san)
-      assert.equal(afterHuman, chess.fen())
-      const afterBot = await waitForBotReply(page, afterHuman, 'b', 20000)
+      let afterBot = afterMove
+      if (afterMove.split(' ')[1] === 'w') {
+        assert.equal(afterMove, chess.fen())
+        afterBot = await waitForBotReply(page, afterMove, 'b', 20000)
+      }
       const nextChess = new Chess(afterBot)
       assert.equal(nextChess.turn(), 'b')
+      assert.ok(
+        chess.moves().some((san) => {
+          const probe = new Chess(chess.fen())
+          probe.move(san)
+          return probe.fen() === afterBot
+        }),
+        'bot reply is a legal move from the human position'
+      )
       chess.load(afterBot)
     }
 
     // Flip board while game is active (Black -> White perspective) and verify drag-and-drop in elevated-2.5d
     await page.getByTitle('Flip Board View').click()
-    const dragMove = chess.moves({ verbose: true }).find((m) => m.flags.includes('n') || m.flags.includes('b')) || chess.moves({ verbose: true })[0]
+    const dragMove = chess.moves({ verbose: true }).find((m) => (m.flags.includes('n') || m.flags.includes('b')) && !m.promotion) || chess.moves({ verbose: true })[0]
     if (dragMove && !dragMove.promotion) {
-      const fromBox = await page.getByTestId('chessboard-frame').locator(`[data-square="${dragMove.from}"]`).boundingBox()
-      const toBox = await page.getByTestId('chessboard-frame').locator(`[data-square="${dragMove.to}"]`).boundingBox()
       const beforeDrag = await page.getByTestId('chessboard-frame').getAttribute('data-fen')
-      await page.mouse.move(fromBox.x + fromBox.width / 2, fromBox.y + fromBox.height / 2)
-      await page.mouse.down()
-      await page.mouse.move(toBox.x + toBox.width / 2, toBox.y + toBox.height / 2, { steps: 6 })
-      await page.mouse.up()
+      const sourcePiece = page.getByTestId('chessboard-frame').locator(`[data-square="${dragMove.from}"] [data-piece]`).first()
+      const targetSquare = page.getByTestId('chessboard-frame').locator(`[data-square="${dragMove.to}"]`)
+      await sourcePiece.dragTo(targetSquare)
       await page.waitForFunction((prev) => document.querySelector('[data-testid="chessboard-frame"]')?.dataset.fen !== prev, beforeDrag, { timeout: 10000 })
-      const afterDragBot = await waitForBotReply(page, beforeDrag, 'b', 20000)
+      const afterDrag = await page.getByTestId('chessboard-frame').getAttribute('data-fen')
+      const afterDragBot = afterDrag.split(' ')[1] === 'b' ? afterDrag : await waitForBotReply(page, afterDrag, 'b', 20000)
       chess.load(afterDragBot)
     }
 

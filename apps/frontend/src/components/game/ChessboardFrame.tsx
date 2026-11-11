@@ -364,7 +364,7 @@ export function ChessboardFrame({
         role="status"
         aria-busy="true"
         aria-label="Loading chessboard"
-        style={{ width: boardWidth, height: boardWidth * 0.82 }}
+        style={{ width: boardWidth, height: boardWidth * 0.85 }}
       />
     )
   }

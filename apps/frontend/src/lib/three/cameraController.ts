@@ -27,10 +27,10 @@ export class CameraController3D {
   private savedTacticalPosition = new THREE.Vector3()
   private savedTacticalLookAt = new THREE.Vector3()
 
-  // Scene bounding box: physical board slab [-4.8, 4.8] + piece height 1.35
+  // Scene bounding box: physical board slab [-4.75, 4.75] + taller 2.5D piece height 1.65
   private sceneBox = new THREE.Box3(
-    new THREE.Vector3(-4.8, 0, -4.8),
-    new THREE.Vector3(4.8, 1.35, 4.8)
+    new THREE.Vector3(-4.75, 0, -4.75),
+    new THREE.Vector3(4.75, 1.65, 4.75)
   )
 
   // User interactive orbit & zoom offsets
@@ -89,7 +89,7 @@ export class CameraController3D {
    * Fits camera based on projected bounding geometry, viewport aspect ratio,
    * board dimensions, and occupied piece bounds.
    */
-  public fitToBounds(box: THREE.Box3, margin = 0.07) {
+  public fitToBounds(box: THREE.Box3, margin = 0.025) {
     const center = new THREE.Vector3()
     box.getCenter(center)
 
@@ -165,7 +165,7 @@ export class CameraController3D {
     const fov=this.restrict2p5d?22:34
     if(this.camera.fov!==fov){this.camera.fov=fov;this.camera.updateProjectionMatrix()}
     if (this.currentMode === 'ending') {
-      if (this.restrict2p5d) { this.fitToBounds(this.sceneBox,.07);return }
+      if (this.restrict2p5d) { this.fitToBounds(this.sceneBox,.025);return }
       this.orbitAngle = this.isFlipped ? Math.PI : 0
       this.targetPosition.set(
         Math.sin(this.orbitAngle) * 7.5,

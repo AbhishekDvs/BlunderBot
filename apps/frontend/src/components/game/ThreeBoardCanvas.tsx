@@ -36,7 +36,7 @@ export function ThreeBoardCanvas({
   boardOnlyRef,
 }: ThreeBoardCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const viewportHeight=Math.round(boardWidth*.82)
+  const viewportHeight=Math.round(boardWidth*.85)
   const rendererRef = useRef<ThreeChessRenderer | null>(null)
   const { activePreset, settings } = useTheme()
   const systemReducedMotion = useReducedMotion()

@@ -178,15 +178,16 @@ export function GameBoard({
       const windowHeight = typeof window !== 'undefined' ? window.innerHeight : 900
 
       if (windowWidth < 1024) {
-        // Mobile / Tablet: scale precisely to viewport width with comfortable edge margins
-        const horizontalPadding = windowWidth < 640 ? 28 : 44
+        // Mobile / Tablet: scale tightly to viewport width for maximum piece legibility
+        const horizontalPadding = windowWidth < 640 ? 12 : 28
         const maxAvailable = windowWidth - horizontalPadding
-        setBoardWidth(Math.max(280, Math.min(maxAvailable, 540)))
+        setBoardWidth(Math.max(300, Math.min(maxAvailable, 580)))
       } else {
-        // Desktop: Fit top banner, board, bottom banner, and toolbar cleanly within 768px+ viewports
-        const availableHeight = windowHeight - 250
-        const maxDesktopWidth = isSidebarCollapsed ? 760 : 620
-        const optimal = Math.max(380, Math.min(maxDesktopWidth, availableHeight))
+        // Desktop: Maximize board & piece visibility while keeping banners, sidebar, and toolbar in view
+        const availableHeight = windowHeight - 205
+        const sidebarReserve = isSidebarCollapsed ? 96 : (windowWidth >= 1280 ? 430 : 360)
+        const maxDesktopWidth = isSidebarCollapsed ? 900 : 740
+        const optimal = Math.max(400, Math.min(maxDesktopWidth, availableHeight, windowWidth - sidebarReserve))
         setBoardWidth(optimal)
       }
     }
@@ -637,7 +638,7 @@ export function GameBoard({
       <div
         ref={boardContainerRef}
         className={`w-full flex flex-col items-center justify-center transition-all duration-300 ${
-          isSidebarCollapsed ? 'max-w-[820px]' : 'max-w-[680px]'
+          isSidebarCollapsed ? 'max-w-[940px]' : 'max-w-[780px]'
         } space-y-2 sm:space-y-3`}
       >
         {/* Top Player Banner */}
